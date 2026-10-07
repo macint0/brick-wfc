@@ -99,6 +99,10 @@ brick-wfc/
   physics columns for A–D (`results/m7_physics.md`). The ≥1-stud rule overstates stability; all
   failures are tip-overs; B depends on grip more than D. Follow-ups listed there (tip-over check in
   propagation, cantilever limits).
+- **M9 — Inventory constraint.** `bricks/inventory.py` (`InventoryConstraint`), bounded backtracking in
+  `wfc.solve_attempt`, 10 real sets (`results/m9_inventory.md`). Post-filter 1.5% valid; WFC + inventory
+  100% valid, 93% of parts used, 1.4 s/build; bottom-up 100% valid, 99.9% used, 99% physically stable,
+  0.014 s/build.
 
 ### M8 — Part library: bricks, plates, tiles
 - Common sizes: bricks and plates 1×1, 1×2, 1×4, 2×2, 2×4 (+ 1×6, 2×6 if cheap); tiles 1×1, 1×2, 2×2.
@@ -107,19 +111,6 @@ brick-wfc/
 - No slopes yet (non-box geometry); revisit later.
 **Done when:** integrity + stability tests pass on 100 random builds per part family; `.ldr` exports
 use the right part files and heights (brick = 24 LDU).
-
-### M9 — Inventory constraint (in progress — 7 of 10 sets done, run stopped by low memory)
-Done so far: `bricks/inventory.py` (inventory from OMR sets, `InventoryConstraint`), bounded backtracking
-in `wfc.solve_attempt`, bottom-up builder with inventory, `experiments/inventory.py`; partial results in
-`results/m9_inventory.md` (WFC + inventory 100% valid but the bottom-up baseline wins on every metric).
-Remaining: finish the run (`python -m brickwfc.experiments.inventory --seeds 20 --out out/m9`, resumable).
-- Input: a parts list — a set from the OMR (`.mpd` → part/color counts via `ldraw/mpd.py`) or a JSON list.
-  Parts outside the supported library are reported and ignored.
-- `InventoryConstraint`: count placed parts per (part, color) via their anchor cells; when a count hits its
-  limit, prune that (part, color)'s tiles everywhere.
-- Metrics: inventory utilization % (parts used / parts available), stable %, restarts.
-**Done when:** on ≥10 real sets, every generated build stays within the inventory (verified post hoc), with
-utilization reported.
 
 ### M10 — Learn from real sets
 - Reuse the M7-in-progress code (fetch, flatten, voxelize, coverage weights).
