@@ -18,6 +18,13 @@ builds are pruned during generation instead of filtered afterwards:
 Learning from real sets (M10) supplies taste: part/color statistics, local placement rules, and a judge.
 The generate → verify → dedupe → judge → select funnel (M3) picks the best candidates.
 
+**WFC is on trial, not assumed.** A random bottom-up builder (`bricks/bottomup.py`, baseline D) satisfies
+the support rule trivially, so every experiment reports it next to WFC, and the funnel treats the
+generator as pluggable. **Decision checkpoint after M9 + M11:** if the bottom-up builder matches WFC on
+stability, inventory use, shape fill and style at lower cost, WFC stops being the centrepiece and the
+paper becomes about alternate builds + the funnel, comparing generators. If WFC wins under the combined
+constraints (its propagation sees dead ends early), that is the paper's main result.
+
 **Positioning vs BrickGPT** (closest prior work): BrickGPT generates from *text* with a fine-tuned LLM
 trained on ShapeNet-derived builds, and enforces stability by *rollback* (98.8% stable, ~40 s/build on GPU).
 We generate from an *inventory* (+ optional shape), learn from *real official sets*, guarantee constraints
@@ -88,9 +95,10 @@ brick-wfc/
 
 ### M6 — Stability-aware propagation (finish)
 Code and tests are done: `SupportConstraint` (prune + force), the "≥1 stud on a solid cell below" verifier,
-and `experiments/stability.py` comparing A (plain + post-filter), B (stability-aware), C (per-cell rule).
-**Done when:** the 1000-seed table is complete for 4×4×2, 4×4×3 and 8×8×6 (8×8×6 B and C remain) and saved
-under `results/` (committed — it's ours, unlike `out/`).
+and `experiments/stability.py` comparing A (plain + post-filter), B (stability-aware), C (per-cell rule),
+D (random bottom-up placement, no WFC).
+**Done when:** the 1000-seed table is complete for A–D at 4×4×2, 4×4×3 and 8×8×6 and saved under
+`results/` (committed — it's ours, unlike `out/`).
 
 ### M7 — Physics-based stability verifier
 - Static-equilibrium check in the spirit of Legolization / BrickGPT: per-part gravity, stud-connection
@@ -144,8 +152,8 @@ IoU.
 **Done when:** the command produces k alternate builds for a given set with instructions that open in a viewer.
 
 ### M13 — Experiments for the paper
-- Baselines: random placement, plain WFC + post-filter, constraint-aware WFC (ours), BrickGPT outputs
-  where comparable (shape-only, no inventory).
+- Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
+  outputs where comparable (shape-only, no inventory). Apply the decision checkpoint above.
 - Metrics: valid %, stable % (simple + physics), inventory utilization, shape IoU, time per accepted
   design, diversity (mean pairwise distance, effective number of distinct designs), contradiction rate.
 - Small user study: pairwise rankings of alternate builds (Bradley–Terry).

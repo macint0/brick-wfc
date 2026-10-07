@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.parts import PLATES, PartSet, PlacedPart, Shape, extract_parts, part_tileset
 from brickwfc.bricks.stability import SupportConstraint
@@ -101,9 +102,20 @@ def test_constraint_is_deterministic(free_parts: PartSet) -> None:
 def test_experiment_cli(tmp_path: Path) -> None:
     assert experiment_main(["--seeds", "3", "--sizes", "3x3x2", "--out", str(tmp_path)]) == 0
     table = (tmp_path / "results.md").read_text()
-    for condition in ("A_plain", "B_aware", "C_per_cell"):
+    for condition in ("A_plain", "B_aware", "C_per_cell", "D_bottom_up"):
         assert condition in table
-    assert len((tmp_path / "runs.jsonl").read_text().splitlines()) == 9
+    assert len((tmp_path / "runs.jsonl").read_text().splitlines()) == 12
     # A second invocation resumes: everything is already done, so nothing is re-run or duplicated.
     assert experiment_main(["--seeds", "3", "--sizes", "3x3x2", "--out", str(tmp_path)]) == 0
-    assert len((tmp_path / "runs.jsonl").read_text().splitlines()) == 9
+    assert len((tmp_path / "runs.jsonl").read_text().splitlines()) == 12
+
+
+def test_bottom_up_builds_are_whole_and_stable(free_parts: PartSet) -> None:
+    builder = BottomUpBuilder(free_parts)
+    for seed in range(30):
+        grid = builder.build((4, 5, 5), np.random.default_rng(seed))
+        placed, errors = extract_parts(grid, free_parts)
+        assert errors == []
+        assert is_stable(placed, free_parts.solid[grid])
+    a = builder.build((3, 4, 4), np.random.default_rng(1))
+    np.testing.assert_array_equal(a, builder.build((3, 4, 4), np.random.default_rng(1)))

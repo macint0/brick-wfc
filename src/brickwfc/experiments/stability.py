@@ -1,4 +1,4 @@
-"""M6 experiment: plain WFC + post-filter vs stability-aware WFC.
+"""M6 experiment: plain WFC + post-filter vs stability-aware WFC (vs a non-WFC baseline).
 
     python -m brickwfc.experiments.stability --seeds 1000 --sizes 4x4x2 4x4x3 8x8x6 --out out/m6
 
@@ -6,6 +6,7 @@ Conditions (all use the same parts, colors, weights, and seeds):
   A  plain      no support rule during generation; unstable designs are filtered afterwards
   B  aware      part-level support enforced in propagation (bricks/stability.py)
   C  per-cell   M4's local rule (every stud needs a solid cell below): stable but no overhangs
+  D  bottom-up  no WFC: random bottom-up placement of supported parts (bricks/bottomup.py)
 
 Ground truth for every condition is ``support.is_stable``.
 """
@@ -18,16 +19,19 @@ import statistics
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Sequence
+from typing import Callable, Sequence
+
+import numpy as np
 
 from brickwfc.bricks.__main__ import parse_size3
+from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.parts import PLATES, PartSet, extract_parts, part_tileset
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.support import is_stable, overhanging_parts
-from brickwfc.wfc import Constraint, run
+from brickwfc.wfc import run
 
-CONDITIONS = ("A_plain", "B_aware", "C_per_cell")
+CONDITIONS = ("A_plain", "B_aware", "C_per_cell", "D_bottom_up")
 
 
 @dataclass(frozen=True)
@@ -35,7 +39,7 @@ class RunRecord:
     condition: str
     size: str
     seed: int
-    success: bool  # WFC finished within max attempts
+    success: bool  # the generator produced a build (WFC: within max attempts)
     stable: bool
     attempts: int
     contradictions: int
@@ -46,23 +50,50 @@ class RunRecord:
     fill: float
 
 
-def setup(condition: str, colors: list[str]) -> tuple[PartSet, tuple[Constraint, ...]]:
+@dataclass(frozen=True)
+class Generated:
+    grid: np.ndarray | None  # None if the generator gave up
+    attempts: int
+    contradictions: int
+    wall_time_s: float
+
+
+Generator = Callable[[int], Generated]  # seed -> build
+
+
+def setup(condition: str, colors: list[str], shape: tuple[int, int, int], max_attempts: int) -> tuple[PartSet, Generator]:
+    """The part set (for decoding builds) and the generator for one condition."""
     support = "cell" if condition == "C_per_cell" else "none"
     parts = part_tileset(list(PLATES.values()), colors_by_name(colors), support=support)
+    if condition == "D_bottom_up":
+        builder = BottomUpBuilder(parts)
+
+        def generate(seed: int) -> Generated:
+            start = time.perf_counter()
+            grid = builder.build(shape, np.random.default_rng(seed))
+            return Generated(grid, 1, 0, time.perf_counter() - start)
+
+        return parts, generate
+
     constraints = (SupportConstraint(parts),) if condition == "B_aware" else ()
-    return parts, constraints
+
+    def generate(seed: int) -> Generated:
+        result = run(parts.tileset, shape, seed, max_attempts, constraints)
+        stats = result.stats
+        return Generated(result.grid, stats.attempts, stats.contradictions, stats.wall_time_s)
+
+    return parts, generate
 
 
-def run_one(condition: str, parts: PartSet, constraints: tuple[Constraint, ...], shape: tuple[int, int, int], size: str, seed: int, max_attempts: int) -> RunRecord:
-    result = run(parts.tileset, shape, seed, max_attempts, constraints)
-    stats = result.stats
-    if result.grid is None:
-        return RunRecord(condition, size, seed, False, False, stats.attempts, stats.contradictions, stats.wall_time_s, 0, 0, 0, 0.0)
-    placed, errors = extract_parts(result.grid, parts)
-    filled = parts.solid[result.grid]
+def run_one(condition: str, size: str, seed: int, parts: PartSet, generate: Generator) -> RunRecord:
+    built = generate(seed)
+    if built.grid is None:
+        return RunRecord(condition, size, seed, False, False, built.attempts, built.contradictions, built.wall_time_s, 0, 0, 0, 0.0)
+    placed, errors = extract_parts(built.grid, parts)
+    filled = parts.solid[built.grid]
     return RunRecord(
-        condition, size, seed, True, is_stable(placed, filled), stats.attempts, stats.contradictions,
-        stats.wall_time_s, len(placed), len(overhanging_parts(placed, filled)), len(errors), float(filled.mean()),
+        condition, size, seed, True, is_stable(placed, filled), built.attempts, built.contradictions,
+        built.wall_time_s, len(placed), len(overhanging_parts(placed, filled)), len(errors), float(filled.mean()),
     )
 
 
@@ -123,15 +154,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             if (size, condition, args.seeds) in done:
                 print(f"{size} {condition}: already done, skipping", flush=True)
                 continue
-            parts, constraints = setup(condition, args.colors.split(","))
+            parts, generate = setup(condition, args.colors.split(","), shape, args.max_attempts)
             start = time.perf_counter()
-            batch = [run_one(condition, parts, constraints, shape, size, seed, args.max_attempts) for seed in range(args.seeds)]
+            batch = [run_one(condition, size, seed, parts, generate) for seed in range(args.seeds)]
             summaries.append(summarize(batch))
             with runs_path.open("a", encoding="utf-8") as runs_file:
                 runs_file.writelines(json.dumps(asdict(r)) + "\n" for r in batch)
             summary_path.write_text(json.dumps(summaries, indent=2), encoding="utf-8")
             print(f"{size} {condition}: stable {summaries[-1]['stable_pct']:.1f}% in {time.perf_counter() - start:.1f}s", flush=True)
 
+    # Group rows by size (in the order given), then condition, whatever order they were run in.
+    size_order = {size: i for i, size in enumerate(args.sizes)}
+    summaries.sort(key=lambda s: (size_order.get(s["size"], len(size_order)), s["size"], s["condition"]))
     table = markdown_table(summaries)
     print(table)
     (args.out / "results.md").write_text(table + "\n", encoding="utf-8")
