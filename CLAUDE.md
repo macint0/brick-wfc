@@ -36,7 +36,7 @@ https://content.moldandyeast.com/forage/y6fmx6n4
 ## Working rules for Claude Code
 
 - Work **one milestone at a time**. When a milestone's "Done when" passes, stop and summarize; don't start the next one unasked.
-- Python 3.11+, `numpy`, `Pillow`, `pytest`. Ask before adding any other dependency.
+- Python 3.11+, `numpy`, `Pillow`, `scipy` (LP solver for physics, M7+), `pytest`. Ask before adding any other dependency.
 - Every random choice goes through a seeded `numpy.random.Generator` passed in explicitly. Same seed → same output.
 - Type hints, small modules, no global state. Prefer clear code over clever code — this will be read by reviewers.
 - Every milestone ships with tests. Run `pytest` before declaring done.
@@ -92,21 +92,13 @@ brick-wfc/
 - **M4 — 3D grid, 1×1 plates.** Support as a vertical adjacency rule; `.ldr` export; isometric preview.
   *Still to do: open the generated `.ldr` files in LeoCAD / Stud.io to confirm they look right.*
 - **M5 — Multi-cell parts.** 1×1, 1×2, 2×2, 2×4 plates; integrity via adjacency + border masks; 100-build integrity test.
-
-### M6 — Stability-aware propagation (finish)
-Code and tests are done: `SupportConstraint` (prune + force), the "≥1 stud on a solid cell below" verifier,
-and `experiments/stability.py` comparing A (plain + post-filter), B (stability-aware), C (per-cell rule),
-D (random bottom-up placement, no WFC).
-**Done when:** the 1000-seed table is complete for A–D at 4×4×2, 4×4×3 and 8×8×6 and saved under
-`results/` (committed — it's ours, unlike `out/`).
-
-### M7 — Physics-based stability verifier
-- Static-equilibrium check in the spirit of Legolization / BrickGPT: per-part gravity, stud-connection
-  forces with push/pull and shear limits; a build is stable if a feasible force assignment exists.
-- Needs a linear-program solver — **ask before adding `scipy`** (or write a small solver if declined).
-- Use it as ground truth: report how many builds that pass the simple rule fail physics (e.g. long
-  cantilevers), and tighten the propagation rule if needed (e.g. limit unsupported overhang length).
-**Done when:** the M6 table gains a "physically stable %" column for every condition.
+- **M6 — Stability-aware propagation.** `SupportConstraint` in propagation; A–D comparison over 1000 seeds
+  (`results/m6_stability.md`). Post-filtering fails at scale; B is 100% stable but the bottom-up
+  baseline D is too, 27× faster.
+- **M7 — Physics-based verifier.** `bricks/physics.py` (LP: required clutch per stud; table or baseplate);
+  physics columns for A–D (`results/m7_physics.md`). The ≥1-stud rule overstates stability; all
+  failures are tip-overs; B depends on grip more than D. Follow-ups listed there (tip-over check in
+  propagation, cantilever limits).
 
 ### M8 — Part library: bricks, plates, tiles
 - Common sizes: bricks and plates 1×1, 1×2, 1×4, 2×2, 2×4 (+ 1×6, 2×6 if cheap); tiles 1×1, 1×2, 2×2.

@@ -8,13 +8,16 @@ Conditions (all use the same parts, colors, weights, and seeds):
   C  per-cell   M4's local rule (every stud needs a solid cell below): stable but no overhangs
   D  bottom-up  no WFC: random bottom-up placement of supported parts (bricks/bottomup.py)
 
-Ground truth for every condition is ``support.is_stable``.
+Simple ground truth for every condition is ``support.is_stable`` (>= 1 stud on something below).
+Physics (M7): ``physics.required_clutch`` per build, reported as "physically stable" at several
+clutch limits (0 = would stand with no grip at all; inf = tips over or floats whatever the grip).
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 import time
 from dataclasses import asdict, dataclass
@@ -26,12 +29,14 @@ import numpy as np
 from brickwfc.bricks.__main__ import parse_size3
 from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.colors import colors_by_name
+from brickwfc.bricks.physics import required_clutch
 from brickwfc.bricks.parts import PLATES, PartSet, extract_parts, part_tileset
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.support import is_stable, overhanging_parts
 from brickwfc.wfc import run
 
 CONDITIONS = ("A_plain", "B_aware", "C_per_cell", "D_bottom_up")
+CLUTCH_LIMITS = (0.0, 10.0)  # per stud, in plate-cell weights; "any finite clutch" is reported too
 
 
 @dataclass(frozen=True)
@@ -48,6 +53,7 @@ class RunRecord:
     overhanging_parts: int
     broken_parts: int
     fill: float
+    required_clutch: float  # per stud, plate-cell weights; inf if no clutch makes it stand
 
 
 @dataclass(frozen=True)
@@ -88,12 +94,13 @@ def setup(condition: str, colors: list[str], shape: tuple[int, int, int], max_at
 def run_one(condition: str, size: str, seed: int, parts: PartSet, generate: Generator) -> RunRecord:
     built = generate(seed)
     if built.grid is None:
-        return RunRecord(condition, size, seed, False, False, built.attempts, built.contradictions, built.wall_time_s, 0, 0, 0, 0.0)
+        return RunRecord(condition, size, seed, False, False, built.attempts, built.contradictions, built.wall_time_s, 0, 0, 0, 0.0, math.inf)
     placed, errors = extract_parts(built.grid, parts)
     filled = parts.solid[built.grid]
     return RunRecord(
         condition, size, seed, True, is_stable(placed, filled), built.attempts, built.contradictions,
         built.wall_time_s, len(placed), len(overhanging_parts(placed, filled)), len(errors), float(filled.mean()),
+        required_clutch(placed, built.grid.shape),
     )
 
 
@@ -114,18 +121,27 @@ def summarize(records: list[RunRecord]) -> dict[str, float | int | str]:
         "overhangs_per_design": statistics.mean(r.overhanging_parts for r in built) if built else 0.0,
         "fill_pct": 100 * statistics.mean(r.fill for r in built) if built else 0.0,
         "broken_parts": sum(r.broken_parts for r in records),
+        **{
+            f"physics_stable_clutch{limit:g}_pct": 100 * sum(r.required_clutch <= limit for r in records) / len(records)
+            for limit in CLUTCH_LIMITS
+        },
+        "physics_stable_any_clutch_pct": 100 * sum(math.isfinite(r.required_clutch) for r in records) / len(records),
+        "median_required_clutch": statistics.median(r.required_clutch for r in records),
     }
 
 
 def markdown_table(summaries: list[dict]) -> str:
-    header = ("| size (WxDxH) | condition | seeds | stable % | restarts/run | time/run (s) | time/stable (s) "
+    header = ("| size (WxDxH) | condition | seeds | stable % | phys. stable %, no clutch | phys. stable %, clutch <=10 "
+              "| phys. stable %, any clutch | median clutch | restarts/run | time/run (s) | time/stable (s) "
               "| parts/design | overhangs/design | fill % | broken parts |")
     columns = header.count("|") - 1
     lines = [header, "|" + "---|" * columns]
     for s in summaries:
         per_stable = "inf" if s["time_per_stable_s"] == float("inf") else f"{s['time_per_stable_s']:.3f}"
         lines.append(
-            f"| {s['size']} | {s['condition']} | {s['seeds']} | {s['stable_pct']:.1f} | {s['restarts_per_run']:.2f} "
+            f"| {s['size']} | {s['condition']} | {s['seeds']} | {s['stable_pct']:.1f} "
+            f"| {s['physics_stable_clutch0_pct']:.1f} | {s['physics_stable_clutch10_pct']:.1f} "
+            f"| {s['physics_stable_any_clutch_pct']:.1f} | {s['median_required_clutch']:.1f} | {s['restarts_per_run']:.2f} "
             f"| {s['time_per_run_s']:.3f} | {per_stable} | {s['parts_per_design']:.1f} "
             f"| {s['overhangs_per_design']:.1f} | {s['fill_pct']:.1f} | {s['broken_parts']} |"
         )
