@@ -79,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     all_stats: list[RunStats] = []
     saved = False
     for i in range(args.runs):
-        result = run(tileset, height, width, seed=args.seed + i, max_attempts=args.max_attempts)
+        result = run(tileset, (height, width), seed=args.seed + i, max_attempts=args.max_attempts)
         all_stats.append(result.stats)
         if args.runs == 1:
             print(format_stats(result.stats))

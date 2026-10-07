@@ -1,4 +1,4 @@
-"""Core 2D Wave Function Collapse solver (spec: CLAUDE.md, "Core WFC spec").
+"""Core Wave Function Collapse solver for 2D and 3D grids (spec: CLAUDE.md, "Core WFC spec").
 
 One *attempt* runs observe -> collapse -> propagate until every cell holds exactly one tile,
 or a domain empties (contradiction). A *run* retries attempts with fresh seeds until one succeeds.
@@ -14,11 +14,12 @@ from typing import Iterable
 
 import numpy as np
 
-from brickwfc.tileset import OFFSETS, Tileset, neighbor_pairs
+from brickwfc.tileset import Tileset, neighbor_pairs
 
 logger = logging.getLogger(__name__)
 
-Cell = tuple[int, int]
+Cell = tuple[int, ...]
+Shape = tuple[int, ...]
 
 # Scale of the seeded noise added to entropies so ties are broken randomly, not by scan order.
 TIE_BREAK_NOISE = 1e-6
@@ -26,23 +27,26 @@ DEFAULT_MAX_ATTEMPTS = 100
 
 
 class Wave:
-    """Per-cell domains for one attempt: ``domain[y, x, t]`` is True while tile ``t`` is still possible."""
+    """Per-cell domains for one attempt: ``domain[*cell, t]`` is True while tile ``t`` is still possible.
 
-    def __init__(self, tileset: Tileset, height: int, width: int) -> None:
-        if height < 1 or width < 1:
-            raise ValueError(f"grid must be at least 1x1, got {width}x{height}")
+    ``cell`` is ``(y, x)`` on a 2D grid and ``(y, z, x)`` on a 3D grid (see ``tileset.Topology``).
+    """
+
+    def __init__(self, tileset: Tileset, shape: Shape) -> None:
+        if len(shape) != tileset.topology.ndim or min(shape) < 1:
+            raise ValueError(f"shape {shape} does not fit a {tileset.topology.ndim}D tileset")
         self.tileset = tileset
-        self.domain = np.ones((height, width, tileset.num_tiles), dtype=bool)
+        self.domain = np.ones((*shape, tileset.num_tiles), dtype=bool)
         self._w = tileset.weights
         self._w_log_w = tileset.weights * np.log(tileset.weights)
 
     @property
-    def shape(self) -> tuple[int, int]:
-        return self.domain.shape[0], self.domain.shape[1]
+    def shape(self) -> Shape:
+        return self.domain.shape[:-1]
 
     def counts(self) -> np.ndarray:
-        """Number of remaining tiles per cell, shape (H, W)."""
-        return self.domain.sum(axis=2)
+        """Number of remaining tiles per cell."""
+        return self.domain.sum(axis=-1)
 
     def is_done(self) -> bool:
         return bool(np.all(self.counts() == 1))
@@ -60,8 +64,7 @@ class Wave:
             return None
         h = self.entropy() + TIE_BREAK_NOISE * rng.random(self.shape)
         h[~uncollapsed] = np.inf
-        y, x = np.unravel_index(np.argmin(h), h.shape)
-        return int(y), int(x)
+        return tuple(int(i) for i in np.unravel_index(np.argmin(h), h.shape))
 
     def collapse(self, cell: Cell, rng: np.random.Generator) -> int:
         """Fix ``cell`` to one remaining tile, sampled with probability proportional to its weight."""
@@ -73,7 +76,7 @@ class Wave:
     def assign(self, cell: Cell, tile: int) -> None:
         """Restrict ``cell`` to the single tile ``tile`` (does not propagate)."""
         self.domain[cell] = False
-        self.domain[cell + (tile,)] = True
+        self.domain[(*cell, tile)] = True
 
     def propagate(self, start: Iterable[Cell]) -> bool:
         """AC-3 style propagation outward from ``start``.
@@ -81,32 +84,33 @@ class Wave:
         Pop a cell; in each neighbor, remove tiles not supported by any tile remaining in the
         popped cell; if a neighbor's domain shrank, push it. Returns False on contradiction.
         """
-        height, width = self.shape
+        shape = self.shape
         compat = self.tileset.compat
+        offsets = self.tileset.topology.offsets
         queue = deque(start)
         while queue:
-            y, x = queue.popleft()
-            here = self.domain[y, x]
-            for d, (dy, dx) in enumerate(OFFSETS):
-                ny, nx = y + dy, x + dx
-                if not (0 <= ny < height and 0 <= nx < width):
+            cell = queue.popleft()
+            here = self.domain[cell]
+            for d, offset in enumerate(offsets):
+                neighbor = tuple(c + o for c, o in zip(cell, offset))
+                if not all(0 <= n < size for n, size in zip(neighbor, shape)):
                     continue
                 supported = compat[d, here].any(axis=0)
-                before = self.domain[ny, nx]
+                before = self.domain[neighbor]
                 after = before & supported
                 if np.array_equal(after, before):
                     continue
-                self.domain[ny, nx] = after
+                self.domain[neighbor] = after
                 if not after.any():
                     return False
-                queue.append((ny, nx))
+                queue.append(neighbor)
         return True
 
     def to_grid(self) -> np.ndarray:
-        """Tile id per cell, shape (H, W). Only valid once every cell is collapsed."""
+        """Tile id per cell, same shape as the grid. Only valid once every cell is collapsed."""
         if not self.is_done():
             raise RuntimeError("wave is not fully collapsed")
-        return self.domain.argmax(axis=2)
+        return self.domain.argmax(axis=-1)
 
 
 @dataclass(frozen=True)
@@ -115,12 +119,11 @@ class AttemptResult:
     collapses: int  # observe+collapse steps taken before finishing or failing
 
 
-def solve_attempt(tileset: Tileset, height: int, width: int, rng: np.random.Generator) -> AttemptResult:
+def solve_attempt(tileset: Tileset, shape: Shape, rng: np.random.Generator) -> AttemptResult:
     """Run a single WFC attempt with no backtracking."""
-    wave = Wave(tileset, height, width)
+    wave = Wave(tileset, shape)
     # Initial pass prunes tiles that can never be supported (e.g. a tile with no allowed neighbor).
-    all_cells = [(y, x) for y in range(height) for x in range(width)]
-    if not wave.propagate(all_cells):
+    if not wave.propagate(np.ndindex(*shape)):
         return AttemptResult(None, 0)
     collapses = 0
     while (cell := wave.observe(rng)) is not None:
@@ -160,8 +163,7 @@ def attempt_rng(seed: int, attempt: int) -> np.random.Generator:
 
 def run(
     tileset: Tileset,
-    height: int,
-    width: int,
+    shape: Shape,
     seed: int,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
 ) -> RunResult:
@@ -171,7 +173,7 @@ def run(
     start = time.perf_counter()
     cells_collapsed = 0
     for attempt in range(max_attempts):
-        result = solve_attempt(tileset, height, width, attempt_rng(seed, attempt))
+        result = solve_attempt(tileset, shape, attempt_rng(seed, attempt))
         cells_collapsed += result.collapses
         if result.grid is not None:
             stats = RunStats(seed, True, attempt + 1, attempt, cells_collapsed, time.perf_counter() - start)
@@ -186,11 +188,11 @@ def run(
 def adjacency_violations(grid: np.ndarray, tileset: Tileset) -> int:
     """Count neighboring cell pairs whose tiles are not allowed to touch.
 
-    Only east and south neighbors are checked, so each pair is counted once; north/west follow
-    from the symmetry that ``Tileset`` validates.
+    Only forward directions are checked, so each pair is counted once; the opposite directions
+    follow from the symmetry that ``Tileset`` validates.
     """
     violations = 0
-    for d in (1, 2):  # E, S
-        src, dst = neighbor_pairs(grid, d)
+    for d in tileset.topology.forward:
+        src, dst = neighbor_pairs(grid, d, tileset.topology)
         violations += int((~tileset.compat[d, src, dst]).sum())
     return violations

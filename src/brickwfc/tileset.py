@@ -1,4 +1,4 @@
-"""Tiles, directional adjacency rules, and weights for 2D WFC."""
+"""Tiles, directional adjacency rules, and weights for WFC on 2D or 3D grids."""
 
 from __future__ import annotations
 
@@ -9,12 +9,46 @@ from typing import Iterable, Sequence
 
 import numpy as np
 
-# Directions are indexed N=0, E=1, S=2, W=3. Offsets are (dy, dx); y is the row index, growing southward.
-DIRECTIONS: tuple[str, ...] = ("N", "E", "S", "W")
-OFFSETS: tuple[tuple[int, int], ...] = ((-1, 0), (0, 1), (1, 0), (0, -1))
-OPPOSITE: tuple[int, ...] = (2, 3, 0, 1)
-
 RGB = tuple[int, int, int]
+
+
+@dataclass(frozen=True)
+class Topology:
+    """A grid neighborhood: direction names, the index offset of each direction, and its opposite."""
+
+    name: str
+    directions: tuple[str, ...]
+    offsets: tuple[tuple[int, ...], ...]
+    opposite: tuple[int, ...]
+
+    @property
+    def ndim(self) -> int:
+        return len(self.offsets[0])
+
+    @property
+    def forward(self) -> tuple[int, ...]:
+        """One direction from each opposite pair (the one pointing along +axis); visiting
+        neighbors only in these directions sees every neighboring pair exactly once."""
+        return tuple(d for d, offset in enumerate(self.offsets) if sum(offset) > 0)
+
+
+# 2D arrays are indexed (y, x): y is the row, growing southward.
+GRID2D = Topology("grid2d", ("N", "E", "S", "W"), ((-1, 0), (0, 1), (1, 0), (0, -1)), (2, 3, 0, 1))
+
+# 3D arrays are indexed (y, z, x): y is the layer (up = +y), z grows southward, x grows eastward.
+GRID3D = Topology(
+    "grid3d",
+    ("U", "D", "N", "E", "S", "W"),
+    ((1, 0, 0), (-1, 0, 0), (0, -1, 0), (0, 0, 1), (0, 1, 0), (0, 0, -1)),
+    (1, 0, 4, 5, 2, 3),
+)
+
+TOPOLOGIES = {t.name: t for t in (GRID2D, GRID3D)}
+
+# 2D shorthands, used by the 2D-only modules.
+DIRECTIONS = GRID2D.directions
+OFFSETS = GRID2D.offsets
+OPPOSITE = GRID2D.opposite
 
 
 @dataclass(frozen=True, eq=False)
@@ -23,13 +57,14 @@ class Tileset:
 
     ``compat[d, a, b]`` is True when tile ``b`` may sit in direction ``d`` of tile ``a``,
     so ``compat[d, a]`` is the mask of tiles allowed next to ``a`` in direction ``d``.
-    Rules must be symmetric: ``compat[d, a, b] == compat[OPPOSITE[d], b, a]``.
+    Rules must be symmetric: ``compat[d, a, b] == compat[opposite[d], b, a]``.
     """
 
     names: tuple[str, ...]
     colors: tuple[RGB, ...]
     weights: np.ndarray  # (T,) float64, all > 0
-    compat: np.ndarray  # (4, T, T) bool
+    compat: np.ndarray  # (D, T, T) bool, D = number of topology directions
+    topology: Topology = GRID2D
 
     def __post_init__(self) -> None:
         # Store read-only copies so a Tileset can't be mutated after validation.
@@ -55,6 +90,7 @@ class Tileset:
 
     def _validate(self) -> None:
         n = len(self.names)
+        directions, opposite = self.topology.directions, self.topology.opposite
         if n == 0:
             raise ValueError("tileset has no tiles")
         if len(set(self.names)) != n:
@@ -68,16 +104,16 @@ class Tileset:
             raise ValueError(f"weights must have shape ({n},), got {self.weights.shape}")
         if not np.all(self.weights > 0):
             raise ValueError(f"weights must be positive, got {self.weights.tolist()}")
-        if self.compat.shape != (4, n, n):
-            raise ValueError(f"compat must have shape (4, {n}, {n}), got {self.compat.shape}")
-        for d in range(4):
-            mismatch = self.compat[d] != self.compat[OPPOSITE[d]].T
+        if self.compat.shape != (len(directions), n, n):
+            raise ValueError(f"compat must have shape ({len(directions)}, {n}, {n}), got {self.compat.shape}")
+        for d in range(len(directions)):
+            mismatch = self.compat[d] != self.compat[opposite[d]].T
             if mismatch.any():
                 a, b = (int(i) for i in np.argwhere(mismatch)[0])
                 raise ValueError(
-                    f"asymmetric adjacency: {self.names[b]!r} {DIRECTIONS[d]} of {self.names[a]!r} "
-                    f"is {bool(self.compat[d, a, b])}, but {self.names[a]!r} {DIRECTIONS[OPPOSITE[d]]} "
-                    f"of {self.names[b]!r} is {bool(self.compat[OPPOSITE[d], b, a])}"
+                    f"asymmetric adjacency: {self.names[b]!r} {directions[d]} of {self.names[a]!r} "
+                    f"is {bool(self.compat[d, a, b])}, but {self.names[a]!r} {directions[opposite[d]]} "
+                    f"of {self.names[b]!r} is {bool(self.compat[opposite[d], b, a])}"
                 )
 
     def rules(self) -> set[tuple[str, str, str]]:
@@ -85,9 +121,8 @@ class Tileset:
 
         Name-based, so tilesets with different tile orders can be compared.
         """
-        return {
-            (self.names[a], self.names[b], DIRECTIONS[d]) for d, a, b in zip(*np.nonzero(self.compat))
-        }
+        directions = self.topology.directions
+        return {(self.names[a], self.names[b], directions[d]) for d, a, b in zip(*np.nonzero(self.compat))}
 
     @classmethod
     def from_pairs(
@@ -96,15 +131,17 @@ class Tileset:
         colors: Sequence[RGB],
         weights: Sequence[float],
         pairs: Iterable[Sequence[str]],
+        topology: Topology = GRID2D,
     ) -> Tileset:
         """Build a tileset from adjacency pairs.
 
         ``(a, b)`` lets a and b touch in every direction. ``(a, b, d)`` lets b sit in direction
-        ``d`` (one of N/E/S/W) of a, which implies a sits in the opposite direction of b.
+        ``d`` (e.g. N/E/S/W) of a, which implies a sits in the opposite direction of b.
         Self-adjacency is not implied; list ``(a, a)`` to allow it.
         """
+        directions, opposite = topology.directions, topology.opposite
         index = {name: i for i, name in enumerate(names)}
-        compat = np.zeros((4, len(names), len(names)), dtype=bool)
+        compat = np.zeros((len(directions), len(names), len(names)), dtype=bool)
         for pair in pairs:
             if len(pair) not in (2, 3):
                 raise ValueError(f"adjacency entry must be [a, b] or [a, b, dir], got {list(pair)}")
@@ -113,15 +150,15 @@ class Tileset:
                 if name not in index:
                     raise ValueError(f"adjacency entry {list(pair)} names unknown tile {name!r}")
             if len(pair) == 2:
-                directions = range(4)
-            elif pair[2] in DIRECTIONS:
-                directions = [DIRECTIONS.index(pair[2])]
+                chosen: Iterable[int] = range(len(directions))
+            elif pair[2] in directions:
+                chosen = [directions.index(pair[2])]
             else:
-                raise ValueError(f"adjacency entry {list(pair)}: direction must be one of {DIRECTIONS}")
-            for d in directions:
+                raise ValueError(f"adjacency entry {list(pair)}: direction must be one of {directions}")
+            for d in chosen:
                 compat[d, index[a], index[b]] = True
-                compat[OPPOSITE[d], index[b], index[a]] = True
-        return cls(tuple(names), tuple(colors), np.asarray(weights, dtype=np.float64), compat)
+                compat[opposite[d], index[b], index[a]] = True
+        return cls(tuple(names), tuple(colors), np.asarray(weights, dtype=np.float64), compat, topology)
 
 
 def parse_hex_color(text: str) -> RGB:
@@ -136,18 +173,17 @@ def to_hex_color(rgb: RGB) -> str:
     return "#{:02x}{:02x}{:02x}".format(*rgb)
 
 
-def neighbor_pairs(grid: np.ndarray, d: int) -> tuple[np.ndarray, np.ndarray]:
+def neighbor_pairs(grid: np.ndarray, d: int, topology: Topology = GRID2D) -> tuple[np.ndarray, np.ndarray]:
     """Aligned views ``(src, dst)`` where ``dst`` is the neighbor in direction ``d`` of ``src``."""
-    height, width = grid.shape
-    dy, dx = OFFSETS[d]
-    src = grid[max(0, -dy) : height - max(0, dy), max(0, -dx) : width - max(0, dx)]
-    dst = grid[max(0, dy) : height - max(0, -dy), max(0, dx) : width - max(0, -dx)]
+    offset = topology.offsets[d]
+    src = grid[tuple(slice(max(0, -o), n - max(0, o)) for o, n in zip(offset, grid.shape))]
+    dst = grid[tuple(slice(max(0, o), n - max(0, -o)) for o, n in zip(offset, grid.shape))]
     return src, dst
 
 
 def adjacency_entries(tileset: Tileset) -> list[list[str]]:
     """Compact JSON adjacency list: ``[a, b]`` when a and b touch in every direction, else ``[a, b, dir]``."""
-    names, compat = tileset.names, tileset.compat
+    names, compat, directions = tileset.names, tileset.compat, tileset.topology.directions
     entries: list[list[str]] = []
     for a in range(tileset.num_tiles):
         for b in range(a, tileset.num_tiles):
@@ -155,12 +191,13 @@ def adjacency_entries(tileset: Tileset) -> list[list[str]]:
             if allowed.all():
                 entries.append([names[a], names[b]])
             else:
-                entries.extend([names[a], names[b], DIRECTIONS[d]] for d in np.nonzero(allowed)[0])
+                entries.extend([names[a], names[b], directions[d]] for d in np.nonzero(allowed)[0])
     return entries
 
 
 def tileset_to_json(tileset: Tileset) -> dict:
     return {
+        "topology": tileset.topology.name,
         "tiles": [
             {"name": name, "color": to_hex_color(color), "weight": float(weight)}
             for name, color, weight in zip(tileset.names, tileset.colors, tileset.weights)
@@ -181,6 +218,7 @@ def load_tileset(path: str | Path) -> Tileset:
     Format::
 
         {
+          "topology": "grid2d",   (optional; "grid2d" or "grid3d", default "grid2d")
           "tiles": [{"name": "water", "color": "#2f6fc4", "weight": 4.0}, ...],
           "adjacency": [["water", "water"], ["water", "sand"], ...]
         }
@@ -194,4 +232,5 @@ def load_tileset(path: str | Path) -> Tileset:
         colors=[parse_hex_color(t["color"]) for t in tiles],
         weights=[float(t.get("weight", 1.0)) for t in tiles],
         pairs=data["adjacency"],
+        topology=TOPOLOGIES[data.get("topology", GRID2D.name)],
     )

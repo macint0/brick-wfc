@@ -75,7 +75,7 @@ def run_funnel(tileset: Tileset, config: FunnelConfig, judge: Judge | None = Non
     clock = time.perf_counter()
     generated: list[Candidate] = []
     for seed in range(config.seed, config.seed + config.n):
-        result = run(tileset, config.height, config.width, seed, config.max_attempts)
+        result = run(tileset, (config.height, config.width), seed, config.max_attempts)
         stats.wfc_contradictions += result.stats.contradictions
         if result.grid is None:
             continue

@@ -130,7 +130,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.regen:
         width, height = args.size or (width, height)
-        result = run(learned, height, width, args.seed)
+        result = run(learned, (height, width), args.seed)
         if result.grid is None:
             print(f"regeneration failed after {result.stats.attempts} attempts")
             return 1

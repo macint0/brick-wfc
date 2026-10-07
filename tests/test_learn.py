@@ -19,11 +19,11 @@ def as_example(grid: np.ndarray, tileset: Tileset) -> Example:
 
 # M2 "Done when": learning from an M1 output and regenerating gives the same rule set.
 def test_learn_from_m1_output_recovers_rules(terrain: Tileset) -> None:
-    m1 = run(terrain, 32, 32, seed=1).grid
+    m1 = run(terrain, (32, 32), seed=1).grid
     learned = learn_tileset(as_example(m1, terrain))
     assert learned.rules() == terrain.rules()
 
-    regenerated = run(learned, 32, 32, seed=2).grid
+    regenerated = run(learned, (32, 32), seed=2).grid
     assert adjacency_violations(regenerated, learned) == 0
     relearned = learn_tileset(as_example(regenerated, learned))
     assert relearned.rules() == terrain.rules()
@@ -31,7 +31,7 @@ def test_learn_from_m1_output_recovers_rules(terrain: Tileset) -> None:
 
 def test_learn_from_m1_png_recovers_rules(terrain: Tileset, tmp_path: Path) -> None:
     path = tmp_path / "m1.png"
-    save_png(run(terrain, 32, 32, seed=1).grid, terrain, path)
+    save_png(run(terrain, (32, 32), seed=1).grid, terrain, path)
     assert learn_tileset(example_from_png(path, terrain)).rules() == terrain.rules()
 
 
@@ -72,7 +72,7 @@ def test_tileset_json_roundtrip_with_directed_rules(terrain: Tileset, tmp_path: 
 
 
 def test_png_roundtrip_detects_scale(terrain: Tileset, tmp_path: Path) -> None:
-    grid = run(terrain, 10, 12, seed=0).grid
+    grid = run(terrain, (10, 12), seed=0).grid
     path = tmp_path / "g.png"
     save_png(grid, terrain, path, scale=5)
     assert detect_scale(np.asarray(Image.open(path).convert("RGB"))) == 5
