@@ -27,6 +27,8 @@ Shape = tuple[int, ...]
 # Scale of the seeded noise added to entropies so ties are broken randomly, not by scan order.
 TIE_BREAK_NOISE = 1e-6
 DEFAULT_MAX_ATTEMPTS = 100
+# With backtracking on, only the most recent collapses can be undone (bounds memory: one domain copy each).
+BACKTRACK_DEPTH = 64
 
 
 class Constraint(Protocol):
@@ -162,23 +164,44 @@ class Wave:
 class AttemptResult:
     grid: np.ndarray | None  # None on contradiction
     collapses: int  # observe+collapse steps taken before finishing or failing
+    backtracks: int = 0  # collapses undone after a contradiction
 
 
 def solve_attempt(
-    tileset: Tileset, shape: Shape, rng: np.random.Generator, constraints: Sequence[Constraint] = ()
+    tileset: Tileset,
+    shape: Shape,
+    rng: np.random.Generator,
+    constraints: Sequence[Constraint] = (),
+    max_backtracks: int = 0,
 ) -> AttemptResult:
-    """Run a single WFC attempt with no backtracking."""
+    """Run a single WFC attempt.
+
+    With ``max_backtracks == 0`` (the default) the first contradiction ends the attempt. Otherwise a
+    contradiction undoes the most recent collapse (restoring the domains saved just before it), bans
+    the tile chosen there, and carries on; the attempt fails after ``max_backtracks`` undos or when no
+    saved collapse is left (only the last ``BACKTRACK_DEPTH`` are kept).
+    """
     wave = Wave(tileset, shape, constraints)
     # Initial pass prunes tiles that can never be supported (e.g. a tile with no allowed neighbor).
     if wave.has_contradiction() or not wave.settle(np.ndindex(*shape)):
         return AttemptResult(None, 0)
-    collapses = 0
+    collapses = backtracks = 0
+    history: deque[tuple[np.ndarray, Cell, int]] = deque(maxlen=BACKTRACK_DEPTH)
     while (cell := wave.observe(rng)) is not None:
-        wave.collapse(cell, rng)
+        saved = wave.domain.copy() if max_backtracks else None
+        tile = wave.collapse(cell, rng)
         collapses += 1
-        if not wave.settle([cell]):
-            return AttemptResult(None, collapses)
-    return AttemptResult(wave.to_grid(), collapses)
+        if saved is not None:
+            history.append((saved, cell, tile))
+        settled = wave.settle([cell])
+        while not settled:
+            if backtracks >= max_backtracks or not history:
+                return AttemptResult(None, collapses, backtracks)
+            wave.domain, cell, tile = history.pop()
+            backtracks += 1
+            wave.domain[(*cell, tile)] = False  # that choice led to a contradiction
+            settled = bool(wave.domain[cell].any()) and wave.settle([cell])
+    return AttemptResult(wave.to_grid(), collapses, backtracks)
 
 
 @dataclass(frozen=True)
@@ -191,6 +214,7 @@ class RunStats:
     contradictions: int
     cells_collapsed: int  # observe+collapse steps summed over all attempts
     wall_time_s: float
+    backtracks: int = 0  # collapses undone, summed over all attempts (0 unless backtracking is on)
 
 
 @dataclass(frozen=True)
@@ -214,21 +238,26 @@ def run(
     seed: int,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     constraints: Sequence[Constraint] = (),
+    max_backtracks: int = 0,
 ) -> RunResult:
-    """Generate one grid, restarting with the next attempt seed on contradiction."""
+    """Generate one grid, restarting with the next attempt seed on contradiction.
+
+    ``max_backtracks`` > 0 lets each attempt undo up to that many collapses before giving up.
+    """
     if max_attempts < 1:
         raise ValueError(f"max_attempts must be >= 1, got {max_attempts}")
     start = time.perf_counter()
-    cells_collapsed = 0
+    cells_collapsed = backtracks = 0
     for attempt in range(max_attempts):
-        result = solve_attempt(tileset, shape, attempt_rng(seed, attempt), constraints)
+        result = solve_attempt(tileset, shape, attempt_rng(seed, attempt), constraints, max_backtracks)
         cells_collapsed += result.collapses
+        backtracks += result.backtracks
         if result.grid is not None:
-            stats = RunStats(seed, True, attempt + 1, attempt, cells_collapsed, time.perf_counter() - start)
+            stats = RunStats(seed, True, attempt + 1, attempt, cells_collapsed, time.perf_counter() - start, backtracks)
             logger.info("run %s", stats)
             return RunResult(result.grid, stats)
         logger.debug("seed %d attempt %d: contradiction after %d collapses", seed, attempt, result.collapses)
-    stats = RunStats(seed, False, max_attempts, max_attempts, cells_collapsed, time.perf_counter() - start)
+    stats = RunStats(seed, False, max_attempts, max_attempts, cells_collapsed, time.perf_counter() - start, backtracks)
     logger.info("run %s", stats)
     return RunResult(None, stats)
 

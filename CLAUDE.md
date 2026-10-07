@@ -108,7 +108,11 @@ brick-wfc/
 **Done when:** integrity + stability tests pass on 100 random builds per part family; `.ldr` exports
 use the right part files and heights (brick = 24 LDU).
 
-### M9 — Inventory constraint
+### M9 — Inventory constraint (in progress — 7 of 10 sets done, run stopped by low memory)
+Done so far: `bricks/inventory.py` (inventory from OMR sets, `InventoryConstraint`), bounded backtracking
+in `wfc.solve_attempt`, bottom-up builder with inventory, `experiments/inventory.py`; partial results in
+`results/m9_inventory.md` (WFC + inventory 100% valid but the bottom-up baseline wins on every metric).
+Remaining: finish the run (`python -m brickwfc.experiments.inventory --seeds 20 --out out/m9`, resumable).
 - Input: a parts list — a set from the OMR (`.mpd` → part/color counts via `ldraw/mpd.py`) or a JSON list.
   Parts outside the supported library are reported and ignored.
 - `InventoryConstraint`: count placed parts per (part, color) via their anchor cells; when a count hits its

@@ -5,10 +5,12 @@ probability as the WFC tileset's weights, try to anchor a part there. Parts are 
 (shape, color) weights WFC uses. A part is placed only if it fits in the grid, overlaps nothing, and
 (above layer 0) rests on at least one solid cell, so every build satisfies ``support.is_stable`` by
 construction. This is the obvious alternative a reviewer would propose, so experiments compare
-against it.
+against it. With an inventory, a (part, color) is skipped once it is used up.
 """
 
 from __future__ import annotations
+
+from typing import Mapping
 
 import numpy as np
 
@@ -31,8 +33,15 @@ class BottomUpBuilder:
         self.choice_p = weights / weights.sum()
         self.solid_share = float(weights.sum() / parts.tileset.weights.sum())
 
-    def build(self, shape: tuple[int, int, int], rng: np.random.Generator) -> np.ndarray:
-        """A (Y, Z, X) grid of tile ids; every placed part is whole and supported."""
+    def build(
+        self,
+        shape: tuple[int, int, int],
+        rng: np.random.Generator,
+        inventory: Mapping[tuple[str, str], int] | None = None,
+    ) -> np.ndarray:
+        """A (Y, Z, X) grid of tile ids; every placed part is whole, supported, and within ``inventory``
+        ((part name, color name) -> count) if one is given."""
+        remaining = dict(inventory) if inventory is not None else None
         ny, nz, nx = shape
         filled = np.zeros(shape, dtype=bool)
         grid = np.full(shape, self.index[TileInfo(None)], dtype=np.int64)
@@ -44,8 +53,13 @@ class BottomUpBuilder:
                 # Try parts in weighted-random order until one fits here.
                 for choice in rng.choice(len(self.choices), size=len(self.choices), replace=False, p=self.choice_p):
                     part_shape, color = self.choices[choice]
+                    key = (part_shape.part.name, color.name)
+                    if remaining is not None and remaining.get(key, 0) <= 0:
+                        continue
                     part = PlacedPart(part_shape, color, y, x, z)
                     if self._fits(part, filled):
+                        if remaining is not None:
+                            remaining[key] -= 1
                         for cy, cz, cx in part.cells():
                             filled[cy, cz, cx] = True
                             grid[cy, cz, cx] = self.index[TileInfo(part_shape, cx - x, cz - z, color)]
