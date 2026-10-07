@@ -1,14 +1,27 @@
-# brick-wfc — stability-aware Wave Function Collapse for brick structures
+# brick-wfc — alternate brick builds with constraint-aware Wave Function Collapse
 
 ## Context
 
-Side project by Mac (final-year CPE student, graphics/rendering focus). Goal: a generator that produces
-LEGO-style brick builds using Wave Function Collapse (WFC), wrapped in a generate → verify → dedupe →
-judge → select funnel. Long-term target: a short paper / workshop paper.
+Side project by Mac (final-year CPE student, graphics/rendering focus). Long-term target: a short paper /
+workshop paper.
 
-**Research contribution we're aiming for:** make WFC *stability-aware* — push physical support /
-connectivity constraints into WFC's propagation step so unstable builds are pruned during generation,
-not filtered afterwards. Everything else (funnel, judges) is supporting infrastructure.
+**Goal:** given a parts inventory (an existing set, or any collection of bricks) and optionally a target
+shape, generate **new alternate builds** that use only those parts, stand up, and look good. Style is
+learned from real official sets; physical and inventory guarantees come from constraints.
+
+**Research contribution we're aiming for:** push hard constraints into WFC's *propagation* step, so invalid
+builds are pruned during generation instead of filtered afterwards:
+- **stability** — every part is supported (M6), checked against a physics-based verifier (M7);
+- **inventory** — never use more of a part than the input provides (M9);
+- **shape** — stay inside a target shape (M11).
+
+Learning from real sets (M10) supplies taste: part/color statistics, local placement rules, and a judge.
+The generate → verify → dedupe → judge → select funnel (M3) picks the best candidates.
+
+**Positioning vs BrickGPT** (closest prior work): BrickGPT generates from *text* with a fine-tuned LLM
+trained on ShapeNet-derived builds, and enforces stability by *rollback* (98.8% stable, ~40 s/build on GPU).
+We generate from an *inventory* (+ optional shape), learn from *real official sets*, guarantee constraints
+*by construction*, and run in well under a second per candidate on CPU without training.
 
 Inspiration (credit, not a citation source): "Generate, Filter, Judge, Select" essay —
 https://content.moldandyeast.com/forage/y6fmx6n4
@@ -22,24 +35,31 @@ https://content.moldandyeast.com/forage/y6fmx6n4
 - Every milestone ships with tests. Run `pytest` before declaring done.
 - Log per-run stats: attempts, contradictions, cells collapsed, wall time. These become paper metrics later.
 - Don't use the LEGO trademark in names, package, or output branding. Use "brick".
+- Commit after each milestone. No Claude co-author / session trailers in commits or PRs.
+- Long experiments must save results incrementally and be resumable (runs can be killed under memory pressure).
+- Downloaded third-party models (LDraw OMR) live in `data/` (gitignored); never commit them.
 
-## Repo layout (target)
+## Repo layout
 
 ```
 brick-wfc/
   CLAUDE.md
   pyproject.toml
   src/brickwfc/
-    wfc.py          # core solver: domains, entropy, collapse, propagate
-    tileset.py      # tiles, adjacency rules, weights (hand-written or learned)
-    learn.py        # learn rules/weights from example grids (later: LDraw)
-    render2d.py     # grid -> PNG
-    funnel/         # verify.py, dedupe.py, judge.py, select.py
-    bricks/         # 3D: parts, multi-cell tiles, stability (M4+)
-    ldraw/          # .ldr/.mpd parsing (M7)
+    wfc.py          # core solver: domains, entropy, collapse, propagate, Constraint hook
+    tileset.py      # tiles, topology (2D/3D), adjacency rules, border masks, weights
+    learn.py        # learn rules/weights from 2D example grids
+    gridio.py       # 2D grid CSV/PNG IO
+    render2d.py     # 2D grid -> PNG, contact sheets
+    render3d.py     # isometric preview of 3D builds
+    funnel/         # features, verify, dedupe, judge, select, pipeline
+    bricks/         # parts, multi-cell tiles, support/stability, voxelize, learning from sets
+    ldraw/          # .ldr export, .mpd parsing, OMR fetch
+    experiments/    # drivers that produce the paper's tables
   examples/         # tiny example maps / rule JSONs
   tests/
-  out/              # generated images (gitignored)
+  data/             # downloaded OMR models (gitignored)
+  out/              # generated images and results (gitignored)
 ```
 
 ## Core WFC spec (M1 must follow this)
@@ -50,62 +70,85 @@ brick-wfc/
 - **Observe:** choose the uncollapsed cell with **lowest weighted Shannon entropy**
   $H = \log\sum w_t - \frac{\sum w_t \log w_t}{\sum w_t}$ over remaining tiles; break ties with tiny seeded noise.
 - **Collapse:** sample one remaining tile with probability ∝ weight `w_t`.
-- **Propagate:** queue-based (AC-3 style). Pop a cell, for each neighbor remove tiles not supported by any remaining tile in the popped cell; if the neighbor's domain shrank, push it. 
+- **Propagate:** queue-based (AC-3 style). Pop a cell, for each neighbor remove tiles not supported by any remaining tile in the popped cell; if the neighbor's domain shrank, push it.
 - **Contradiction:** any domain becomes empty → restart with the next seed (max attempts configurable). Backtracking is a later optimization, not M1.
+- **Non-pairwise constraints** (M6+): objects implementing `Constraint.prune(wave, changed)` run after AC-3 inside `Wave.settle`, alternating with AC-3 until a fixpoint. They must be sound: only remove tiles that cannot appear in any valid completion.
 
 ## Milestones
 
-### M0 — Setup
-`pyproject.toml`, package skeleton, pytest running, `.gitignore` (`out/`).
-**Done when:** `pytest` passes on an empty smoke test.
+### Done
 
-### M1 — 2D WFC, hand-written rules
-- Tileset from JSON: tile names, colors, weights, adjacency pairs.
-- Example tileset: water / sand / grass / forest (water–sand, sand–grass, grass–forest allowed; same–same allowed; water–grass, water–forest, sand–forest NOT allowed).
-- CLI: `python -m brickwfc.run --tiles examples/terrain.json --size 32x32 --seed 1 --out out/m1.png`.
-**Done when:**
-- Tests: (a) every finished grid satisfies every adjacency rule; (b) 1D sanity case: 3 cells, tiles W/S/F, rules W–S, S–F (+ same–same) — collapsing cell 0 to W removes F from cell 1; (c) same seed → identical output; (d) contradiction triggers a restart and is counted.
-- 100 runs at 32×32 complete; print success rate, mean attempts, mean time.
+- **M0 — Setup.** Package skeleton, pytest, `.gitignore`.
+- **M1 — 2D WFC, hand-written rules.** Terrain tileset, CLI, tests (a)–(d), 100-run benchmark.
+- **M2 — Learn rules + weights from an example.** Learning from an M1 output recovers the exact rule set.
+- **M3 — Funnel v0 (2D).** One command runs generate → verify → dedupe → judge → select with stage counts.
+- **M4 — 3D grid, 1×1 plates.** Support as a vertical adjacency rule; `.ldr` export; isometric preview.
+  *Still to do: open the generated `.ldr` files in LeoCAD / Stud.io to confirm they look right.*
+- **M5 — Multi-cell parts.** 1×1, 1×2, 2×2, 2×4 plates; integrity via adjacency + border masks; 100-build integrity test.
 
-### M2 — Learn rules + weights from an example
-- Input: a small example grid (PNG where each color = a tile, or a CSV of tile ids).
-- Learn: tile frequencies → weights; observed neighbor pairs → adjacency rules.
-**Done when:** learning from an M1 output and regenerating gives the same rule set; outputs visually resemble the example.
+### M6 — Stability-aware propagation (finish)
+Code and tests are done: `SupportConstraint` (prune + force), the "≥1 stud on a solid cell below" verifier,
+and `experiments/stability.py` comparing A (plain + post-filter), B (stability-aware), C (per-cell rule).
+**Done when:** the 1000-seed table is complete for 4×4×2, 4×4×3 and 8×8×6 (8×8×6 B and C remain) and saved
+under `results/` (committed — it's ours, unlike `out/`).
 
-### M3 — Funnel v0 (2D)
-- **Generate** N designs (default 1000).
-- **Verify:** hard checks with a signed margin (e.g. "all land tiles form one connected region" via BFS; margin = size of largest region / total land).
-- **Dedupe:** feature vector (tile histogram + region count + perimeter); drop if L2 distance to any kept design < threshold.
-- **Judge:** heuristic score function (pluggable interface so an LLM/learned judge can replace it later).
-- **Select:** greedy top-k (default 12) maximizing `score + λ · min_distance_to_selected`.
-- Output: contact-sheet PNG of the k picks + a stats JSON (counts surviving each stage).
-**Done when:** one command runs the whole funnel and prints the stage-by-stage counts.
+### M7 — Physics-based stability verifier
+- Static-equilibrium check in the spirit of Legolization / BrickGPT: per-part gravity, stud-connection
+  forces with push/pull and shear limits; a build is stable if a feasible force assignment exists.
+- Needs a linear-program solver — **ask before adding `scipy`** (or write a small solver if declined).
+- Use it as ground truth: report how many builds that pass the simple rule fail physics (e.g. long
+  cantilevers), and tighten the propagation rule if needed (e.g. limit unsupported overhang length).
+**Done when:** the M6 table gains a "physically stable %" column for every condition.
 
-### M4 — 3D grid, 1×1 plates
-- 3D grid at stud resolution: `x, z` = studs, `y` = plate layers. Tiles = empty or 1×1 plate (by color).
-- Constraint: a non-empty cell at layer > 0 must have a non-empty cell directly below (simple support).
-- Export to LDraw `.ldr` so builds open in LeoCAD / Stud.io. Units: 1 stud = 20 LDU, plate = 8 LDU, brick = 24 LDU; **LDraw −Y is up**.
-**Done when:** generated `.ldr` files open correctly in a viewer; no floating plates.
+### M8 — Part library: bricks, plates, tiles
+- Common sizes: bricks and plates 1×1, 1×2, 1×4, 2×2, 2×4 (+ 1×6, 2×6 if cheap); tiles 1×1, 1×2, 2×2.
+- Bricks span 3 plate layers → vertical integrity rules, like M5's horizontal ones.
+- Tiles have no studs → nothing may sit on top of a tile.
+- No slopes yet (non-box geometry); revisit later.
+**Done when:** integrity + stability tests pass on 100 random builds per part family; `.ldr` exports
+use the right part files and heights (brick = 24 LDU).
 
-### M5 — Multi-cell parts
-- Tile = (part, local offset inside the part, rotation). Parts: 1×1, 1×2, 2×2, 2×4 plates (bricks later).
-- Adjacency rules guarantee pieces are whole (offset (0,0) of a 1×2 must have offset (1,0) of the same 1×2 to its east, etc.).
-**Done when:** every exported part is complete; tests check piece integrity on 100 random builds.
+### M9 — Inventory constraint
+- Input: a parts list — a set from the OMR (`.mpd` → part/color counts via `ldraw/mpd.py`) or a JSON list.
+  Parts outside the supported library are reported and ignored.
+- `InventoryConstraint`: count placed parts per (part, color) via their anchor cells; when a count hits its
+  limit, prune that (part, color)'s tiles everywhere.
+- Metrics: inventory utilization % (parts used / parts available), stable %, restarts.
+**Done when:** on ≥10 real sets, every generated build stays within the inventory (verified post hoc), with
+utilization reported.
 
-### M6 — Stability-aware propagation (the research part)
-- Move support/connectivity constraints *into propagation*: prune tiles that would leave a part unsupported or disconnected from the ground.
-- Keep a post-hoc stability verifier as ground truth (start simple: every part overlaps ≥1 stud with a part below or the ground; later a static-equilibrium check — see Legolization / BrickGPT).
-- Compare: (A) plain WFC + post-filter vs (B) stability-aware WFC. Metrics: stable-design rate, contradictions/restarts, time per stable design.
-**Done when:** a results table for A vs B over ≥1000 seeds.
+### M10 — Learn from real sets
+- Reuse the M7-in-progress code (fetch, flatten, voxelize, coverage weights).
+- Learn: part/color weights; directional co-occurrence (which part/color sits next to or on which) as
+  soft weights; a learned judge scoring "looks like a real set" (start simple: likelihood under the learned
+  co-occurrence statistics).
+- Pick plate/brick-heavy sets on purpose (Town / City buildings, Creator) and report how much of each
+  set is recognized.
+- Optional: use `0 STEP` data (present in some OMR files) — e.g. sub-assembly statistics.
+**Done when:** weights, rules and judge are learned from ≥20 sets, and generated builds score closer to
+real sets than uniform-weight builds under held-out statistics.
 
-### M7 — Learn from real sets (LDraw OMR)
-- Parse `.ldr` / `.mpd` from the LDraw Official Model Repository, voxelize to the M5 tile representation, learn weights/rules.
-**Done when:** weights learned from ≥10 official sets; generated builds use the learned distribution.
+### M11 — Target shape
+- Input: a voxel shape on the stud/plate grid — from an `.ldr` model, a heightmap PNG, or simple
+  primitives.
+- Constraint: solid only inside the shape; encourage filling it (weights near the shape surface).
+- Metrics: shape IoU / fill %, plus everything above.
+**Done when:** "build shape S from set X's parts" produces stable, inventory-feasible builds with reported
+IoU.
 
-### M8 — Experiments for the paper
-- Baselines: random placement, unconstrained WFC, stability-aware WFC, (optional) BrickGPT outputs.
-- Metrics: valid %, stable %, buildable %, time per design, diversity (mean pairwise distance, effective number of distinct designs), contradiction rate.
-- Optional: small user study ranking outputs pairwise (Bradley–Terry).
+### M12 — Alternate-build pipeline
+- One command: set number or parts list (+ optional shape) → 3D funnel (generate → verify stability,
+  inventory, integrity → dedupe → judge → select top-k).
+- Output: `.ldr` files with `0 STEP` building instructions (layer by layer), isometric previews, contact
+  sheet, stats JSON.
+**Done when:** the command produces k alternate builds for a given set with instructions that open in a viewer.
+
+### M13 — Experiments for the paper
+- Baselines: random placement, plain WFC + post-filter, constraint-aware WFC (ours), BrickGPT outputs
+  where comparable (shape-only, no inventory).
+- Metrics: valid %, stable % (simple + physics), inventory utilization, shape IoU, time per accepted
+  design, diversity (mean pairwise distance, effective number of distinct designs), contradiction rate.
+- Small user study: pairwise rankings of alternate builds (Bradley–Terry).
 
 ## References
 
