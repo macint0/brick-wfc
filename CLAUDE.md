@@ -25,6 +25,10 @@ stability, inventory use, shape fill and style at lower cost, WFC stops being th
 paper becomes about alternate builds + the funnel, comparing generators. If WFC wins under the combined
 constraints (its propagation sees dead ends early), that is the paper's main result.
 
+**Checkpoint status (2026-10-07, after M6, M7, M9 and the M11 quick test):** the bottom-up builder matches or
+beats WFC on stability, physics, inventory validity/utilization and speed (10–100×). WFC's only measured
+win is filling shapes with large overhangs (at the cost of grip). Decision pending with Mac.
+
 **Positioning vs BrickGPT** (closest prior work): BrickGPT generates from *text* with a fine-tuned LLM
 trained on ShapeNet-derived builds, and enforces stability by *rollback* (98.8% stable, ~40 s/build on GPU).
 We generate from an *inventory* (+ optional shape), learn from *real official sets*, guarantee constraints
@@ -123,7 +127,10 @@ use the right part files and heights (brick = 24 LDU).
 **Done when:** weights, rules and judge are learned from ≥20 sets, and generated builds score closer to
 real sets than uniform-weight builds under held-out statistics.
 
-### M11 — Target shape
+### M11 — Target shape (quick test done: `results/m11_shape_quick.md`)
+Quick test (shape only, 5 shapes, 100 seeds): `bricks/shapes.py`, `ShapeConstraint`, bottom-up `allowed` mask,
+`experiments/shape.py`. Bottom-up fills supported shapes better and 10–25× faster; WFC fills overhang shapes
+better (mushroom 55% vs 41%) but those builds need more grip. Still to do: shape + inventory together.
 - Input: a voxel shape on the stud/plate grid — from an `.ldr` model, a heightmap PNG, or simple
   primitives.
 - Constraint: solid only inside the shape; encourage filling it (weights near the shape surface).
