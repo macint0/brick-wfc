@@ -2,6 +2,9 @@
 
 One *attempt* runs observe -> collapse -> propagate until every cell holds exactly one tile,
 or a domain empties (contradiction). A *run* retries attempts with fresh seeds until one succeeds.
+
+Beyond pairwise adjacency, optional ``Constraint`` objects can prune domains during propagation
+(e.g. the part-support constraint in ``bricks/stability.py``).
 """
 
 from __future__ import annotations
@@ -10,7 +13,7 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Iterable, Protocol, Sequence
 
 import numpy as np
 
@@ -26,16 +29,28 @@ TIE_BREAK_NOISE = 1e-6
 DEFAULT_MAX_ATTEMPTS = 100
 
 
+class Constraint(Protocol):
+    """A non-pairwise constraint enforced during propagation."""
+
+    def prune(self, wave: Wave, changed: set[Cell]) -> list[Cell] | None:
+        """Remove tiles that the constraint rules out, given the cells whose domains just changed.
+
+        Returns the cells it shrank (they are propagated further), or None on contradiction.
+        """
+        ...
+
+
 class Wave:
     """Per-cell domains for one attempt: ``domain[*cell, t]`` is True while tile ``t`` is still possible.
 
     ``cell`` is ``(y, x)`` on a 2D grid and ``(y, z, x)`` on a 3D grid (see ``tileset.Topology``).
     """
 
-    def __init__(self, tileset: Tileset, shape: Shape) -> None:
+    def __init__(self, tileset: Tileset, shape: Shape, constraints: Sequence[Constraint] = ()) -> None:
         if len(shape) != tileset.topology.ndim or min(shape) < 1:
             raise ValueError(f"shape {shape} does not fit a {tileset.topology.ndim}D tileset")
         self.tileset = tileset
+        self.constraints = tuple(constraints)
         self.domain = np.ones((*shape, tileset.num_tiles), dtype=bool)
         # Cells on the grid boundary may only hold tiles allowed to face that boundary.
         for d, offset in enumerate(tileset.topology.offsets):
@@ -87,11 +102,30 @@ class Wave:
         self.domain[cell] = False
         self.domain[(*cell, tile)] = True
 
-    def propagate(self, start: Iterable[Cell]) -> bool:
+    def settle(self, start: Iterable[Cell]) -> bool:
+        """Propagate adjacency from ``start``, then let each constraint prune, until nothing changes.
+
+        Returns False on contradiction.
+        """
+        pending = list(start)
+        while pending:
+            changed = set(pending)
+            if not self.propagate(pending, changed):
+                return False
+            pending = []
+            for constraint in self.constraints:
+                pruned = constraint.prune(self, changed)
+                if pruned is None:
+                    return False
+                pending.extend(pruned)
+        return True
+
+    def propagate(self, start: Iterable[Cell], changed: set[Cell] | None = None) -> bool:
         """AC-3 style propagation outward from ``start``.
 
         Pop a cell; in each neighbor, remove tiles not supported by any tile remaining in the
-        popped cell; if a neighbor's domain shrank, push it. Returns False on contradiction.
+        popped cell; if a neighbor's domain shrank, push it. Shrunk cells are added to
+        ``changed`` when given. Returns False on contradiction.
         """
         shape = self.shape
         compat = self.tileset.compat
@@ -113,6 +147,8 @@ class Wave:
                 if not after.any():
                     return False
                 queue.append(neighbor)
+                if changed is not None:
+                    changed.add(neighbor)
         return True
 
     def to_grid(self) -> np.ndarray:
@@ -128,17 +164,19 @@ class AttemptResult:
     collapses: int  # observe+collapse steps taken before finishing or failing
 
 
-def solve_attempt(tileset: Tileset, shape: Shape, rng: np.random.Generator) -> AttemptResult:
+def solve_attempt(
+    tileset: Tileset, shape: Shape, rng: np.random.Generator, constraints: Sequence[Constraint] = ()
+) -> AttemptResult:
     """Run a single WFC attempt with no backtracking."""
-    wave = Wave(tileset, shape)
+    wave = Wave(tileset, shape, constraints)
     # Initial pass prunes tiles that can never be supported (e.g. a tile with no allowed neighbor).
-    if wave.has_contradiction() or not wave.propagate(np.ndindex(*shape)):
+    if wave.has_contradiction() or not wave.settle(np.ndindex(*shape)):
         return AttemptResult(None, 0)
     collapses = 0
     while (cell := wave.observe(rng)) is not None:
         wave.collapse(cell, rng)
         collapses += 1
-        if not wave.propagate([cell]):
+        if not wave.settle([cell]):
             return AttemptResult(None, collapses)
     return AttemptResult(wave.to_grid(), collapses)
 
@@ -175,6 +213,7 @@ def run(
     shape: Shape,
     seed: int,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    constraints: Sequence[Constraint] = (),
 ) -> RunResult:
     """Generate one grid, restarting with the next attempt seed on contradiction."""
     if max_attempts < 1:
@@ -182,7 +221,7 @@ def run(
     start = time.perf_counter()
     cells_collapsed = 0
     for attempt in range(max_attempts):
-        result = solve_attempt(tileset, shape, attempt_rng(seed, attempt))
+        result = solve_attempt(tileset, shape, attempt_rng(seed, attempt), constraints)
         cells_collapsed += result.collapses
         if result.grid is not None:
             stats = RunStats(seed, True, attempt + 1, attempt, cells_collapsed, time.perf_counter() - start)

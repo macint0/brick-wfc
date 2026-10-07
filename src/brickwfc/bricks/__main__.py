@@ -2,6 +2,9 @@
 
     python -m brickwfc.bricks --size 12x12x8 --seed 1 --runs 5 --out out/m5
     python -m brickwfc.bricks --parts plate1x1 --support cell --out out/m4     (M4: 1x1 plates only)
+
+--support: none (no rule), cell (every stud needs a solid cell below), aware (part-level
+support enforced during propagation, M6).
 """
 
 from __future__ import annotations
@@ -13,7 +16,8 @@ from pathlib import Path
 from brickwfc.bricks.build import export_build
 from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.parts import PLATES, extract_parts, part_tileset
-from brickwfc.bricks.support import floating_cells
+from brickwfc.bricks.stability import SupportConstraint
+from brickwfc.bricks.support import overhanging_parts, unsupported_parts
 from brickwfc.wfc import run
 
 
@@ -34,28 +38,32 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--parts", default=",".join(PLATES), help=f"comma-separated, from {list(PLATES)}")
     parser.add_argument("--colors", default="red,white,blue,yellow", help="comma-separated color names")
     parser.add_argument("--empty-weight", type=float, default=1.0)
-    parser.add_argument("--support", choices=["none", "cell"], default="cell")
+    parser.add_argument("--support", choices=["none", "cell", "aware"], default="aware")
     parser.add_argument("--out", type=Path, default=Path("out/bricks"))
     args = parser.parse_args(argv)
 
     part_list = [PLATES[name] for name in args.parts.split(",")]
-    parts = part_tileset(part_list, colors_by_name(args.colors.split(",")), args.empty_weight, args.support)
-    times, floating_total, broken_total, failures = [], 0, 0, 0
+    rule = "cell" if args.support == "cell" else "none"
+    parts = part_tileset(part_list, colors_by_name(args.colors.split(",")), args.empty_weight, rule)
+    constraints = [SupportConstraint(parts)] if args.support == "aware" else []
+    times, unsupported_total, broken_total, failures = [], 0, 0, 0
     for seed in range(args.seed, args.seed + args.runs):
-        result = run(parts.tileset, args.size, seed)
+        result = run(parts.tileset, args.size, seed, constraints=constraints)
         times.append(result.stats.wall_time_s)
         if result.grid is None:
             failures += 1
             continue
         placed, errors = extract_parts(result.grid, parts)
-        floating = int(floating_cells(parts.solid[result.grid]).sum())
-        floating_total += floating
+        filled = parts.solid[result.grid]
+        unsupported = len(unsupported_parts(placed, filled))
+        unsupported_total += unsupported
         broken_total += len(errors)
         stem = args.out / f"build_seed{seed}"
         export_build(result.grid, placed, parts, stem.with_suffix(".ldr"), stem.with_suffix(".png"), f"brickwfc build seed {seed}")
-        print(f"seed={seed} parts={len(placed)} broken={len(errors)} floating_cells={floating} "
+        print(f"seed={seed} parts={len(placed)} broken={len(errors)} unsupported={unsupported} "
+              f"overhanging={len(overhanging_parts(placed, filled))} "
               f"attempts={result.stats.attempts} time={result.stats.wall_time_s:.2f}s -> {stem}.ldr")
-    print(f"runs={args.runs} failures={failures} broken parts={broken_total} floating cells={floating_total} "
+    print(f"runs={args.runs} failures={failures} broken parts={broken_total} unsupported parts={unsupported_total} "
           f"mean time={statistics.mean(times):.2f}s")
     return 0 if failures == 0 and broken_total == 0 else 1
 
