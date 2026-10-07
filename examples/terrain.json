@@ -1,0 +1,17 @@
+{
+  "tiles": [
+    {"name": "water",  "color": "#2f6fc4", "weight": 1.0},
+    {"name": "sand",   "color": "#e8d38b", "weight": 1.0},
+    {"name": "grass",  "color": "#6dbb4a", "weight": 1.0},
+    {"name": "forest", "color": "#2e6b30", "weight": 1.0}
+  ],
+  "adjacency": [
+    ["water", "water"],
+    ["sand", "sand"],
+    ["grass", "grass"],
+    ["forest", "forest"],
+    ["water", "sand"],
+    ["sand", "grass"],
+    ["grass", "forest"]
+  ]
+}
