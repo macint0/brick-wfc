@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -58,6 +59,9 @@ class Tileset:
     ``compat[d, a, b]`` is True when tile ``b`` may sit in direction ``d`` of tile ``a``,
     so ``compat[d, a]`` is the mask of tiles allowed next to ``a`` in direction ``d``.
     Rules must be symmetric: ``compat[d, a, b] == compat[opposite[d], b, a]``.
+
+    ``border[d, t]`` is True when tile ``t`` may sit with the grid boundary in direction ``d``
+    (default: always). Multi-cell parts use it so a part never sticks out of the grid.
     """
 
     names: tuple[str, ...]
@@ -65,17 +69,23 @@ class Tileset:
     weights: np.ndarray  # (T,) float64, all > 0
     compat: np.ndarray  # (D, T, T) bool, D = number of topology directions
     topology: Topology = GRID2D
+    border: np.ndarray | None = None  # (D, T) bool; None means all True
 
     def __post_init__(self) -> None:
         # Store read-only copies so a Tileset can't be mutated after validation.
         weights = np.array(self.weights, dtype=np.float64)
         compat = np.array(self.compat, dtype=bool)
-        weights.setflags(write=False)
-        compat.setflags(write=False)
+        if self.border is None:
+            border = np.ones((len(self.topology.directions), len(self.names)), dtype=bool)
+        else:
+            border = np.array(self.border, dtype=bool)
+        for array in (weights, compat, border):
+            array.setflags(write=False)
         object.__setattr__(self, "names", tuple(self.names))
         object.__setattr__(self, "colors", tuple(tuple(c) for c in self.colors))
         object.__setattr__(self, "weights", weights)
         object.__setattr__(self, "compat", compat)
+        object.__setattr__(self, "border", border)
         self._validate()
 
     @property
@@ -106,6 +116,8 @@ class Tileset:
             raise ValueError(f"weights must be positive, got {self.weights.tolist()}")
         if self.compat.shape != (len(directions), n, n):
             raise ValueError(f"compat must have shape ({len(directions)}, {n}, {n}), got {self.compat.shape}")
+        if self.border.shape != (len(directions), n):
+            raise ValueError(f"border must have shape ({len(directions)}, {n}), got {self.border.shape}")
         for d in range(len(directions)):
             mismatch = self.compat[d] != self.compat[opposite[d]].T
             if mismatch.any():
@@ -196,7 +208,7 @@ def adjacency_entries(tileset: Tileset) -> list[list[str]]:
 
 
 def tileset_to_json(tileset: Tileset) -> dict:
-    return {
+    data = {
         "topology": tileset.topology.name,
         "tiles": [
             {"name": name, "color": to_hex_color(color), "weight": float(weight)}
@@ -204,6 +216,10 @@ def tileset_to_json(tileset: Tileset) -> dict:
         ],
         "adjacency": adjacency_entries(tileset),
     }
+    forbidden = [[tileset.names[t], tileset.topology.directions[d]] for d, t in zip(*np.nonzero(~tileset.border))]
+    if forbidden:
+        data["border_forbidden"] = forbidden
+    return data
 
 
 def save_tileset(tileset: Tileset, path: str | Path) -> None:
@@ -220,17 +236,24 @@ def load_tileset(path: str | Path) -> Tileset:
         {
           "topology": "grid2d",   (optional; "grid2d" or "grid3d", default "grid2d")
           "tiles": [{"name": "water", "color": "#2f6fc4", "weight": 4.0}, ...],
-          "adjacency": [["water", "water"], ["water", "sand"], ...]
+          "adjacency": [["water", "water"], ["water", "sand"], ...],
+          "border_forbidden": [["tile", "E"], ...]   (optional; tiles that may not face that grid edge)
         }
 
     Entries are ``[a, b]`` (undirected) or ``[a, b, dir]`` (directed); see ``Tileset.from_pairs``.
     """
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     tiles = data["tiles"]
-    return Tileset.from_pairs(
+    tileset = Tileset.from_pairs(
         names=[t["name"] for t in tiles],
         colors=[parse_hex_color(t["color"]) for t in tiles],
         weights=[float(t.get("weight", 1.0)) for t in tiles],
         pairs=data["adjacency"],
         topology=TOPOLOGIES[data.get("topology", GRID2D.name)],
     )
+    if "border_forbidden" not in data:
+        return tileset
+    border = np.ones_like(tileset.border)
+    for name, direction in data["border_forbidden"]:
+        border[tileset.topology.directions.index(direction), tileset.index(name)] = False
+    return dataclasses.replace(tileset, border=border)

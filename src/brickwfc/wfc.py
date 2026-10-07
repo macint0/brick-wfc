@@ -37,6 +37,12 @@ class Wave:
             raise ValueError(f"shape {shape} does not fit a {tileset.topology.ndim}D tileset")
         self.tileset = tileset
         self.domain = np.ones((*shape, tileset.num_tiles), dtype=bool)
+        # Cells on the grid boundary may only hold tiles allowed to face that boundary.
+        for d, offset in enumerate(tileset.topology.offsets):
+            axis = next(i for i, o in enumerate(offset) if o != 0)
+            face = [slice(None)] * len(shape)
+            face[axis] = -1 if offset[axis] > 0 else 0
+            self.domain[tuple(face)] &= tileset.border[d]
         self._w = tileset.weights
         self._w_log_w = tileset.weights * np.log(tileset.weights)
 
@@ -47,6 +53,9 @@ class Wave:
     def counts(self) -> np.ndarray:
         """Number of remaining tiles per cell."""
         return self.domain.sum(axis=-1)
+
+    def has_contradiction(self) -> bool:
+        return not self.domain.any(axis=-1).all()
 
     def is_done(self) -> bool:
         return bool(np.all(self.counts() == 1))
@@ -123,7 +132,7 @@ def solve_attempt(tileset: Tileset, shape: Shape, rng: np.random.Generator) -> A
     """Run a single WFC attempt with no backtracking."""
     wave = Wave(tileset, shape)
     # Initial pass prunes tiles that can never be supported (e.g. a tile with no allowed neighbor).
-    if not wave.propagate(np.ndindex(*shape)):
+    if wave.has_contradiction() or not wave.propagate(np.ndindex(*shape)):
         return AttemptResult(None, 0)
     collapses = 0
     while (cell := wave.observe(rng)) is not None:
