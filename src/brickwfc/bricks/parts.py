@@ -12,7 +12,7 @@ Grids are indexed (y, z, x), as in ``tileset.GRID3D``.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Sequence
+from typing import Literal, Mapping, Sequence
 
 import numpy as np
 
@@ -125,24 +125,36 @@ def part_tileset(
     colors: Sequence[BrickColor],
     empty_weight: float = 1.0,
     support: Support = "none",
+    coverage: Mapping[tuple[str, str], float] | None = None,
 ) -> PartSet:
     """Tiles for every (shape, offset, color) plus empty.
 
-    Weights: each part type gets the same total weight, split evenly over its orientations,
-    offsets, and colors, so part types cover a similar share of cells.
+    Weights: by default each part type gets the same total weight, split evenly over its
+    orientations, offsets, and colors, so part types cover a similar share of cells.
+    ``coverage`` instead maps (shape name, color name) to a target share of cells (e.g. learned
+    from real sets, M7); pairs missing from it get no tiles. Either way the solid tiles' weights
+    sum to ``len(parts)``, so ``empty_weight`` means the same thing in both modes.
     ``support="cell"`` adds M4's local rule: no solid cell directly above an empty one.
     """
+    shapes = shapes_of(parts)
+    tile_specs: list[tuple[Shape, BrickColor, float]] = []  # weight per tile of each (shape, color)
+    for shape in shapes:
+        area = shape.size_x * shape.size_z
+        orientations = sum(1 for s in shapes if s.part == shape.part)
+        for color in colors:
+            if coverage is None:
+                tile_specs.append((shape, color, 1.0 / (orientations * area * len(colors))))
+            elif coverage.get((shape.name, color.name), 0) > 0:
+                tile_specs.append((shape, color, coverage[(shape.name, color.name)] / area))
+    total = sum(w * s.size_x * s.size_z for s, _, w in tile_specs)
+
     infos: list[TileInfo] = [TileInfo(None)]
     weights: list[float] = [empty_weight]
-    shapes = shapes_of(parts)
-    for shape in shapes:
-        orientations = sum(1 for s in shapes if s.part == shape.part)
-        per_tile = 1.0 / (orientations * shape.size_x * shape.size_z * len(colors))
-        for color in colors:
-            for z in range(shape.size_z):
-                for x in range(shape.size_x):
-                    infos.append(TileInfo(shape, x, z, color))
-                    weights.append(per_tile)
+    for shape, color, weight in tile_specs:
+        for z in range(shape.size_z):
+            for x in range(shape.size_x):
+                infos.append(TileInfo(shape, x, z, color))
+                weights.append(weight * len(parts) / total)
 
     count = len(infos)
     compat = np.ones((len(GRID3D.directions), count, count), dtype=bool)
