@@ -80,26 +80,47 @@ class Tileset:
                     f"of {self.names[b]!r} is {bool(self.compat[OPPOSITE[d], b, a])}"
                 )
 
+    def rules(self) -> set[tuple[str, str, str]]:
+        """All allowed placements as (a, b, direction) name triples: ``b`` may sit ``direction`` of ``a``.
+
+        Name-based, so tilesets with different tile orders can be compared.
+        """
+        return {
+            (self.names[a], self.names[b], DIRECTIONS[d]) for d, a, b in zip(*np.nonzero(self.compat))
+        }
+
     @classmethod
     def from_pairs(
         cls,
         names: Sequence[str],
         colors: Sequence[RGB],
         weights: Sequence[float],
-        pairs: Iterable[tuple[str, str]],
+        pairs: Iterable[Sequence[str]],
     ) -> Tileset:
-        """Build a tileset from undirected pairs: each ``(a, b)`` lets a and b touch in every direction.
+        """Build a tileset from adjacency pairs.
 
+        ``(a, b)`` lets a and b touch in every direction. ``(a, b, d)`` lets b sit in direction
+        ``d`` (one of N/E/S/W) of a, which implies a sits in the opposite direction of b.
         Self-adjacency is not implied; list ``(a, a)`` to allow it.
         """
         index = {name: i for i, name in enumerate(names)}
         compat = np.zeros((4, len(names), len(names)), dtype=bool)
-        for a, b in pairs:
+        for pair in pairs:
+            if len(pair) not in (2, 3):
+                raise ValueError(f"adjacency entry must be [a, b] or [a, b, dir], got {list(pair)}")
+            a, b = pair[0], pair[1]
             for name in (a, b):
                 if name not in index:
-                    raise ValueError(f"adjacency pair ({a!r}, {b!r}) names unknown tile {name!r}")
-            compat[:, index[a], index[b]] = True
-            compat[:, index[b], index[a]] = True
+                    raise ValueError(f"adjacency entry {list(pair)} names unknown tile {name!r}")
+            if len(pair) == 2:
+                directions = range(4)
+            elif pair[2] in DIRECTIONS:
+                directions = [DIRECTIONS.index(pair[2])]
+            else:
+                raise ValueError(f"adjacency entry {list(pair)}: direction must be one of {DIRECTIONS}")
+            for d in directions:
+                compat[d, index[a], index[b]] = True
+                compat[OPPOSITE[d], index[b], index[a]] = True
         return cls(tuple(names), tuple(colors), np.asarray(weights, dtype=np.float64), compat)
 
 
@@ -109,6 +130,49 @@ def parse_hex_color(text: str) -> RGB:
     if len(digits) != 6:
         raise ValueError(f"expected a color like '#RRGGBB', got {text!r}")
     return (int(digits[0:2], 16), int(digits[2:4], 16), int(digits[4:6], 16))
+
+
+def to_hex_color(rgb: RGB) -> str:
+    return "#{:02x}{:02x}{:02x}".format(*rgb)
+
+
+def neighbor_pairs(grid: np.ndarray, d: int) -> tuple[np.ndarray, np.ndarray]:
+    """Aligned views ``(src, dst)`` where ``dst`` is the neighbor in direction ``d`` of ``src``."""
+    height, width = grid.shape
+    dy, dx = OFFSETS[d]
+    src = grid[max(0, -dy) : height - max(0, dy), max(0, -dx) : width - max(0, dx)]
+    dst = grid[max(0, dy) : height - max(0, -dy), max(0, dx) : width - max(0, -dx)]
+    return src, dst
+
+
+def adjacency_entries(tileset: Tileset) -> list[list[str]]:
+    """Compact JSON adjacency list: ``[a, b]`` when a and b touch in every direction, else ``[a, b, dir]``."""
+    names, compat = tileset.names, tileset.compat
+    entries: list[list[str]] = []
+    for a in range(tileset.num_tiles):
+        for b in range(a, tileset.num_tiles):
+            allowed = compat[:, a, b]  # b in direction d of a; the reverse is implied by symmetry
+            if allowed.all():
+                entries.append([names[a], names[b]])
+            else:
+                entries.extend([names[a], names[b], DIRECTIONS[d]] for d in np.nonzero(allowed)[0])
+    return entries
+
+
+def tileset_to_json(tileset: Tileset) -> dict:
+    return {
+        "tiles": [
+            {"name": name, "color": to_hex_color(color), "weight": float(weight)}
+            for name, color, weight in zip(tileset.names, tileset.colors, tileset.weights)
+        ],
+        "adjacency": adjacency_entries(tileset),
+    }
+
+
+def save_tileset(tileset: Tileset, path: str | Path) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(tileset_to_json(tileset), indent=2) + "\n", encoding="utf-8")
 
 
 def load_tileset(path: str | Path) -> Tileset:
@@ -121,7 +185,7 @@ def load_tileset(path: str | Path) -> Tileset:
           "adjacency": [["water", "water"], ["water", "sand"], ...]
         }
 
-    Adjacency pairs are undirected (see ``Tileset.from_pairs``).
+    Entries are ``[a, b]`` (undirected) or ``[a, b, dir]`` (directed); see ``Tileset.from_pairs``.
     """
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     tiles = data["tiles"]
@@ -129,5 +193,5 @@ def load_tileset(path: str | Path) -> Tileset:
         names=[t["name"] for t in tiles],
         colors=[parse_hex_color(t["color"]) for t in tiles],
         weights=[float(t.get("weight", 1.0)) for t in tiles],
-        pairs=[(a, b) for a, b in data["adjacency"]],
+        pairs=data["adjacency"],
     )

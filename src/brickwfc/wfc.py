@@ -14,7 +14,7 @@ from typing import Iterable
 
 import numpy as np
 
-from brickwfc.tileset import OFFSETS, Tileset
+from brickwfc.tileset import OFFSETS, Tileset, neighbor_pairs
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +189,8 @@ def adjacency_violations(grid: np.ndarray, tileset: Tileset) -> int:
     Only east and south neighbors are checked, so each pair is counted once; north/west follow
     from the symmetry that ``Tileset`` validates.
     """
-    compat = tileset.compat
-    east_ok = compat[1, grid[:, :-1], grid[:, 1:]]
-    south_ok = compat[2, grid[:-1, :], grid[1:, :]]
-    return int((~east_ok).sum() + (~south_ok).sum())
+    violations = 0
+    for d in (1, 2):  # E, S
+        src, dst = neighbor_pairs(grid, d)
+        violations += int((~tileset.compat[d, src, dst]).sum())
+    return violations

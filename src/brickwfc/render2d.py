@@ -23,3 +23,24 @@ def save_png(grid: np.ndarray, tileset: Tileset, path: str | Path, scale: int = 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     render(grid, tileset, scale).save(path)
+
+
+def contact_sheet(
+    images: list[Image.Image],
+    columns: int,
+    gap: int = 8,
+    background: tuple[int, int, int] = (255, 255, 255),
+) -> Image.Image:
+    """Lay images out on a grid, row-major, each slot sized to the largest image."""
+    if not images:
+        raise ValueError("contact_sheet needs at least one image")
+    cell_w = max(img.width for img in images)
+    cell_h = max(img.height for img in images)
+    rows = -(-len(images) // columns)
+    sheet = Image.new(
+        "RGB", (columns * cell_w + (columns - 1) * gap, rows * cell_h + (rows - 1) * gap), background
+    )
+    for i, img in enumerate(images):
+        row, col = divmod(i, columns)
+        sheet.paste(img, (col * (cell_w + gap), row * (cell_h + gap)))
+    return sheet
