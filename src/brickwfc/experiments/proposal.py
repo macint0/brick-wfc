@@ -12,9 +12,14 @@ offset) using exactly the set's parts. Conditions:
   stats_raster     statistics only, raster order: the control, so a gain of the model is not the order's
   proposal_raster  statistics x the learned proposal (``--proposal-strength``), raster order
 
+Statistics: ``--style-version`` (default v2, relearned with corners and slopes; see ``alt.inputs.STYLE_FILES``)
+of the fold's file in ``--style-dir``. They drive both the style bias and the judge.
 Metrics as in M10 (``experiments.style.evaluate``): validity, utilization, the judge and the size-matched
 judge against the real model, the distance to the set's own statistics, time.
 ``--random-weights`` uses an untrained model (a smoke test of the plumbing; its numbers mean nothing).
+Each build's row also logs its placed parts (``placed``: [part, turn, LDraw color, layer, x, z], the format of
+``alt.candidates``) and how many of them the model's vocabulary cannot express (``outside_vocab``), so figures
+and counts come from the logged builds.
 Results are appended per build to ``runs.jsonl`` and resumed; ``--workers`` processes (default 3).
 """
 
@@ -22,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import statistics
 import time
@@ -32,8 +38,10 @@ from typing import Sequence
 
 import numpy as np
 
+from brickwfc.alt.inputs import STYLE_FILES, STYLE_VERSION
 from brickwfc.bricks.bottomup import BottomUpBuilder
-from brickwfc.bricks.parts import PlacedPart
+from brickwfc.bricks.colors import color_for_code
+from brickwfc.bricks.parts import CATALOG, PlacedPart, Shape, extract_parts
 from brickwfc.bricks.proposal import Proposal, random_weights
 from brickwfc.bricks.style import StyleBias, StyleStats, events
 from brickwfc.bricks.tokens import Vocab, build_vocab
@@ -61,6 +69,22 @@ class Job:
     proposal_strength: float
 
 
+def style_file(style_dir: Path, fold: int, version: str) -> Path:
+    return style_dir / STYLE_FILES[version].format(i=fold)
+
+
+def placed_to_json(placed: Sequence[PlacedPart]) -> list[list]:
+    return [[p.shape.part.name, p.shape.turn, p.color.ldraw, p.layer, p.x, p.z] for p in placed]
+
+
+def placed_from_json(rows: Sequence[Sequence]) -> list[PlacedPart]:
+    return [PlacedPart(Shape(CATALOG[name], turn), color_for_code(code), layer, x, z) for name, turn, code, layer, x, z in rows]
+
+
+def job_vocab(weights: str) -> Vocab:
+    return Vocab.load(Path(weights).with_name("vocab.json")) if weights else build_vocab()
+
+
 def load_proposal(weights: str) -> Proposal:
     if weights:
         return Proposal.load(Path(weights))
@@ -81,12 +105,15 @@ def run_job(job: Job) -> dict:
     seconds = time.perf_counter() - start
     record = evaluate(job.set_number, job.fold, job.condition, "contacts", job.seed, grid, False, seconds, parts,
                       inventory, job.stats, StyleStats().add(real), events(real))
-    return asdict(record)
+    placed = [] if grid is None else extract_parts(grid, parts)[0]
+    vocab = job_vocab(job.weights)
+    return {**asdict(record), "outside_vocab": sum(vocab.shape(p.shape) is None for p in placed),
+            "placed": placed_to_json(placed)}
 
 
 def summary_table(rows: list[dict], sets: Sequence[str]) -> str:
     lines = ["| condition | builds | valid % | utilization % | judge | size-matched judge | real ceiling | "
-             "distance to set | s/build |", "|---|---|---|---|---|---|---|---|---|"]
+             "distance to set | outside vocab / build | s/build |", "|---|---|---|---|---|---|---|---|---|---|"]
     for condition in CONDITIONS:
         mine = [r for r in rows if r["condition"] == condition and r["set_number"] in sets]
         if not mine:
@@ -94,7 +121,8 @@ def summary_table(rows: list[dict], sets: Sequence[str]) -> str:
         mean = lambda key: statistics.fmean(r[key] for r in mine)  # noqa: E731
         lines.append(f"| {condition} | {len(mine)} | {100 * mean('valid'):.0f} | {100 * mean('utilization'):.1f} | "
                      f"{mean('judge'):.4f} | {mean('matched_judge'):.4f} | {mean('matched_ceiling'):.4f} | "
-                     f"{mean('distance'):.4f} | {mean('wall_time_s'):.2f} |")
+                     f"{mean('distance'):.4f} | {statistics.fmean(r.get('outside_vocab', math.nan) for r in mine):.1f} | "
+                     f"{mean('wall_time_s'):.2f} |")
     wins = []
     for a, b in (("proposal_raster", "stats_raster"), ("proposal_raster", "stats_random"), ("stats_raster", "stats_random")):
         per_set = []
@@ -115,6 +143,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     group.add_argument("--random-weights", action="store_true", help="untrained model: a smoke test")
     parser.add_argument("--sets-file", type=Path, default=Path("results/sets_selection.json"))
     parser.add_argument("--style-dir", type=Path, default=Path("results/m10_style_stats"))
+    parser.add_argument("--style-version", choices=sorted(STYLE_FILES), default=STYLE_VERSION,
+                        help="M10 style statistics: v1 (M8 catalog) or v2 (relearned with corners and slopes)")
     parser.add_argument("--data", type=Path, default=Path("data/omr"))
     parser.add_argument("--fold", type=int, default=0)
     parser.add_argument("--sets", nargs="*", help="only these sets of the fold")
@@ -130,7 +160,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     all_sets = json.loads(args.sets_file.read_text(encoding="utf-8"))["selected"]
     sets = [s for s in folds(all_sets, 4, 0)[args.fold] if not args.sets or s in args.sets]
-    stats = StyleStats.load(args.style_dir / f"style_fold{args.fold}.json")
+    stats = StyleStats.load(style_file(args.style_dir, args.fold, args.style_version))
     if args.weights:
         Vocab.load(args.weights.with_name("vocab.json"))  # fail early if it is missing
     models = {s: voxelize(flatten(fetch_set(s, args.data).read_text(encoding="utf-8", errors="replace")))[0] for s in sets}
@@ -138,6 +168,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     runs = args.out / "runs.jsonl"
     rows = [json.loads(line) for line in runs.open(encoding="utf-8")] if runs.exists() else []
+    other = {r.get("style_version", "v1") for r in rows} - {args.style_version}
+    if other:
+        parser.error(f"{runs} has builds with style statistics {sorted(other)}; use another --out")
     done = {(r["set_number"], r["condition"], r["seed"]) for r in rows}
     jobs = [Job(s, args.fold, c, seed, tuple(models[s]), stats, str(args.weights or ""), args.height, args.room,
                 args.strength, args.proposal_strength)
@@ -146,6 +179,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     executor = InlineExecutor() if args.workers == 1 else ProcessPoolExecutor(max_workers=args.workers)
     with executor:
         for job, row in zip(jobs, executor.map(run_job, jobs)):
+            row["style_version"] = args.style_version
             rows.append(row)
             with runs.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(row) + "\n")
