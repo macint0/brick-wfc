@@ -163,6 +163,19 @@ brick-wfc/
   points: `results/m12_pipeline.md` (connectivity costs 2–20 fill points, most on 1-wide-brick sets; up to 140 s per
   candidate on the largest set; `--max-clutch` uncalibrated).
 
+### M12b — 3D targets and looks (Mac, 2026-10-08: builds are recognizable but not good enough)
+Order matters; commit each step with a before/after figure on the same six demo sets.
+1. **True 3D targets.** Inputs are extruded heightfields today; the generator is already 3D. Add: a loader for
+   BrickGPT's published structures as target masks (fairest head-to-head: same object, their unlimited bricks vs
+   our real inventory); a mesh voxelizer (`trimesh`, approved by Mac) for `.obj`/`.stl` at a chosen resolution,
+   scaled to the inventory; `--hollow` (shell of 2 cells + internal supports); overhang handling measured (fill,
+   stability) with `--max-clutch` and/or builder-added support columns.
+2. **Mirror symmetry** in the bottom-up builder (mirrored pairs when the inventory has two; fallback to single).
+3. **Clean skins**: prefer the largest fitting part on exposed surfaces, align seams across rows.
+4. **Slopes and corner parts** in the catalog (sloped top face accepts nothing; L-shaped footprints).
+Not now: style-bias tuning, color logic, WFC. **Done when:** the six-set demo re-rendered with a 3D target
+looks clearly better side by side, every build still valid/stable/one piece, and the per-set coverage rises.
+
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
   outputs where comparable (shape-only, no inventory). Apply the decision checkpoint above.
