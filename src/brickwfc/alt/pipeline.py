@@ -8,7 +8,8 @@ Input: an OMR set number, an .mpd/.ldr model or a .csv parts list (``inputs.py``
 statistics, from the fold that held the set out if it is one of the M10 sets, else from all of them.
 
   generate  ``--n`` candidates, seeds ``--seed`` .. ``--seed + n - 1``, with the bottom-up builder D2
-            and the learned style bias (or ``--generator wfc``), in parallel (``candidates.py``)
+            and the learned style bias (or ``--generator wfc``), in parallel (``candidates.py``); ``--order``
+            and ``--proposal`` (a learned proposal model, M12b) change how D2 picks parts
   verify    integrity, inventory, support, shape, physics on a table (``candidates.py``), then a size
             floor: candidates with fewer contact events than the ``--min-size-quantile`` quantile of the
             verified ones fail "too_small", so one tiny build cannot shrink every judge sample; with a
@@ -34,6 +35,7 @@ candidate as it is generated, so a killed run resumes: rerun the same command).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -92,6 +94,8 @@ class AltConfig:
     hollow: int = 0  # 3D target: shell thickness in cells, plus internal pillars (0: solid)
     supports: bool = False  # 3D target: support columns under overhangs out of a part's reach
     open_tops: bool = True  # with a target shape: studless top cells only under empty target cells
+    order: str = "random"  # d2: cells of a layer visited in random or raster order
+    proposal: str | None = None  # d2: learned proposal model (.npz from training/, vocab.json next to it)
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = math.inf  # physics: keep builds needing at most this clutch per stud
     wfc_time_limit_s: float = 30.0
@@ -149,7 +153,8 @@ def make_context(source: Source, stats: StyleStats, config: AltConfig, target: T
         grid, empty = mask.shape, SHAPE_EMPTY_WEIGHT
     return Context(source.inventory, source.colors, stats, grid, mask, preferred, empty, config.strength,
                    config.generator, config.max_clutch, config.wfc_time_limit_s, config.balanced,
-                   config.bridge, config.connect, config.connect_rounds, config.open_tops and target is not None)
+                   config.bridge, config.connect, config.connect_rounds, config.open_tops and target is not None,
+                   config.order, config.proposal or "")
 
 
 # Generation, resumable ---------------------------------------------------------------------------
@@ -168,6 +173,10 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
     }
     if context.open_tops:  # only when on, so caches from before the rule stay valid
         key["open_tops"] = True
+    if context.order != "random":  # likewise
+        key["order"] = context.order
+    if context.proposal:  # the model by content, so retrained weights are not mixed with old candidates
+        key["proposal"] = hashlib.sha256(Path(context.proposal).read_bytes()).hexdigest()[:16]
     return json.loads(json.dumps(key))
 
 
@@ -331,6 +340,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="with a target shape: let studless tops (tiles) sit under target cells (as before M12b 1d)")
     parser.add_argument("--supports", action="store_true",
                         help="3D target: add support columns under overhangs out of a part's reach (extra cells)")
+    parser.add_argument("--order", choices=("random", "raster"), default=defaults.order,
+                        help="d2: order the cells of a layer are visited in")
+    parser.add_argument("--proposal", help="d2: learned proposal model (.npz, vocab.json next to it; see training/)")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -365,6 +377,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, help="output directory (default out/alt/<input name>)")
     parser.add_argument("--fresh", action="store_true", help="discard cached candidates")
     args = parser.parse_args(argv)
+    if args.generator != "d2" and (args.proposal or args.order != "random"):
+        parser.error("--order and --proposal apply to --generator d2 only")
 
     start = time.perf_counter()
     config = AltConfig(
@@ -373,7 +387,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         connect=not args.no_connect, connect_rounds=args.connect_rounds,
         shape=args.shape, height_map=args.height_map, color_map=args.color_map, shape_height=args.shape_height,
         shape_exact=args.shape_exact, shape_columns=args.shape_columns, voxels=args.voxels, mesh_up=args.mesh_up,
-        hollow=args.hollow, supports=args.supports, open_tops=not args.no_open_tops,
+        hollow=args.hollow, supports=args.supports, open_tops=not args.no_open_tops, order=args.order,
+        proposal=args.proposal,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,

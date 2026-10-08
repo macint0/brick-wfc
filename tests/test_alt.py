@@ -194,3 +194,30 @@ def test_disconnected_builds_fail_verify(tiny_ldr: Path, style_dir: tuple[Path, 
     joined = generate(context, range(20))
     assert any("disconnected" in c.failed for c in loose)
     assert all(c.clusters == 1 and "disconnected" not in c.failed for c in joined)
+
+
+def test_order_and_proposal_reach_the_builder_and_the_cache_key(tiny_ldr: Path, style_dir: tuple[Path, Path],
+                                                                tmp_path: Path) -> None:
+    weights = Path(__file__).parent / "fixtures" / "proposal" / "proposal.npz"
+    source, label, plain = tiny_context(tiny_ldr, style_dir)
+    _, _, raster = tiny_context(tiny_ldr, style_dir, order="raster")
+    _, _, model = tiny_context(tiny_ldr, style_dir, order="raster", proposal=str(weights))
+    keys = [cache_key(source, label, c) for c in (plain, raster, model)]
+    assert "order" not in keys[0] and "proposal" not in keys[0]  # caches from before the options stay valid
+    assert keys[1]["order"] == "raster" and len(keys[2]["proposal"]) == 16
+    assert keys[0] != keys[1] != keys[2]
+    generate_all(raster, range(2), tmp_path / "c.jsonl", keys[1], workers=1)
+    with pytest.raises(SystemExit):  # a statistics cache is not reused for the model
+        generate_all(model, range(2), tmp_path / "c.jsonl", keys[2], workers=1)
+
+    seeds = range(6)
+    by_order = generate(raster, seeds)
+    with_model = generate(model, seeds)
+    assert [c.placed for c in with_model] == [c.placed for c in generate(model, seeds)]  # seeded
+    assert [c.placed for c in with_model] != [c.placed for c in by_order]  # the model steers the choices
+    assert [c.placed for c in by_order] != [c.placed for c in generate(plain, seeds)]  # so does the order
+    for c in with_model:
+        assert not set(c.failed) & {"generate", "integrity", "inventory", "support"}  # guarantees hold
+    with pytest.raises(SystemExit):
+        main([str(tiny_ldr), "--generator", "wfc", "--order", "raster", "--out", str(tmp_path / "w"),
+              "--style-dir", str(style_dir[0]), "--sets-file", str(style_dir[1])])
