@@ -59,6 +59,9 @@ https://content.moldandyeast.com/forage/y6fmx6n4
 - Don't use the LEGO trademark in names, package, or output branding. Use "brick".
 - Commit after each milestone. No Claude co-author / session trailers in commits or PRs.
 - Long experiments must save results incrementally and be resumable (runs can be killed under memory pressure).
+- Experiments run in parallel across seeds/sets (`ProcessPoolExecutor`, `--workers`, default `cpu_count - 2`;
+  Mac's PC: 12 logical cores, 16 GB). Output must be identical to a serial run (per-seed `Generator`, results
+  written in plan order). Memory-heavy WFC jobs get their own smaller cap (`--wfc-workers`).
 - Downloaded third-party models (LDraw OMR) live in `data/` (gitignored); never commit them.
 
 ## Repo layout
