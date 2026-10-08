@@ -167,23 +167,44 @@ brick-wfc/
 ### M12b — 3D targets, learned proposal, looks (Mac, 2026-10-08)
 Mac's framing: BrickGPT-style generation from a real inventory with a bigger catalog, constraints guaranteed at
 decode time. The bottom-up builder is the decoder; the *proposal* in it is pluggable (today: M10 statistics).
-Order matters; commit each step with a before/after figure (spaceship + one BrickGPT object, same seeds).
-1. **True 3D targets.** Inputs are extruded heightfields today; the generator is already 3D. Add: a loader for
-   BrickGPT's StableText2Brick structures (MIT; 47k objects, all brick sizes map 1:1 onto our catalog) as target
-   masks and as the head-to-head (their data, not their model); a mesh voxelizer (`trimesh`) for `.obj`/`.stl`;
-   `--hollow` (shell + internal supports); overhang handling measured with `--max-clutch` and/or builder support
-   columns. Commits 1a, 1b+1c, 1d.
-2. **Learned proposal model.** A small transformer (~10M params) trained from scratch on brick token sequences
-   (part, color, x, y, z, rotation) from BrickGPT structures + the 28 real sets, on Colab (free T4, ~1 h); CPU
-   inference. Decoded inside `BottomUpBuilder` with the same masks (inventory, support, balance, shape, one piece),
-   so every guarantee stays. Compare against the statistics proposal under the same judge, same seeds, same sets.
-   Keep the statistics as the no-training baseline in every table.
+**Status (2026-10-09):** steps 1 and 4 done, step 2 trained and being compared, step 3 not started.
+1. **True 3D targets — done** (`results/m12b_brickgpt.md`, `m12b_overhangs_tables.md`, figures
+   `m12b_before_after.png`, `m12b_opentops_before_after.png`, `m12b_hollow_before_after.png`).
+   `--shape brickgpt:<id>` loads a StableText2Brick structure (`bricks/brickgpt.py`; their data, not their model;
+   all 8 brick sizes map 1:1 onto the catalog), `--shape model.stl|.obj` voxelizes a mesh (`bricks/mesh.py`,
+   `trimesh`), `--hollow N` keeps a shell. Head-to-head on 6 objects × 3 sets: every build 100% valid / physics /
+   one piece; fill 69–85% on car, sofa, vessel, bench; table 54–78%; chair 15–74% (bimodal on the small sets,
+   undiagnosed). Their table is 3 pieces and their chair needs clutch 816. **Open tops** (a studless top only
+   where the target is empty above; `AltConfig.open_tops`, default on, `--no-open-tops`) fixes tiles capping thin
+   stems: fill up on all 18 pairs (table 6378-1: 15 → 54%), 1.3–7.6× faster. Support columns (`--supports`) help
+   only where the object hangs over nothing (chair, bench). Clutch calibrated from StableLego: a real stud holds
+   1111 plate-cell weights; a capped `--max-clutch 1111` binds only on 10182-1 and removes builds instead of
+   fixing overhangs. **Open point for Mac:** full chairs need 1427–5212 clutch, above real; `--supports` keeps
+   84–100% within 1111. Decide whether `--max-clutch 1111` becomes the pipeline default. Hollow: sound, no clear
+   win, off by default.
+2. **Learned proposal model — trained, comparison running.** 5 tokens per part (Y, Z, X, shape, color) with a
+   BOS/SRC/SCALE/mask-patch prefix (`bricks/tokens.py`, `experiments/export_tokens.py`), transformer
+   d256 / 6 layers / 8 heads, 5.16M params, trained on BrickGPT's train split + the real sets on Mac's RTX 3060
+   (`training/train.py`; cu124 torch in a scratch venv, not a project dependency; Colab optional). Run 1
+   overfit the real sets; run 2 (`--set-share 0.05`, `--val-sets 6378-1 31048-1`, early stop at step 1500) is the
+   model: `data/models/proposal_run2.npz` + `vocab.json` (gitignored). numpy inference with a KV cache
+   (`bricks/proposal.py`, ~6 ms per cell query), decoded inside `BottomUpBuilder(proposal=)` with every mask.
+   Parts outside the vocabulary (slopes, corners) get the uniform fallback. Comparison vs statistics under the
+   judge: `experiments/proposal.py` (fold 0, 5 seeds, stats_random / stats_raster / proposal_raster) →
+   `results/m12b_proposal.md`. Keep the statistics as the no-training baseline in every table.
 3. **Mirror symmetry** and **clean skins** (largest fitting part on exposed surfaces): only if step 2 does not
    already produce them; measure first.
-4. **Slopes and corner parts** in the catalog (sloped top face accepts nothing; L-shaped footprints).
-Not now: style-bias tuning, color logic, WFC. **Done when:** the six-set demo re-rendered with a 3D target
-looks clearly better side by side, every build still valid/stable/one piece, the learned proposal is compared
-to statistics under the judge, and the per-set coverage rises.
+4. **Slopes and corner parts — done** (`results/m12b_catalog.md`): catalog 63 → 88 parts (corner plates/bricks,
+   slopes, inverted, corner and ridge slopes, cheese slopes) with per-cell geometry (footprint, stud cells, seated
+   cells; a slope is its bounding box, the sloped face accepts nothing). Style statistics v2 relearned. Recognized
+   share of the 28 building sets 61 → 69%, on-grid 49 → 57% (Creator houses up to 90%). Slope-aware preview.
+Also landed: `rebrickable:<set>` / any set number as the inventory from Rebrickable's bulk CSVs
+(`bricks/rebrickable.py`, `results/m12c_rebrickable.md`); diversity metric for M13 (Leinster–Cobbold, threshold
+kernel normalized per setup by the median D2 pair distance, `funnel/diversity.py`, `results/m13_diversity.md`);
+paper skeleton in `paper/`. Not now: style-bias tuning, color logic, WFC.
+**Done when:** the six-set demo re-rendered with a 3D target looks clearly better side by side (yes:
+`m12b_before_after.png`), every build still valid/stable/one piece (yes), the learned proposal is compared to
+statistics under the judge (running), and the per-set coverage rises (yes).
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
