@@ -1,0 +1,154 @@
+[
+  {
+    "set": "6372-1",
+    "condition": "balance",
+    "grid_YZX": [
+      21,
+      9,
+      9
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 5.5,
+    "utilization_pct": 99.25373134328358,
+    "clusters_per_build": 4.0,
+    "median_clutch": 9.75,
+    "judge": -0.2630874062448268,
+    "judge_size": 1043,
+    "connected_pct": 5.5,
+    "seconds_per_build": 0.5413293560000966
+  },
+  {
+    "set": "6372-1",
+    "condition": "balance_bridge",
+    "grid_YZX": [
+      21,
+      9,
+      9
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 7.0,
+    "utilization_pct": 99.25373134328358,
+    "clusters_per_build": 4.0,
+    "median_clutch": 10.2,
+    "judge": -0.26183445541179967,
+    "judge_size": 1043,
+    "connected_pct": 7.0,
+    "seconds_per_build": 0.5685263540000051
+  },
+  {
+    "set": "6372-1",
+    "condition": "balance_connect",
+    "grid_YZX": [
+      21,
+      9,
+      9
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 100.0,
+    "utilization_pct": 99.25373134328358,
+    "clusters_per_build": 1.0,
+    "median_clutch": 9.0,
+    "judge": -0.26387636119924873,
+    "judge_size": 1043,
+    "connected_pct": 100.0,
+    "seconds_per_build": 0.9084883345000889
+  },
+  {
+    "set": "6372-1",
+    "condition": "balance_bridge_connect",
+    "grid_YZX": [
+      21,
+      9,
+      9
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 100.0,
+    "utilization_pct": 99.25373134328358,
+    "clusters_per_build": 1.0,
+    "median_clutch": 10.458333333333332,
+    "judge": -0.26316851875591074,
+    "judge_size": 1043,
+    "connected_pct": 100.0,
+    "seconds_per_build": 0.9268743670000004
+  },
+  {
+    "set": "10182-1",
+    "condition": "balance",
+    "grid_YZX": [
+      44,
+      18,
+      18
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 0.5,
+    "utilization_pct": 99.90785997357992,
+    "clusters_per_build": 15.0,
+    "median_clutch": 214.5000000000001,
+    "judge": -0.2463660818398666,
+    "judge_size": 12596,
+    "connected_pct": 0.5,
+    "seconds_per_build": 13.17364594350016
+  },
+  {
+    "set": "10182-1",
+    "condition": "balance_bridge",
+    "grid_YZX": [
+      44,
+      18,
+      18
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 0.0,
+    "utilization_pct": 99.9557463672391,
+    "clusters_per_build": 13.0,
+    "median_clutch": 215.86916592269768,
+    "judge": NaN,
+    "judge_size": 12596,
+    "connected_pct": 0.0,
+    "seconds_per_build": 13.77983002000001
+  },
+  {
+    "set": "10182-1",
+    "condition": "balance_connect",
+    "grid_YZX": [
+      44,
+      18,
+      18
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 100.0,
+    "utilization_pct": 99.9507926023778,
+    "clusters_per_build": 1.0,
+    "median_clutch": 212.4999999999999,
+    "judge": -0.2465986493457043,
+    "judge_size": 12596,
+    "connected_pct": 100.0,
+    "seconds_per_build": 17.01054007000015
+  },
+  {
+    "set": "10182-1",
+    "condition": "balance_bridge_connect",
+    "grid_YZX": [
+      44,
+      18,
+      18
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 100.0,
+    "utilization_pct": 99.98249669749009,
+    "clusters_per_build": 1.0,
+    "median_clutch": 209.00000000000037,
+    "judge": -0.24552900187330093,
+    "judge_size": 12596,
+    "connected_pct": 100.0,
+    "seconds_per_build": 17.041797597999995
+  }
+]

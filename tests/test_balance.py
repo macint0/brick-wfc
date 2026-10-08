@@ -1,6 +1,7 @@
 """M12 step 1b: tip-over check (clusters on a table) and the balanced bottom-up builder."""
 
 import math
+from collections import Counter
 
 import numpy as np
 import pytest
@@ -9,7 +10,7 @@ from brickwfc.bricks.balance import Balance, clusters, convex_hull, outside_dist
 from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.parts import CATALOG, PLATES, PlacedPart, Shape, extract_parts, part_tileset
-from brickwfc.bricks.physics import required_clutch, tipping_clusters
+from brickwfc.bricks.physics import required_clutch, table_clutch, tipping_clusters
 
 RED = colors_by_name(["red"])[0]
 
@@ -79,3 +80,39 @@ def test_balanced_builds_never_tip(parts) -> None:
         grid = BottomUpBuilder(parts, any_offset=True, balanced=True).build((6, 5, 5), np.random.default_rng(seed))
         placed, _ = extract_parts(grid, parts)
         assert placed and math.isfinite(required_clutch(placed, grid.shape))
+
+
+@pytest.fixture(scope="module")
+def tile_parts():
+    return part_tileset(list(PLATES.values()) + [CATALOG["brick2x4"], CATALOG["tile2x2"]],
+                        colors_by_name(["red", "blue"]), empty_weight=1.0)
+
+
+def test_connect_pass_makes_one_piece(tile_parts) -> None:
+    inventory = {("plate2x4", "red"): 6, ("plate1x2", "blue"): 10, ("brick2x4", "red"): 4, ("plate1x1", "red"): 8,
+                 ("tile2x2", "blue"): 4}
+    plain = BottomUpBuilder(tile_parts, any_offset=True, balanced=True, bridge=True)
+    connected = BottomUpBuilder(tile_parts, any_offset=True, balanced=True, bridge=True, connect=True)
+    split = 0
+    for seed in range(30):
+        before, _ = extract_parts(plain.build((8, 6, 6), np.random.default_rng(seed), inventory), tile_parts)
+        split += len(clusters(before)) > 1
+        grid = connected.build((8, 6, 6), np.random.default_rng(seed), inventory)
+        placed, errors = extract_parts(grid, tile_parts)
+        assert not errors  # in particular nothing rests on a tile placed under an existing part
+        assert len(clusters(placed)) == 1 and math.isfinite(required_clutch(placed, grid.shape))
+        used = Counter((p.shape.part.name, p.color.name) for p in placed)
+        assert all(used[key] <= count for key, count in inventory.items())
+    assert split > 0  # the repair pass was exercised
+
+
+def test_bridge_needs_balance(tile_parts) -> None:
+    with pytest.raises(ValueError):
+        BottomUpBuilder(tile_parts, any_offset=True, bridge=True)
+
+
+def test_table_clutch_matches_required_clutch(parts) -> None:
+    for seed in range(15):
+        grid = BottomUpBuilder(parts, any_offset=True).build((6, 5, 5), np.random.default_rng(seed))
+        placed, _ = extract_parts(grid, parts)
+        assert table_clutch(placed, grid.shape) == pytest.approx(required_clutch(placed, grid.shape), rel=1e-6, abs=1e-6)

@@ -181,3 +181,13 @@ def test_cli_with_target_shape(tiny_ldr: Path, style_dir: tuple[Path, Path], tmp
     stats = json.loads((out / "stats.json").read_text(encoding="utf-8"))
     assert stats["shape_cells"] > 0
     assert all(0 < row["fill_pct"] <= 100 for row in stats["selected"])
+
+
+def test_disconnected_builds_fail_verify(tiny_ldr: Path, style_dir: tuple[Path, Path]) -> None:
+    source, _, context = tiny_context(tiny_ldr, style_dir)
+    import dataclasses
+
+    loose = generate(dataclasses.replace(context, connect=False, bridge=False), range(20))
+    joined = generate(context, range(20))
+    assert any("disconnected" in c.failed for c in loose)
+    assert all(c.clusters == 1 and "disconnected" not in c.failed for c in joined)

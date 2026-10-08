@@ -43,7 +43,7 @@ from typing import Sequence
 
 import numpy as np
 
-from brickwfc.alt.candidates import GENERATORS, Candidate, Context, generate
+from brickwfc.alt.candidates import GENERATORS, VERIFY_VERSION, Candidate, Context, generate
 from brickwfc.alt.features import feature_vector, occupancy
 from brickwfc.alt.inputs import DATA_DIR, SETS_FILE, STYLE_DIR, Source, learned_style, load_source
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
@@ -74,10 +74,13 @@ class AltConfig:
     height: int | None = None  # plates (no target shape); None: a cube, see cube_grid
     room: float = 1.5  # grid volume / inventory volume (no target shape)
     balanced: bool = True
+    bridge: bool = True
+    connect: bool = True
     shape: str | None = None  # see target.py
     height_map: str | None = None
     color_map: str | None = None
     shape_height: int = 6  # plates, for a silhouette without a height map
+    shape_exact: bool = False  # a model shape keeps its exact cells (overhangs) instead of solid columns
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = math.inf  # physics: keep builds needing at most this clutch per stud
     wfc_time_limit_s: float = 30.0
@@ -117,7 +120,8 @@ def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) ->
         return None
     return load_target(config.shape, inventory_cells(source.inventory), source.colors,
                        Path(config.height_map) if config.height_map else None,
-                       Path(config.color_map) if config.color_map else None, config.shape_height, data_dir)
+                       Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
+                       config.shape_exact)
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
@@ -130,7 +134,8 @@ def make_context(source: Source, stats: StyleStats, config: AltConfig, target: T
         mask, preferred = target.mask, target.preferred
         grid, empty = mask.shape, SHAPE_EMPTY_WEIGHT
     return Context(source.inventory, source.colors, stats, grid, mask, preferred, empty, config.strength,
-                   config.generator, config.max_clutch, config.wfc_time_limit_s, config.balanced)
+                   config.generator, config.max_clutch, config.wfc_time_limit_s, config.balanced,
+                   config.bridge, config.connect)
 
 
 # Generation, resumable ---------------------------------------------------------------------------
@@ -143,7 +148,8 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
         "grid": list(context.grid), "mask": None if context.mask is None else np.argwhere(context.mask).tolist(),
         "preferred": None if context.preferred is None else context.preferred.tolist(),
         "empty_weight_per_part": context.empty_weight_per_part, "strength": context.strength,
-        "generator": context.generator, "balanced": context.balanced, "max_clutch": context.max_clutch,
+        "generator": context.generator, "balanced": context.balanced, "bridge": context.bridge,
+        "connect": context.connect,        "verify_version": VERIFY_VERSION, "max_clutch": context.max_clutch,
         "wfc_time_limit_s": context.wfc_time_limit_s,
     }
     return json.loads(json.dumps(key))
@@ -199,7 +205,8 @@ def run_funnel(candidates: list[Candidate], context: Context, stats: StyleStats,
 
     clock = time.perf_counter()
     colors = [color.name for color in context.colors]
-    features = np.array([feature_vector(c.placed, context.grid, colors) for c in verified]).reshape(len(verified), -1)
+    features = np.array([feature_vector(c.placed, context.grid, colors) for c in verified])
+    features = features.reshape(len(verified), features.shape[1] if verified else 0)
     kept = dedupe(features, config.dedupe_threshold)
     unique, features = [verified[i] for i in kept], features[kept]
     stages.append(StageStats("dedupe", len(unique), time.perf_counter() - clock))
@@ -247,6 +254,7 @@ def write_outputs(source: Source, context: Context, report: FunnelReport, out: P
                                f"Alternate build {rank} from {source.name} (seed {c.seed})")
         previews.append(png)
         row = {"rank": rank, "seed": c.seed, "ldr": ldr.name, "png": png.name, "parts": len(c.placed),
+               "clusters": c.clusters,
                "steps": len(layer_steps(c.placed)), "judge": chosen.judge, "clutch": c.clutch,
                "utilization_pct": 100 * utilization(list(c.placed), source.inventory),
                "seconds": c.seconds, "physics_seconds": c.physics_seconds}
@@ -276,6 +284,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--color-map", help="color image, same size as the silhouette: preferred colors")
     parser.add_argument("--shape-height", type=int, default=defaults.shape_height,
                         help="plates, for a silhouette without a height map")
+    parser.add_argument("--shape-exact", action="store_true",
+                        help="model shape: keep its exact cells (overhangs, rooms) instead of solid columns")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -283,6 +293,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--height", type=int, default=defaults.height,
                         help="grid height in plates (no --shape; default: a cube)")
     parser.add_argument("--no-balance", action="store_true", help="d2 without the tip-over check (as in M9b-M11)")
+    parser.add_argument("--no-bridge", action="store_true", help="d2 without the preference for joining clusters")
+    parser.add_argument("--no-connect", action="store_true", help="d2 without the pass that makes builds one piece")
     parser.add_argument("--room", type=float, default=defaults.room, help="grid volume / inventory volume (no --shape)")
     parser.add_argument("--strength", type=float, default=defaults.strength, help="exponent on the style weights")
     parser.add_argument("--max-clutch", type=float, default=defaults.max_clutch, help="physics limit per stud")
@@ -302,8 +314,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     start = time.perf_counter()
     config = AltConfig(
         n=args.n, k=args.k, seed=args.seed, generator=args.generator, height=args.height, room=args.room,
-        balanced=not args.no_balance,
+        balanced=not args.no_balance, bridge=not args.no_balance and not args.no_bridge,
+        connect=not args.no_connect,
         shape=args.shape, height_map=args.height_map, color_map=args.color_map, shape_height=args.shape_height,
+        shape_exact=args.shape_exact,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
     )
@@ -347,6 +361,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "generation_cpu_s": sum(c.seconds for c in candidates),
         "physics_cpu_s": sum(c.physics_seconds for c in candidates),
         "physics_checked": len(clutches), "physics_stable": sum(math.isfinite(v) for v in clutches),
+        "clusters_per_build_median": float(np.median([c.clusters for c in candidates])),
+        "connected": sum(c.clusters == 1 for c in candidates),
         "wall_time_s": time.perf_counter() - start,
         "selected": rows,
     }

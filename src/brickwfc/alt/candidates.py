@@ -8,7 +8,9 @@ column's preferred color (from a color image, ``target.py``) first.
 
 Checks, in order: ``integrity`` (every part whole, nothing on a tile), ``inventory`` (no part overused),
 ``support`` (every part rests on a stud), ``shape`` (nothing outside the target shape), and, only for
-builds that pass those, ``physics`` (finite required clutch per stud on a table, at most ``max_clutch``).
+builds that pass those, ``physics`` (finite required clutch per stud on a table, at most ``max_clutch``),
+and ``disconnected`` (the build is more than one cluster of stud-connected parts, so it falls apart when
+lifted; ``balance.clusters``).
 A seed with no build fails ``generate``.
 
 Candidates are generated in chunks of seeds, one chunk per worker job; each job builds its own tileset
@@ -25,11 +27,12 @@ from typing import Sequence
 
 import numpy as np
 
+from brickwfc.bricks.balance import clusters
 from brickwfc.bricks.bottomup import PREFERRED_BOOST, BottomUpBuilder
 from brickwfc.bricks.colors import BrickColor, color_for_code
 from brickwfc.bricks.inventory import Inventory, InventoryConstraint, overuse
 from brickwfc.bricks.parts import CATALOG, PartSet, PlacedPart, Shape, extract_parts
-from brickwfc.bricks.physics import required_clutch
+from brickwfc.bricks.physics import table_clutch
 from brickwfc.bricks.shapes import Mask, ShapeConstraint, outside
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.style import StyleBias, StyleStats, styled_tileset
@@ -37,7 +40,8 @@ from brickwfc.bricks.support import is_stable
 from brickwfc.wfc import Bias, run
 
 GENERATORS = ("d2", "wfc")
-CHECKS = ("generate", "integrity", "inventory", "support", "shape", "physics")
+CHECKS = ("generate", "integrity", "inventory", "support", "shape", "physics", "disconnected")
+VERIFY_VERSION = 3  # bump when the checks change, so cached candidates are not reused
 WFC_MAX_ATTEMPTS, WFC_MAX_BACKTRACKS = 20, 1000
 
 
@@ -57,6 +61,8 @@ class Context:
     max_clutch: float = math.inf
     wfc_time_limit_s: float = 30.0
     balanced: bool = True  # d2: refuse parts that would tip their cluster over
+    bridge: bool = True  # d2 (with balanced): prefer placements that join clusters
+    connect: bool = True  # d2: repair pass that makes the build one piece (see bottomup)
 
 
 @dataclass(frozen=True)
@@ -67,6 +73,7 @@ class Candidate:
     clutch: float  # required clutch per stud on a table; nan if physics was not checked
     seconds: float  # generation time
     physics_seconds: float
+    clusters: int = 0  # clusters of stud-connected parts (1 = one liftable piece)
 
     @property
     def valid(self) -> bool:
@@ -75,19 +82,22 @@ class Candidate:
     def to_json(self) -> dict:
         parts = [[p.shape.part.name, int(p.shape.rotated), p.color.ldraw, p.layer, p.x, p.z] for p in self.placed]
         return {"seed": self.seed, "failed": list(self.failed), "clutch": self.clutch, "seconds": self.seconds,
-                "physics_seconds": self.physics_seconds, "placed": parts}
+                "physics_seconds": self.physics_seconds, "clusters": self.clusters, "placed": parts}
 
     @classmethod
     def from_json(cls, data: dict) -> "Candidate":
         placed = tuple(PlacedPart(Shape(CATALOG[name], bool(rotated)), color_for_code(code), layer, x, z)
                        for name, rotated, code, layer, x, z in data["placed"])
-        return cls(data["seed"], placed, tuple(data["failed"]), data["clutch"], data["seconds"], data["physics_seconds"])
+        count = data["clusters"] if "clusters" in data else len(clusters(placed))  # older caches lack it
+        return cls(data["seed"], placed, tuple(data["failed"]), data["clutch"], data["seconds"], data["physics_seconds"],
+                   count)
 
 
 def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.ndarray | None:
     """One grid of tile ids for ``seed``, or None if the generator gave up."""
     if context.generator == "d2":
-        builder = BottomUpBuilder(parts, any_offset=True, style=bias, balanced=context.balanced)
+        builder = BottomUpBuilder(parts, any_offset=True, style=bias, balanced=context.balanced,
+                                  bridge=context.bridge, connect=context.connect)
         return builder.build(context.grid, np.random.default_rng(seed), context.inventory, context.mask,
                              context.preferred)
     constraints = [SupportConstraint(parts), InventoryConstraint(parts, context.inventory)]
@@ -112,8 +122,8 @@ def wfc_bias(parts: PartSet, bias: StyleBias, preferred: np.ndarray | None) -> B
     return weights
 
 
-def verify(context: Context, parts: PartSet, grid: np.ndarray) -> tuple[list[PlacedPart], list[str], float, float]:
-    """(placed parts, failed checks, required clutch or nan, physics seconds)."""
+def verify(context: Context, parts: PartSet, grid: np.ndarray) -> tuple[list[PlacedPart], list[str], float, float, int]:
+    """(placed parts, failed checks, required clutch or nan, physics seconds, number of clusters)."""
     placed, errors = extract_parts(grid, parts)
     filled = parts.solid[grid]
     failed = []
@@ -128,11 +138,14 @@ def verify(context: Context, parts: PartSet, grid: np.ndarray) -> tuple[list[Pla
     clutch, seconds = math.nan, 0.0
     if not failed:
         start = time.perf_counter()
-        clutch = required_clutch(placed, grid.shape)
+        clutch = table_clutch(placed, grid.shape)
         seconds = time.perf_counter() - start
         if not (math.isfinite(clutch) and clutch <= context.max_clutch):
             failed.append("physics")
-    return placed, failed, clutch, seconds
+    count = len(clusters(placed))
+    if count != 1:
+        failed.append("disconnected")
+    return placed, failed, clutch, seconds, count
 
 
 def generate(context: Context, seeds: Sequence[int]) -> list[Candidate]:
@@ -146,6 +159,6 @@ def generate(context: Context, seeds: Sequence[int]) -> list[Candidate]:
         if grid is None:
             candidates.append(Candidate(seed, (), ("generate",), math.nan, seconds, 0.0))
             continue
-        placed, failed, clutch, physics_seconds = verify(context, parts, grid)
-        candidates.append(Candidate(seed, tuple(placed), tuple(failed), clutch, seconds, physics_seconds))
+        placed, failed, clutch, physics_seconds, count = verify(context, parts, grid)
+        candidates.append(Candidate(seed, tuple(placed), tuple(failed), clutch, seconds, physics_seconds, count))
     return candidates

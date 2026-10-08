@@ -4,8 +4,9 @@
 - a top-down silhouette image (one pixel per stud, image rows along z; opaque or dark pixels are inside),
   extruded ``--shape-height`` plates and scaled in the footprint only; with a height map (same size, grey
   value = height in plates) the whole shape is scaled uniformly instead;
-- an LDraw model (.ldr/.mpd file, or an OMR set number), voxelized (catalog parts on the stud grid only)
-  and scaled uniformly.
+- an LDraw model (.ldr/.mpd file, or an OMR set number), voxelized (catalog parts on the stud grid only),
+  each column filled from the ground to its top cell (or, with ``exact``, its own cells, which keeps
+  overhangs and rooms but is a sparse view of the model), and scaled uniformly.
 
 With a silhouette, an optional color image of the same size gives each column a preferred color: the
 inventory color nearest to its pixel (transparent pixels: no preference).
@@ -47,12 +48,16 @@ class Target:
 
 
 def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_map: Path | None = None,
-                color_map: Path | None = None, height: int = 6, data_dir: Path = Path("data/omr")) -> Target:
-    """The target ``spec`` with a volume of about ``cells`` grid cells."""
+                color_map: Path | None = None, height: int = 6, data_dir: Path = Path("data/omr"),
+                exact: bool = False) -> Target:
+    """The target ``spec`` with a volume of about ``cells`` grid cells. ``exact``: a model keeps its own
+    cells instead of solid columns."""
     path = Path(spec)
     is_image = path.suffix.lower() in IMAGE_SUFFIXES
     if (height_map or color_map) and not is_image:
         raise ValueError("--height-map and --color-map go with a silhouette image as --shape")
+    if exact and (is_image or spec in SHAPES):
+        raise ValueError("--shape-exact goes with a model as --shape")
     if spec in SHAPES:
         return Target(sized_for(spec, cells), None, f"{spec} (primitive)")
     if is_image:
@@ -76,4 +81,5 @@ def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_ma
     placed, _ = voxelize(flatten(text))
     if not placed:
         raise ValueError(f"{spec}: no catalog parts on the stud grid to take a shape from")
-    return Target(from_model(placed, cells), None, f"{path.stem if path.suffix else spec} (model)")
+    kind = "model, exact cells" if exact else "model, solid columns"
+    return Target(from_model(placed, cells, solid_columns=not exact), None, f"{path.stem if path.suffix else spec} ({kind})")

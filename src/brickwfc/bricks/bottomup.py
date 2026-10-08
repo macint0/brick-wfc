@@ -19,7 +19,12 @@ cell and the parts beside it. Without one, builds are exactly as before.
 
 With ``balanced=True`` (M12), a part is also refused if it would tip its cluster of stud-connected parts
 over on a table (``balance.Balance``), so every build needs only finite clutch
-(``physics.required_clutch``). Off by default, which reproduces the M9b-M11 tables.
+(``physics.required_clutch``). Off by default, which reproduces the M9b-M11 tables. With ``bridge=True``
+as well, a part tries all its offsets at the visited cell and takes the one resting on the most distinct
+clusters (ties: the first in random order), so separate stacks get joined into one piece where possible.
+With ``connect=True``, a repair pass makes the build one piece: the largest cluster is kept, the other
+clusters' parts go back to the inventory and are placed again on layers above the ground only, where every
+part rests on (so joins) the kept cluster.
 
 With ``preferred`` colors (M12: a (Z, X) array of color names from a color image, "" for none), parts
 of the cell's preferred color are tried first; if none of them fits or is left, the sampler's own order
@@ -28,11 +33,12 @@ follows.
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import TYPE_CHECKING, Mapping
 
 import numpy as np
 
-from brickwfc.bricks.balance import Balance
+from brickwfc.bricks.balance import Balance, clusters
 from brickwfc.bricks.colors import BrickColor
 from brickwfc.bricks.parts import PartSet, PlacedPart, Shape, TileInfo
 
@@ -44,11 +50,15 @@ PREFERRED_BOOST = 1e6  # weight factor for parts of a cell's preferred color: in
 
 class BottomUpBuilder:
     def __init__(self, parts: PartSet, any_offset: bool = False, style: StyleBias | None = None,
-                 balanced: bool = False) -> None:
+                 balanced: bool = False, bridge: bool = False, connect: bool = False) -> None:
+        if bridge and not (balanced and any_offset):
+            raise ValueError("bridge needs balanced=True and any_offset=True")
         self.parts = parts
         self.any_offset = any_offset
         self.style = style
         self.balanced = balanced
+        self.bridge = bridge
+        self.connect = connect
         self.index = {info: t for t, info in enumerate(parts.infos)}
         # Same priors as WFC: a cell's chance of holding (shape, color) is the summed weight of
         # that pair's tiles; the solid share is the solid tiles' share of all weight.
@@ -79,24 +89,39 @@ class BottomUpBuilder:
         """A (Y, Z, X) grid of tile ids; every placed part is whole, supported, within ``inventory``
         ((part name, color name) -> count) and inside ``allowed`` (bool, grid-shaped) if given.
         ``preferred`` (Z, X) color names, "" for none, reorders the parts tried at each cell."""
-        remaining = dict(inventory) if inventory is not None else None
-        ny, nz, nx = shape
         allowed = np.ones(shape, dtype=bool) if allowed is None else allowed
-        filled = np.zeros(shape, dtype=bool)
-        studs = np.zeros(shape, dtype=bool)  # cells on a part's top layer that carry a stud
-        owner = np.full(shape, -1, dtype=np.int64)  # index into ``placed``
-        placed: list[PlacedPart] = []
-        balance = Balance() if self.balanced else None
-        grid = np.full(shape, self.index[TileInfo(None)], dtype=np.int64)
-        for y in range(ny):
+        state = _State(shape, self.index[TileInfo(None)], inventory, self.balanced)
+        self._fill(state, range(shape[0]), rng, allowed, preferred)
+        if self.connect and state.placed:
+            found = clusters(state.placed)
+            if len(found) > 1:
+                # Keep the largest cluster, return the others' parts to the inventory and place them again
+                # above the ground only: each part placed there rests on the kept cluster, so joins it.
+                keep = set(found[0][0])
+                returned = Counter((p.shape.part.name, p.color.name) for i, p in enumerate(state.placed) if i not in keep)
+                remaining = None if state.remaining is None else dict(Counter(state.remaining) + returned)
+                kept = sorted((state.placed[i] for i in keep), key=lambda p: p.layer)
+                state = _State(shape, self.index[TileInfo(None)], None, self.balanced)
+                for part in kept:  # already counted against the inventory
+                    self._put(state, part)
+                state.remaining = remaining
+                self._fill(state, range(1, shape[0]), rng, allowed, preferred)
+        return state.grid
+
+    def _fill(self, state: "_State", layers: range, rng: np.random.Generator, allowed: np.ndarray,
+              preferred: np.ndarray | None) -> None:
+        """One bottom-up pass over ``layers``: visit free cells in random order and place a part at some."""
+        _, nz, nx = state.filled.shape
+        remaining = state.remaining
+        for y in layers:
             for flat in rng.permutation(nz * nx):
                 z, x = divmod(int(flat), nx)
-                if filled[y, z, x] or not allowed[y, z, x] or rng.random() >= self.solid_share:
+                if state.filled[y, z, x] or not allowed[y, z, x] or rng.random() >= self.solid_share:
                     continue
                 # Try parts in weighted-random order until one fits here. Whether a part fits depends
                 # only on its box, so once a box size fails here, other parts of that size are skipped.
                 failed: set[tuple[int, int, int]] = set()
-                p = self.choice_p if self.style is None else self._styled_p(owner, placed, y, z, x)
+                p = self.choice_p if self.style is None else self._styled_p(state.owner, state.placed, y, z, x)
                 if preferred is not None and preferred[z, x]:
                     p = p * np.where(self.choice_color_names == preferred[z, x], PREFERRED_BOOST, 1.0)
                     p = p / p.sum()
@@ -110,24 +135,29 @@ class BottomUpBuilder:
                         if self.any_offset:  # draw what _place would have drawn: same seed, same build
                             rng.permutation(part_shape.size_z * part_shape.size_x)
                         continue
-                    part = self._place(part_shape, color, y, z, x, filled, studs, allowed, rng, owner, balance)
+                    part = self._place(part_shape, color, y, z, x, state.filled, state.studs, allowed, rng,
+                                       state.owner, state.balance)
                     if part is None:
                         failed.add(box)
                     else:
-                        if remaining is not None:
-                            remaining[key] -= 1
-                        for cy, cz, cx in part.cells():
-                            filled[cy, cz, cx] = True
-                            owner[cy, cz, cx] = len(placed)
-                            grid[cy, cz, cx] = self.index[TileInfo(part_shape, cx - part.x, cz - part.z, color, cy - y)]
-                        if part_shape.part.studs:
-                            for cell in part.top_cells():
-                                studs[cell] = True
-                        if balance is not None:
-                            balance.add(part, self._below(part, owner))
-                        placed.append(part)
+                        self._put(state, part)
                         break
-        return grid
+
+    def _put(self, state: "_State", part: PlacedPart) -> None:
+        """Record a placed part in every structure of ``state``."""
+        key = (part.shape.part.name, part.color.name)
+        if state.remaining is not None:
+            state.remaining[key] -= 1
+        for cy, cz, cx in part.cells():
+            state.filled[cy, cz, cx] = True
+            state.owner[cy, cz, cx] = len(state.placed)
+            state.grid[cy, cz, cx] = self.index[TileInfo(part.shape, cx - part.x, cz - part.z, part.color, cy - part.layer)]
+        if part.shape.part.studs:
+            for cell in part.top_cells():
+                state.studs[cell] = True
+        if state.balance is not None:
+            state.balance.add(part, self._below(part, state.owner))
+        state.placed.append(part)
 
     def _styled_p(self, owner: np.ndarray, placed: list[PlacedPart], y: int, z: int, x: int) -> np.ndarray:
         """Choice probabilities at cell (y, z, x): base weights times the style's likelihood ratios for
@@ -157,12 +187,18 @@ class BottomUpBuilder:
         if not self.any_offset:
             part = PlacedPart(part_shape, color, y, x, z)
             return part if ok(part) else None
+        best, best_joined = None, -1
         for flat in rng.permutation(part_shape.size_z * part_shape.size_x):
             dz, dx = divmod(int(flat), part_shape.size_x)
             part = PlacedPart(part_shape, color, y, x - dx, z - dz)
-            if ok(part):
+            if not ok(part):
+                continue
+            if not self.bridge:
                 return part
-        return None
+            joined = len({balance.root(i) for i in self._below(part, owner)})
+            if joined > best_joined:
+                best, best_joined = part, joined
+        return best
 
     @staticmethod
     def _below(part: PlacedPart, owner: np.ndarray) -> set[int]:
@@ -182,8 +218,25 @@ class BottomUpBuilder:
         box = (slice(y, y + sy), slice(z, z + sz), slice(x, x + sx))
         if filled[box].any() or not allowed[box].all():
             return False
+        # Nothing may rest on a tile; only the connect pass can put a part under existing ones.
+        if not part.shape.part.studs and y + sy < ny and filled[y + sy, z : z + sz, x : x + sx].any():
+            return False
         if y == 0:
             return True
         below_filled, below_studs = filled[y - 1, z : z + sz, x : x + sx], studs[y - 1, z : z + sz, x : x + sx]
         # A filled cell below without a stud is a tile's top: nothing may rest on it.
         return bool(below_studs.any()) and not (below_filled & ~below_studs).any()
+
+
+class _State:
+    """A build in progress."""
+
+    def __init__(self, shape: tuple[int, int, int], empty_tile: int, inventory: Mapping[tuple[str, str], int] | None,
+                 balanced: bool) -> None:
+        self.remaining = dict(inventory) if inventory is not None else None
+        self.filled = np.zeros(shape, dtype=bool)
+        self.studs = np.zeros(shape, dtype=bool)  # cells on a part's top layer that carry a stud
+        self.owner = np.full(shape, -1, dtype=np.int64)  # index into ``placed``
+        self.placed: list[PlacedPart] = []
+        self.balance = Balance() if balanced else None
+        self.grid = np.full(shape, empty_tile, dtype=np.int64)

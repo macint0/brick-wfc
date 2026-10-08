@@ -41,11 +41,15 @@ def part_occupancy(placed: list[PlacedPart], shape: tuple[int, int, int]) -> np.
     return owner
 
 
-def required_clutch(placed: list[PlacedPart], shape: tuple[int, int, int], baseplate: bool = False) -> float:
+def required_clutch(placed: list[PlacedPart], shape: tuple[int, int, int], baseplate: bool = False,
+                    method: str = "highs") -> float:
     """Smallest clutch per stud (in plate-cell weights) for which the build is in static equilibrium.
 
     By default the build stands on a table (the ground only pushes). With ``baseplate=True`` it is
     clicked onto a studded baseplate, so ground contacts can also pull (with the same clutch limit).
+    ``method`` is the ``scipy.optimize.linprog`` solver. ``"highs-ipm"`` (interior point) is much faster on
+    tall builds of 1000+ parts (M12: 5 s instead of minutes) and agrees to rounding; the default
+    keeps the M7-M11 tables reproducible.
     """
     if not placed:
         return 0.0
@@ -104,7 +108,7 @@ def required_clutch(placed: list[PlacedPart], shape: tuple[int, int, int], basep
     cost = np.zeros(n_vars + 1)
     cost[t_col] = 1.0
 
-    result = linprog(cost, A_ub=a_ub, b_ub=b_ub, A_eq=a_eq, b_eq=b_eq, bounds=(0, None), method="highs")
+    result = linprog(cost, A_ub=a_ub, b_ub=b_ub, A_eq=a_eq, b_eq=b_eq, bounds=(0, None), method=method)
     if result.status == 2:  # infeasible
         return math.inf
     if result.status != 0:
@@ -125,3 +129,15 @@ def tipping_clusters(placed: list[PlacedPart]) -> list[tuple[list[int], float]]:
     from brickwfc.bricks.balance import clusters
 
     return [(members, c.tip_distance()) for members, c in clusters(placed) if not c.stands()]
+
+
+def table_clutch(placed: list[PlacedPart], shape: tuple[int, int, int]) -> float:
+    """``required_clutch`` on a table, faster on large builds (M12): infinite if a cluster tips over
+    (``tipping_clusters``, exact), else the LP by interior point, falling back to the default solver if
+    that fails."""
+    if tipping_clusters(placed):
+        return math.inf
+    try:
+        return required_clutch(placed, shape, method="highs-ipm")
+    except RuntimeError:
+        return required_clutch(placed, shape)

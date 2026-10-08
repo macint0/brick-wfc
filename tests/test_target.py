@@ -144,3 +144,14 @@ def test_cli_with_silhouette_and_color_map(tiny_ldr: Path, style_dir: tuple[Path
     stats = json.loads((out / "stats.json").read_text(encoding="utf-8"))
     assert "silhouette" in stats["shape"] and stats["grid_YZX"][0] == 3
     assert all(0 < row["fill_pct"] <= 100 for row in stats["selected"])
+
+
+def test_shape_exact_keeps_the_model_cells(tiny_ldr: Path) -> None:
+    solid = load_target(str(tiny_ldr), 500, [RED])
+    exact = load_target(str(tiny_ldr), 500, [RED], exact=True)
+    assert "solid columns" in solid.description and "exact cells" in exact.description
+    assert exact.mask.sum() > 0 and not np.array_equal(exact.mask, solid.mask)
+    assert not (solid.mask[1:] & ~solid.mask[:-1]).any()  # solid columns: nothing above an empty cell
+    with pytest.raises(ValueError):
+        load_target("pyramid", 500, [RED], exact=True)
+
