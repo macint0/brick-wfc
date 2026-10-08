@@ -12,6 +12,12 @@ Percent columns (valid, stable, timeout) are shares of *attempted* builds, so a 
 scores low on them; utilization and fill are means over the builds that *finished*; time per accepted
 design is the total time of all attempts over the number of valid builds.
 
+Diversity (``experiments.diversity_pass``) follows one rule: within a setup (same inventory, grid and target),
+feature distances are in units of the median pairwise distance among that setup's D2-pipeline candidates, and
+two designs count as distinct when they are at least 0.5 units apart (half a typical D2 distance). The
+columns give the effective share of distinct designs among the verified candidates under that rule, and their
+mean pairwise distance in those units; setups without a D2-pipeline run have no unit (—).
+
 Sources differ in setup (plates only vs the full catalog, with or without a target shape, ...): the tag says
 which experiment a number comes from, and the legend under the table describes each one. Compare numbers
 within a column only when they share a tag.
@@ -50,7 +56,7 @@ SOURCES: dict[str, Source] = {
                        "M12b: BrickGPT's own structures (test split), our physics", "brickgpt"),
     "proposal": Source(("results/m12b_proposal_runs.jsonl", "out/m12b_proposal/runs.jsonl"),
                        "M12b: learned proposal vs statistics, fold-0 sets", "jsonl"),
-    "diversity": Source(("results/m13_diversity.json",), "M13: effective share of distinct designs among verified candidates, per alt run"),
+    "diversity": Source(("results/m13_diversity.json",), "M13: diversity of verified candidates per alt run, in units of the setup's D2 pair distance"),
 }
 
 
@@ -201,7 +207,7 @@ def show(value: Value) -> str:
 # The tables --------------------------------------------------------------------------------------------------
 
 COLUMNS = ("valid %", "stable % (support rule)", "stable % (physics, table)", "utilization %", "fill / IoU %",
-           "s per accepted design", "diversity (effective / verified designs, %)", "timeout %")
+           "s per accepted design", "diversity: distinct designs %", "diversity: normalized mean distance", "timeout %")
 
 
 def generator_row(cond: Mapping[str, Mapping[str, object]], stable: Cell | None = None, fill: Cell | None = None,
@@ -220,7 +226,8 @@ def generator_row(cond: Mapping[str, Mapping[str, object]], stable: Cell | None 
         "utilization %": first(*(c(s, UTILIZATION[s]) for s in ("m9b", "m9", "m12_demo", "m10", "proposal"))),
         "fill / IoU %": fill,
         "s per accepted design": first(*(c(s, TIME_PER_ACCEPTED[s], "{:.3g}") for s in ("m9b", "m9", "m12_demo", "m10", "proposal"))),
-        "diversity (effective / verified designs, %)": c("diversity", mean_of("effective_share", 100), "{:.0f}"),
+        "diversity: distinct designs %": c("diversity", mean_of("effective_share_norm", 100), "{:.0f}"),
+        "diversity: normalized mean distance": c("diversity", mean_of("mean_distance_norm"), "{:.2f}"),
         "timeout %": first(*(c(s, TIMEOUT_PCT[s], "{:.0f}") for s in ("m9b", "m10", "m12_demo"))),
     }
     row.update(extra or {})
