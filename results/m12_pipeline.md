@@ -1,5 +1,11 @@
 # M12 — Alternate-build pipeline
 
+**Done.** `python -m brickwfc.alt SET` produces k alternate builds for a real set, as `.ldr` files with
+one `0 STEP` per layer. Mac stepped through `out/alt/10182-1/build_01.ldr` in Studio on 2026-10-08 and the
+instructions play back correctly. Every selected build fits the set's inventory, is whole, is supported,
+stands on a table (finite required clutch), and is one piece. A target shape is optional: a primitive, a
+silhouette image (with height and color maps), or a model.
+
 `python -m brickwfc.alt SET|parts.csv|model.mpd [--shape ...] [--n 200] [--k 8]`: generate (D2 + learned
 style) → verify (integrity, inventory, support, shape, physics on a table, size floor) → dedupe → judge
 (size-matched style divergence) → select (diversity-aware top-k). Writes `.ldr` files with one `0 STEP` per
@@ -147,3 +153,68 @@ tips (exact, no LP), and otherwise solves the LP by interior point, falling back
 if that fails. It agrees with `required_clutch` to 7e-15 (relative) on 80 cached candidates, including
 feasibility on all of them. The slowest build went from 146 s to 4.6 s. `required_clutch` itself is
 unchanged, so M7–M11 reproduce.
+
+## Step 3 — one spaceship, six sets
+
+`experiments/demo.py`. The target is a top-down spaceship: a silhouette, a height map in whole bricks
+(wings 3 plates, fuselage and fins 6, cockpit 9) and a color map (`examples/spaceship_*.png`). It is
+scaled to each set's inventory volume. Per set: D2 (100 candidates, k = 4), D2 without the connect pass
+(100, to show what the one-piece rule costs), and WFC with the support, inventory and shape constraints
+(10 candidates, 30 s cap, only on sets of at most 400 parts; its backtracking history needs ~1.5 GB per
+worker on 10182-1). Defaults: tip-over check, bridge, connect with 10 rounds (see below).
+Figure: `results/m12_demo_sheet.png` (the target, then the top-judged build per set). Data:
+`results/m12_demo_summary.json`.
+
+| set (year) | generator | parts | grid (WxDxH) | built % | stands % | one piece % | valid % | fill % | IoU | utilization % | best judge | s/candidate |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 374-1 (1978) | D2 | 219 | 40x26x8 | 100 | 100 | 100 | **100** | 59.5 | 0.59 | 66.1 | -0.300 | 10.6 |
+| | D2, no connect | | | 100 | 100 | 0 | 0 | 79.5 | 0.80 | 93.2 | — | 1.4 |
+| | WFC | | | 0 | — | — | 0 | — | — | — | — | 30.2 |
+| 6378-1 (1986) | D2 | 203 | 37x25x7 | 100 | 100 | 100 | **100** | 69.9 | 0.70 | 91.6 | -0.340 | 15.3 |
+| | D2, no connect | | | 100 | 100 | 0 | 0 | 71.7 | 0.72 | 94.6 | — | 2.1 |
+| | WFC | | | 0 | — | — | 0 | — | — | — | — | 31.7 |
+| 7743-1 (2008) | D2 | 279 | 40x26x8 | 100 | 100 | 100 | **100** | 63.0 | 0.63 | 79.3 | -0.336 | 34.8 |
+| | D2, no connect | | | 100 | 100 | 0 | 0 | 71.9 | 0.72 | 92.9 | — | 4.0 |
+| | WFC | | | 0 | — | — | 0 | — | — | — | — | 118.9 |
+| 5891-1 (2010) | D2 | 323 | 43x28x8 | 100 | 100 | 100 | **100** | 65.1 | 0.65 | 81.2 | -0.340 | 22.6 |
+| | D2, no connect | | | 100 | 100 | 0 | 0 | 76.8 | 0.77 | 92.6 | — | 2.7 |
+| | WFC | | | 0 | — | — | 0 | — | — | — | — | 30.3 |
+| 4956-1 (2007) | D2 | 397 | 50x32x10 | 100 | 100 | 100 | **100** | 52.3 | 0.52 | 74.1 | -0.314 | 48.5 |
+| | D2, no connect | | | 100 | 100 | 0 | 0 | 61.6 | 0.62 | 88.6 | — | 6.4 |
+| | WFC | | | 0 | — | — | 0 | — | — | — | — | 112.5 |
+| 10182-1 (2007) | D2 | 1514 | 68x43x13 | 100 | 100 | 100 | **100** | 74.3 | 0.74 | 84.4 | -0.234 | 139.9 |
+| | D2, no connect | | | 100 | 100 | 0 | 0 | 81.4 | 0.81 | 96.2 | — | 21.3 |
+| | WFC | | | not run (memory) | | | | | | | | |
+
+Fill, IoU and utilization are over builds that pass every check but connectivity (for D2 these are the
+valid builds). s/candidate is generation plus physics, with 10 in parallel (WFC: 2).
+
+- **D2: every candidate is valid on every set.** It stands, is one piece, and stays within inventory and
+  shape. Fill is 52–74% and utilization 66–92% of the recognized parts. The color map shows on every
+  set, mapped to its nearest inventory colors (e.g. 7743-1's blue-and-white wings).
+- **The one-piece rule costs 2–20 points of fill** (6378-1: 72 → 70; 374-1: 80 → 60) and 3–27 points of
+  utilization. The cost is highest for inventories of mostly 1-wide bricks: those link only along their
+  length, and there are few wide plates to tie rows together.
+- **WFC builds nothing**: 0 of 50 candidates finish within the cap on the five sets it ran on, as expected
+  from M9b (WFC + inventory at full-catalog scale). The cap is checked between WFC steps, so a run can
+  overshoot it (up to 119 s). WFC also has no tip-over or connect pass, so even a finished WFC build might
+  not stand or be one piece.
+
+**Connect rounds.** With one repair round (step 2b), the flat spaceship splits into 50–100 clusters and
+the build keeps only the largest. Fill on 7743-1 falls to 37% and utilization to 45%. More rounds place
+the returned parts anywhere again (they may join the kept cluster or each other) and keep the largest
+cluster again; the last round refills layers ≥ 1 only, so one piece stays guaranteed. 7743-1, 8 seeds,
+1/3/6/10/16 rounds: fill 37/51/61/65/66%, utilization 45/62/78/83/84%. Time grows with the rounds, so
+the pipeline default is 10 (`--connect-rounds`). The builder default stays 1, so the step-2b study
+reproduces.
+
+## Open points after M12
+
+- **Better bridging.** Choose wide parts where they join clusters (the bridge preference only picks among
+  one part's offsets), or keep a cap of wide plates for the top layers. Either would recover more of the
+  fill the one-piece rule costs.
+- **Time.** Up to 140 s per candidate on 10182-1 with 10 repair rounds (10 in parallel). It is fine for
+  k-of-100, but slow for sweeps.
+- **Clutch.** Median required clutch is 9–210 plate-cell weights per stud, depending on the set. It is
+  unbounded for now; M13 calibrates `--max-clutch`.
+- **Shapes.** Model shapes are heightfields by default (`--shape-exact` keeps the exact cells).

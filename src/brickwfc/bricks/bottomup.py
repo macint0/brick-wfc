@@ -24,7 +24,9 @@ as well, a part tries all its offsets at the visited cell and takes the one rest
 clusters (ties: the first in random order), so separate stacks get joined into one piece where possible.
 With ``connect=True``, a repair pass makes the build one piece: the largest cluster is kept, the other
 clusters' parts go back to the inventory and are placed again on layers above the ground only, where every
-part rests on (so joins) the kept cluster.
+part rests on (so joins) the kept cluster. With ``connect_rounds`` > 1, earlier rounds place the returned
+parts anywhere (they may join the kept cluster or each other) and keep the largest cluster again, so less
+of the inventory is lost on wide, low shapes where a build splits into many clusters.
 
 With ``preferred`` colors (M12: a (Z, X) array of color names from a color image, "" for none), parts
 of the cell's preferred color are tried first; if none of them fits or is left, the sampler's own order
@@ -50,7 +52,8 @@ PREFERRED_BOOST = 1e6  # weight factor for parts of a cell's preferred color: in
 
 class BottomUpBuilder:
     def __init__(self, parts: PartSet, any_offset: bool = False, style: StyleBias | None = None,
-                 balanced: bool = False, bridge: bool = False, connect: bool = False) -> None:
+                 balanced: bool = False, bridge: bool = False, connect: bool = False,
+                 connect_rounds: int = 1) -> None:
         if bridge and not (balanced and any_offset):
             raise ValueError("bridge needs balanced=True and any_offset=True")
         self.parts = parts
@@ -59,6 +62,7 @@ class BottomUpBuilder:
         self.balanced = balanced
         self.bridge = bridge
         self.connect = connect
+        self.connect_rounds = connect_rounds
         self.index = {info: t for t, info in enumerate(parts.infos)}
         # Same priors as WFC: a cell's chance of holding (shape, color) is the summed weight of
         # that pair's tiles; the solid share is the solid tiles' share of all weight.
@@ -92,20 +96,23 @@ class BottomUpBuilder:
         allowed = np.ones(shape, dtype=bool) if allowed is None else allowed
         state = _State(shape, self.index[TileInfo(None)], inventory, self.balanced)
         self._fill(state, range(shape[0]), rng, allowed, preferred)
-        if self.connect and state.placed:
+        for round_ in range(self.connect_rounds if self.connect else 0):
             found = clusters(state.placed)
-            if len(found) > 1:
-                # Keep the largest cluster, return the others' parts to the inventory and place them again
-                # above the ground only: each part placed there rests on the kept cluster, so joins it.
-                keep = set(found[0][0])
-                returned = Counter((p.shape.part.name, p.color.name) for i, p in enumerate(state.placed) if i not in keep)
-                remaining = None if state.remaining is None else dict(Counter(state.remaining) + returned)
-                kept = sorted((state.placed[i] for i in keep), key=lambda p: p.layer)
-                state = _State(shape, self.index[TileInfo(None)], None, self.balanced)
-                for part in kept:  # already counted against the inventory
-                    self._put(state, part)
-                state.remaining = remaining
-                self._fill(state, range(1, shape[0]), rng, allowed, preferred)
+            if len(found) <= 1:
+                break
+            # Keep the largest cluster and return the others' parts to the inventory. Earlier rounds place
+            # them again anywhere (they may join the kept cluster); the last round only above the ground,
+            # where each part rests on (so joins) the kept cluster.
+            keep = set(found[0][0])
+            returned = Counter((p.shape.part.name, p.color.name) for i, p in enumerate(state.placed) if i not in keep)
+            remaining = None if state.remaining is None else dict(Counter(state.remaining) + returned)
+            kept = sorted((state.placed[i] for i in keep), key=lambda p: p.layer)
+            state = _State(shape, self.index[TileInfo(None)], None, self.balanced)
+            for part in kept:  # already counted against the inventory
+                self._put(state, part)
+            state.remaining = remaining
+            last = round_ == self.connect_rounds - 1
+            self._fill(state, range(1 if last else 0, shape[0]), rng, allowed, preferred)
         return state.grid
 
     def _fill(self, state: "_State", layers: range, rng: np.random.Generator, allowed: np.ndarray,

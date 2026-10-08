@@ -43,8 +43,8 @@ STUDIES = {
     "connect": {
         "balance": ["--no-bridge", "--no-connect"],
         "balance_bridge": ["--no-connect"],
-        "balance_connect": ["--no-bridge"],
-        "balance_bridge_connect": [],
+        "balance_connect": ["--no-bridge", "--connect-rounds", "1"],
+        "balance_bridge_connect": ["--connect-rounds", "1"],
     },
 }
 

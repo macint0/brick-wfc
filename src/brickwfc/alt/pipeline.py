@@ -76,6 +76,7 @@ class AltConfig:
     balanced: bool = True
     bridge: bool = True
     connect: bool = True
+    connect_rounds: int = 10  # repair rounds (see bottomup); 1 reproduces the step-2b table
     shape: str | None = None  # see target.py
     height_map: str | None = None
     color_map: str | None = None
@@ -135,7 +136,7 @@ def make_context(source: Source, stats: StyleStats, config: AltConfig, target: T
         grid, empty = mask.shape, SHAPE_EMPTY_WEIGHT
     return Context(source.inventory, source.colors, stats, grid, mask, preferred, empty, config.strength,
                    config.generator, config.max_clutch, config.wfc_time_limit_s, config.balanced,
-                   config.bridge, config.connect)
+                   config.bridge, config.connect, config.connect_rounds)
 
 
 # Generation, resumable ---------------------------------------------------------------------------
@@ -149,7 +150,7 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
         "preferred": None if context.preferred is None else context.preferred.tolist(),
         "empty_weight_per_part": context.empty_weight_per_part, "strength": context.strength,
         "generator": context.generator, "balanced": context.balanced, "bridge": context.bridge,
-        "connect": context.connect,        "verify_version": VERIFY_VERSION, "max_clutch": context.max_clutch,
+        "connect": context.connect, "connect_rounds": context.connect_rounds,        "verify_version": VERIFY_VERSION, "max_clutch": context.max_clutch,
         "wfc_time_limit_s": context.wfc_time_limit_s,
     }
     return json.loads(json.dumps(key))
@@ -295,6 +296,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--no-balance", action="store_true", help="d2 without the tip-over check (as in M9b-M11)")
     parser.add_argument("--no-bridge", action="store_true", help="d2 without the preference for joining clusters")
     parser.add_argument("--no-connect", action="store_true", help="d2 without the pass that makes builds one piece")
+    parser.add_argument("--connect-rounds", type=int, default=defaults.connect_rounds,
+                        help="repair rounds of the connect pass (1: as in step 2b)")
     parser.add_argument("--room", type=float, default=defaults.room, help="grid volume / inventory volume (no --shape)")
     parser.add_argument("--strength", type=float, default=defaults.strength, help="exponent on the style weights")
     parser.add_argument("--max-clutch", type=float, default=defaults.max_clutch, help="physics limit per stud")
@@ -315,7 +318,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     config = AltConfig(
         n=args.n, k=args.k, seed=args.seed, generator=args.generator, height=args.height, room=args.room,
         balanced=not args.no_balance, bridge=not args.no_balance and not args.no_bridge,
-        connect=not args.no_connect,
+        connect=not args.no_connect, connect_rounds=args.connect_rounds,
         shape=args.shape, height_map=args.height_map, color_map=args.color_map, shape_height=args.shape_height,
         shape_exact=args.shape_exact,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,

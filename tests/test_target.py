@@ -155,3 +155,17 @@ def test_shape_exact_keeps_the_model_cells(tiny_ldr: Path) -> None:
     with pytest.raises(ValueError):
         load_target("pyramid", 500, [RED], exact=True)
 
+
+def test_spaceship_target_images(tmp_path: Path) -> None:
+    from brickwfc.experiments.demo import labeled_sheet, spaceship_images, write_spaceship
+
+    silhouette_image, heights, colors = spaceship_images()
+    inside = inside_pixels(silhouette_image)
+    grey = np.asarray(heights)
+    assert inside.any() and (grey[inside] > 0).all() and (grey[~inside] == 0).all()
+    assert (np.asarray(colors)[..., 3][inside] == 255).all()
+    paths = write_spaceship(tmp_path)
+    target = load_target(str(paths[0]), 2000, [RED, BLUE, WHITE], paths[1], paths[2])
+    assert abs(target.mask.sum() - 2000) / 2000 < 0.15 and set(np.unique(target.preferred)) <= {"", "red", "blue", "white"}
+    labeled_sheet([paths[0], paths[2]], ["a", "b"], tmp_path / "sheet.png", columns=2)
+    assert (tmp_path / "sheet.png").exists()

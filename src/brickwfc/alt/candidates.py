@@ -63,6 +63,7 @@ class Context:
     balanced: bool = True  # d2: refuse parts that would tip their cluster over
     bridge: bool = True  # d2 (with balanced): prefer placements that join clusters
     connect: bool = True  # d2: repair pass that makes the build one piece (see bottomup)
+    connect_rounds: int = 10
 
 
 @dataclass(frozen=True)
@@ -97,7 +98,8 @@ def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.nd
     """One grid of tile ids for ``seed``, or None if the generator gave up."""
     if context.generator == "d2":
         builder = BottomUpBuilder(parts, any_offset=True, style=bias, balanced=context.balanced,
-                                  bridge=context.bridge, connect=context.connect)
+                                  bridge=context.bridge, connect=context.connect,
+                                  connect_rounds=context.connect_rounds)
         return builder.build(context.grid, np.random.default_rng(seed), context.inventory, context.mask,
                              context.preferred)
     constraints = [SupportConstraint(parts), InventoryConstraint(parts, context.inventory)]

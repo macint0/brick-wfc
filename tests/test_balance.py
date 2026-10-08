@@ -116,3 +116,19 @@ def test_table_clutch_matches_required_clutch(parts) -> None:
         grid = BottomUpBuilder(parts, any_offset=True).build((6, 5, 5), np.random.default_rng(seed))
         placed, _ = extract_parts(grid, parts)
         assert table_clutch(placed, grid.shape) == pytest.approx(required_clutch(placed, grid.shape), rel=1e-6, abs=1e-6)
+
+
+def test_connect_rounds_keep_one_piece_and_lose_fewer_parts(tile_parts) -> None:
+    inventory = {("plate1x2", "blue"): 20, ("plate1x1", "red"): 20, ("brick2x4", "red"): 4}
+    used = {}
+    for rounds in (1, 4):
+        builder = BottomUpBuilder(tile_parts, any_offset=True, balanced=True, bridge=True, connect=True,
+                                  connect_rounds=rounds)
+        total = 0
+        for seed in range(15):
+            grid = builder.build((3, 8, 8), np.random.default_rng(seed), inventory)
+            placed, errors = extract_parts(grid, tile_parts)
+            assert not errors and len(clusters(placed)) == 1
+            total += len(placed)
+        used[rounds] = total
+    assert used[4] >= used[1]
