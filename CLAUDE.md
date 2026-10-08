@@ -51,7 +51,8 @@ https://content.moldandyeast.com/forage/y6fmx6n4
 ## Working rules for Claude Code
 
 - Work **one milestone at a time**. When a milestone's "Done when" passes, stop and summarize; don't start the next one unasked.
-- Python 3.11+, `numpy`, `Pillow`, `scipy` (LP solver for physics, M7+), `pytest`. Ask before adding any other dependency.
+- Python 3.11+, `numpy`, `Pillow`, `scipy` (LP solver for physics, M7+), `pytest`, `trimesh` (mesh voxelizer for 3D
+  targets, approved by Mac 2026-10-08 for M12b). Ask before adding any other dependency.
 - Every random choice goes through a seeded `numpy.random.Generator` passed in explicitly. Same seed → same output.
 - Type hints, small modules, no global state. Prefer clear code over clever code — this will be read by reviewers.
 - Every milestone ships with tests. Run `pytest` before declaring done.
