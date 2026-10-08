@@ -31,6 +31,10 @@ of the inventory is lost on wide, low shapes where a build splits into many clus
 With ``preferred`` colors (M12: a (Z, X) array of color names from a color image, "" for none), parts
 of the cell's preferred color are tried first; if none of them fits or is left, the sampler's own order
 follows.
+
+Speed (M12b): above the ground, a cell with no stud below within a part's reach (``_reachable``) cannot
+take any part, so its placement attempts are skipped; the random draws they would have made are still made,
+so builds are identical to trying them. This matters on 3D targets, whose overhangs leave many such cells.
 """
 
 from __future__ import annotations
@@ -39,6 +43,7 @@ from collections import Counter
 from typing import TYPE_CHECKING, Mapping
 
 import numpy as np
+from scipy import ndimage
 
 from brickwfc.bricks.balance import Balance, clusters
 from brickwfc.bricks.colors import BrickColor
@@ -64,6 +69,8 @@ class BottomUpBuilder:
         self.connect = connect
         self.connect_rounds = connect_rounds
         self.index = {info: t for t, info in enumerate(parts.infos)}
+        # Largest part footprint side: a part covering a cell reaches at most this - 1 cells away from it.
+        self.reach = max(max(info.shape.size_z, info.shape.size_x) for info in parts.infos if info.solid)
         # Same priors as WFC: a cell's chance of holding (shape, color) is the summed weight of
         # that pair's tiles; the solid share is the solid tiles' share of all weight.
         totals: dict[tuple, float] = {}
@@ -121,6 +128,8 @@ class BottomUpBuilder:
         _, nz, nx = state.filled.shape
         remaining = state.remaining
         for y in layers:
+            # Parts placed on layer y never add studs to layer y - 1, so this holds for the whole layer.
+            reachable = self._reachable(state.studs, y)
             for flat in rng.permutation(nz * nx):
                 z, x = divmod(int(flat), nx)
                 if state.filled[y, z, x] or not allowed[y, z, x] or rng.random() >= self.solid_share:
@@ -138,7 +147,7 @@ class BottomUpBuilder:
                     if remaining is not None and remaining.get(key, 0) <= 0:
                         continue
                     box = (part_shape.size_y, part_shape.size_z, part_shape.size_x)
-                    if box in failed:
+                    if box in failed or not reachable[z, x]:
                         if self.any_offset:  # draw what _place would have drawn: same seed, same build
                             rng.permutation(part_shape.size_z * part_shape.size_x)
                         continue
@@ -206,6 +215,14 @@ class BottomUpBuilder:
             if joined > best_joined:
                 best, best_joined = part, joined
         return best
+
+    def _reachable(self, studs: np.ndarray, y: int) -> np.ndarray:
+        """(Z, X): cells of layer ``y`` that some part covering them could rest on a stud from. False
+        means no part fits there at all (above the ground every part needs a stud under its footprint)."""
+        if y == 0:
+            return np.ones(studs.shape[1:], dtype=bool)
+        size = 2 * self.reach - 1
+        return ndimage.maximum_filter(studs[y - 1], size=size, mode="constant", cval=False)
 
     @staticmethod
     def _below(part: PlacedPart, owner: np.ndarray) -> set[int]:
