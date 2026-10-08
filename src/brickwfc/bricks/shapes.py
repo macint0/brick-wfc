@@ -2,13 +2,21 @@
 
 ``ShapeConstraint`` keeps WFC's solid tiles inside the mask; adjacency propagation then keeps whole
 parts inside it too (a part's continuation tile can't sit in a cell that must stay empty).
+
+Besides the primitives, shapes come from a top-down silhouette image (optionally with a height map),
+or from a voxelized model, rescaled to a target volume (M12); ``preferred_colors`` reads a color image
+aligned with the silhouette.
 """
 
 from __future__ import annotations
 
-import numpy as np
+from typing import Callable, Sequence
 
-from brickwfc.bricks.parts import PartSet
+import numpy as np
+from PIL import Image
+
+from brickwfc.bricks.colors import BrickColor
+from brickwfc.bricks.parts import PartSet, PlacedPart
 from brickwfc.wfc import Cell, Wave
 
 Mask = np.ndarray  # (Y, Z, X) bool
@@ -92,6 +100,105 @@ def sized_for(
                 break
             side += 1
     return best[3]
+
+
+# Shapes from images and models (M12) ------------------------------------------------------------------
+
+
+def inside_pixels(image: Image.Image) -> np.ndarray:
+    """(rows, columns) bool: the opaque pixels of an image with transparency, else the dark ones
+    (luminance < 128, a dark silhouette on a light background)."""
+    if image.mode in ("RGBA", "LA", "PA") or "transparency" in image.info:
+        alpha = np.asarray(image.convert("RGBA"))[..., 3]
+        if (alpha < 255).any():
+            return alpha >= 128
+    return np.asarray(image.convert("L")) < 128
+
+
+def column_heights(silhouette: Image.Image, heights: Image.Image | None = None, height: int = 6) -> np.ndarray:
+    """(Z, X) column heights in plates from a top-down silhouette (one pixel per stud, rows along z):
+    ``height`` everywhere inside it, or the grey value of ``heights`` (same size; at least 1 inside)."""
+    inside = inside_pixels(silhouette)
+    if heights is None:
+        return np.where(inside, height, 0)
+    grey = np.asarray(heights.convert("L")).astype(np.int64)
+    if grey.shape != inside.shape:
+        raise ValueError(f"height map is {grey.shape[::-1]} pixels, silhouette {inside.shape[::-1]}")
+    return np.where(inside, np.maximum(grey, 1), 0)
+
+
+def height_map_of(mask: Mask) -> np.ndarray:
+    """(Z, X) number of layers from the ground to each column's top cell (0 for an empty column)."""
+    ny = mask.shape[0]
+    return np.where(mask.any(axis=0), ny - np.argmax(mask[::-1], axis=0), 0)
+
+
+def extrude(heights: np.ndarray) -> Mask:
+    """Mask of columns standing on the ground, ``heights`` (Z, X) plates tall."""
+    layers = np.arange(max(int(heights.max()), 1))[:, None, None]
+    return layers < heights[None]
+
+
+def resample(array: np.ndarray, factors: tuple[float, ...]) -> np.ndarray:
+    """Nearest-neighbor rescale of ``array``'s leading axes by ``factors`` (each axis at least 1 long)."""
+    for axis, factor in enumerate(factors):
+        n = array.shape[axis]
+        size = max(1, round(n * factor))
+        index = np.minimum((np.arange(size) / factor).astype(np.int64), n - 1)
+        array = np.take(array, index, axis=axis)
+    return array
+
+
+def bounds(mask: Mask) -> tuple[slice, slice, slice]:
+    """Layers 0 .. top filled layer (layer 0 stays the ground), and the z and x range of the filled cells."""
+    ys, zs, xs = (np.nonzero(mask.any(axis=other))[0] for other in ((1, 2), (0, 2), (0, 1)))
+    return slice(0, ys.max() + 1), slice(zs.min(), zs.max() + 1), slice(xs.min(), xs.max() + 1)
+
+
+def fit_scale(volume: Callable[[float], int], cells: float, dims: int, steps: int = 121) -> float:
+    """The factor ``f`` near (cells / volume(1)) ** (1 / dims) whose ``volume(f)`` is closest to ``cells``."""
+    estimate = (cells / volume(1.0)) ** (1 / dims)
+    factors = estimate * np.exp(np.linspace(-0.3, 0.3, steps))
+    errors = [abs(volume(float(f)) - cells) for f in factors]
+    return float(factors[int(np.argmin(errors))])
+
+
+def from_heights(heights: np.ndarray, cells: float, scale_height: bool) -> tuple[Mask, float]:
+    """Extruded columns scaled so the volume is about ``cells``: the footprint by ``f`` and, with
+    ``scale_height``, the heights too (shape kept); else only the footprint. Returns (mask, f); the mask
+    covers the whole resampled footprint (cut it with ``bounds``)."""
+    def scaled_heights(f: float) -> np.ndarray:
+        h = resample(heights, (f, f))
+        return np.where(h > 0, np.maximum(np.round(h * f), 1), 0).astype(np.int64) if scale_height else h
+
+    f = fit_scale(lambda f: int(scaled_heights(f).sum()), cells, 3 if scale_height else 2)
+    return extrude(scaled_heights(f)), f
+
+
+def from_model(placed: Sequence[PlacedPart], cells: float, solid_columns: bool = True) -> Mask:
+    """The cells of a (voxelized) model, scaled uniformly so the volume is about ``cells``. With
+    ``solid_columns``, each column is filled from the ground to its top cell first: the model's massing
+    rather than its exact cells (a voxelized model keeps only the catalog parts on the stud grid, so its
+    cells are a sparse, partial view)."""
+    shape = tuple(max(c[i] for p in placed for c in p.cells()) + 1 for i in range(3))
+    occupied = np.zeros(shape, dtype=bool)
+    for part in placed:
+        for cell in part.cells():
+            occupied[cell] = True
+    if solid_columns:
+        occupied = extrude(np.round(height_map_of(occupied)).astype(np.int64))
+    f = fit_scale(lambda f: int(resample(occupied, (f, f, f)).sum()), cells, 3)
+    mask = resample(occupied, (f, f, f))
+    return mask[bounds(mask)]
+
+
+def preferred_colors(image: Image.Image, colors: Sequence[BrickColor]) -> np.ndarray:
+    """(Z, X) name of the color in ``colors`` nearest (RGB distance) to each pixel; "" where transparent."""
+    rgba = np.asarray(image.convert("RGBA")).astype(np.float64)
+    palette = np.array([c.rgb for c in colors], dtype=np.float64)
+    nearest = np.argmin(((rgba[..., None, :3] - palette) ** 2).sum(axis=-1), axis=-1)
+    names = np.array([c.name for c in colors], dtype=object)[nearest]
+    return np.where(rgba[..., 3] >= 128, names, "")
 
 
 def fill(filled: np.ndarray, mask: Mask) -> float:

@@ -12,6 +12,7 @@ from typing import Sequence
 import numpy as np
 
 from brickwfc.bricks.parts import PlacedPart
+from brickwfc.bricks.shapes import height_map_of
 from brickwfc.bricks.style import TYPE_INDEX, TYPES
 
 HEIGHT_MAP_BLOCKS = 4  # the top view is pooled into at most 4 x 4 blocks
@@ -27,9 +28,7 @@ def occupancy(placed: Sequence[PlacedPart], shape: tuple[int, int, int]) -> np.n
 
 def height_map(filled: np.ndarray) -> np.ndarray:
     """(Z, X) height of each column's top filled cell (0 = empty column), as a share of the grid height."""
-    ny = filled.shape[0]
-    top = np.where(filled.any(axis=0), ny - np.argmax(filled[::-1], axis=0), 0)
-    return top / ny
+    return height_map_of(filled) / filled.shape[0]
 
 
 def pooled(values: np.ndarray, blocks: int) -> np.ndarray:

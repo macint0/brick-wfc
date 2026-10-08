@@ -1,0 +1,79 @@
+"""Target shapes for the pipeline (``--shape``), scaled to the inventory's volume.
+
+- a primitive name (``bricks.shapes.SHAPES``), scaled by ``shapes.sized_for``;
+- a top-down silhouette image (one pixel per stud, image rows along z; opaque or dark pixels are inside),
+  extruded ``--shape-height`` plates and scaled in the footprint only; with a height map (same size, grey
+  value = height in plates) the whole shape is scaled uniformly instead;
+- an LDraw model (.ldr/.mpd file, or an OMR set number), voxelized (catalog parts on the stud grid only)
+  and scaled uniformly.
+
+With a silhouette, an optional color image of the same size gives each column a preferred color: the
+inventory color nearest to its pixel (transparent pixels: no preference).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Sequence
+
+import numpy as np
+from PIL import Image
+
+from brickwfc.bricks.colors import BrickColor
+from brickwfc.bricks.shapes import (
+    SHAPES,
+    Mask,
+    bounds,
+    column_heights,
+    from_heights,
+    from_model,
+    preferred_colors,
+    resample,
+    sized_for,
+)
+from brickwfc.bricks.voxelize import voxelize
+from brickwfc.ldraw.fetch import fetch_set
+from brickwfc.ldraw.mpd import flatten
+
+IMAGE_SUFFIXES = (".png", ".gif", ".bmp")
+
+
+@dataclass(frozen=True, eq=False)
+class Target:
+    mask: Mask
+    preferred: np.ndarray | None  # (Z, X) color names, "" for no preference
+    description: str
+
+
+def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_map: Path | None = None,
+                color_map: Path | None = None, height: int = 6, data_dir: Path = Path("data/omr")) -> Target:
+    """The target ``spec`` with a volume of about ``cells`` grid cells."""
+    path = Path(spec)
+    is_image = path.suffix.lower() in IMAGE_SUFFIXES
+    if (height_map or color_map) and not is_image:
+        raise ValueError("--height-map and --color-map go with a silhouette image as --shape")
+    if spec in SHAPES:
+        return Target(sized_for(spec, cells), None, f"{spec} (primitive)")
+    if is_image:
+        silhouette = Image.open(path)
+        heights = column_heights(silhouette, Image.open(height_map) if height_map else None, height)
+        if not heights.any():
+            raise ValueError(f"{spec}: no pixel is inside the silhouette (dark or opaque)")
+        mask, factor = from_heights(heights, cells, scale_height=height_map is not None)
+        box = bounds(mask)
+        preferred = None
+        if color_map:
+            image = Image.open(color_map)
+            if image.size != silhouette.size:
+                raise ValueError(f"color map is {image.size} pixels, silhouette {silhouette.size}")
+            preferred = resample(preferred_colors(image, colors), (factor, factor))[box[1:]]
+        return Target(mask[box], preferred, f"{path.name} (silhouette, scaled x{factor:.2f})")
+    if path.suffix.lower() in (".ldr", ".mpd"):
+        text = path.read_text(encoding="utf-8", errors="replace")
+    else:
+        text = fetch_set(spec, data_dir).read_text(encoding="utf-8", errors="replace")
+    placed, _ = voxelize(flatten(text))
+    if not placed:
+        raise ValueError(f"{spec}: no catalog parts on the stud grid to take a shape from")
+    return Target(from_model(placed, cells), None, f"{path.stem if path.suffix else spec} (model)")

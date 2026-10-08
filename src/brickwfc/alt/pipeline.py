@@ -2,6 +2,7 @@
 
     python -m brickwfc.alt 6372-1 --n 200 --k 8
     python -m brickwfc.alt my_parts.csv --shape pyramid --out out/alt/mine
+    python -m brickwfc.alt 6372-1 --shape ship.png --color-map ship_colors.png
 
 Input: an OMR set number, an .mpd/.ldr model or a .csv parts list (``inputs.py``). Style: the M10
 statistics, from the fold that held the set out if it is one of the M10 sets, else from all of them.
@@ -18,9 +19,11 @@ statistics, from the fold that held the set out if it is one of the M10 sets, el
             (``funnel.select``); judge scores are standardized and feature distances divided by their
             median, so the two terms are on comparable scales
 
-Without a target shape, the grid is a cube in cells (as many plates tall as studs wide) with volume
-``--room`` x the inventory's; ``--height`` fixes the height instead (M10's grid: ``--height 12``); with ``--shape`` (a primitive of ``bricks.shapes``), the shape is scaled to the
-inventory's volume and the generators are told to fill it. Writes, under ``--out``: build_NN.ldr (one
+Without a target shape, the grid is a cube in millimetres (2.5 plates tall per stud of width) with
+volume ``--room`` x the inventory's; ``--height`` fixes the height instead (M10's grid: ``--height 12``). With
+``--shape`` (a primitive, a silhouette image with optional ``--height-map`` and ``--color-map``, or a
+model; ``target.py``), the shape is scaled to the inventory's volume and the generators are told to fill
+it. Writes, under ``--out``: build_NN.ldr (one
 ``0 STEP`` per layer, bottom to top), build_NN.png, sheet.png, stats.json, and candidates.jsonl (every
 candidate as it is generated, so a killed run resumes: rerun the same command).
 """
@@ -44,8 +47,9 @@ from brickwfc.alt.candidates import GENERATORS, Candidate, Context, generate
 from brickwfc.alt.features import feature_vector, occupancy
 from brickwfc.alt.inputs import DATA_DIR, SETS_FILE, STYLE_DIR, Source, learned_style, load_source
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
+from brickwfc.alt.target import Target, load_target
 from brickwfc.bricks.inventory import inventory_cells, utilization
-from brickwfc.bricks.shapes import SHAPES, fill, iou, sized_for
+from brickwfc.bricks.shapes import SHAPES, fill, iou
 from brickwfc.bricks.style import StyleStats, events, matched_divergence
 from brickwfc.bricks.voxelize import voxelize
 from brickwfc.experiments.inventory import grid_for
@@ -53,10 +57,12 @@ from brickwfc.experiments.style import InlineExecutor
 from brickwfc.funnel.dedupe import dedupe
 from brickwfc.funnel.pipeline import StageStats, format_stages
 from brickwfc.funnel.select import select
+from brickwfc.ldraw.export import PLATE_LDU, STUD_LDU
 from brickwfc.ldraw.mpd import flatten
 
 SHAPE_EMPTY_WEIGHT = 0.05  # per part type: a solid share of ~95%, so the builders try to fill the shape
 CHUNKS_PER_WORKER = 4
+PLATES_PER_STUD = STUD_LDU / PLATE_LDU  # 2.5: plate layers per stud of width, for a cube in millimetres
 
 
 @dataclass(frozen=True)
@@ -68,7 +74,10 @@ class AltConfig:
     height: int | None = None  # plates (no target shape); None: a cube, see cube_grid
     room: float = 1.5  # grid volume / inventory volume (no target shape)
     balanced: bool = True
-    shape: str | None = None
+    shape: str | None = None  # see target.py
+    height_map: str | None = None
+    color_map: str | None = None
+    shape_height: int = 6  # plates, for a silhouette without a height map
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = math.inf  # physics: keep builds needing at most this clutch per stud
     wfc_time_limit_s: float = 30.0
@@ -96,21 +105,32 @@ class FunnelReport:
 
 
 def cube_grid(cells: float, room: float) -> tuple[int, int, int]:
-    """(Y, Z, X) as many plates tall as studs wide and deep, with volume about ``room`` x ``cells``."""
-    side = max(2, math.ceil((room * cells) ** (1 / 3)))
-    return (side, side, side)
+    """(Y, Z, X) of a cube in millimetres (a plate is 0.4 studs tall, so 2.5 plates per stud of width)
+    with volume about ``room`` x ``cells``."""
+    volume = room * cells
+    side = max(2, math.ceil((volume / PLATES_PER_STUD) ** (1 / 3)))
+    return (max(1, math.ceil(volume / side**2)), side, side)
 
 
-def make_context(source: Source, stats: StyleStats, config: AltConfig) -> Context:
+def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -> Target | None:
     if config.shape is None:
+        return None
+    return load_target(config.shape, inventory_cells(source.inventory), source.colors,
+                       Path(config.height_map) if config.height_map else None,
+                       Path(config.color_map) if config.color_map else None, config.shape_height, data_dir)
+
+
+def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
+    if target is None:
         grid = (cube_grid(inventory_cells(source.inventory), config.room) if config.height is None
                 else grid_for(source.inventory, config.height, config.room))
-        mask, empty = None, config.room - 1
+        mask = preferred = None
+        empty = config.room - 1
     else:
-        mask = sized_for(config.shape, inventory_cells(source.inventory))
+        mask, preferred = target.mask, target.preferred
         grid, empty = mask.shape, SHAPE_EMPTY_WEIGHT
-    return Context(source.inventory, source.colors, stats, grid, mask, empty, config.strength, config.generator,
-                   config.max_clutch, config.wfc_time_limit_s, config.balanced)
+    return Context(source.inventory, source.colors, stats, grid, mask, preferred, empty, config.strength,
+                   config.generator, config.max_clutch, config.wfc_time_limit_s, config.balanced)
 
 
 # Generation, resumable ---------------------------------------------------------------------------
@@ -121,8 +141,10 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
     key = {
         "source": source.name, "inventory": sorted([*k, v] for k, v in source.inventory.items()), "style": style_label,
         "grid": list(context.grid), "mask": None if context.mask is None else np.argwhere(context.mask).tolist(),
+        "preferred": None if context.preferred is None else context.preferred.tolist(),
         "empty_weight_per_part": context.empty_weight_per_part, "strength": context.strength,
-        "generator": context.generator, "balanced": context.balanced, "max_clutch": context.max_clutch, "wfc_time_limit_s": context.wfc_time_limit_s,
+        "generator": context.generator, "balanced": context.balanced, "max_clutch": context.max_clutch,
+        "wfc_time_limit_s": context.wfc_time_limit_s,
     }
     return json.loads(json.dumps(key))
 
@@ -248,7 +270,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     defaults = AltConfig()
     parser = argparse.ArgumentParser(prog="python -m brickwfc.alt", description=__doc__.splitlines()[0])
     parser.add_argument("input", help="OMR set number (e.g. 6372-1), .mpd/.ldr model, or .csv parts list")
-    parser.add_argument("--shape", choices=sorted(SHAPES), help="target shape, scaled to the inventory's volume")
+    parser.add_argument("--shape", help=f"target shape, scaled to the inventory's volume: one of {sorted(SHAPES)}, "
+                        "a silhouette image, an .ldr/.mpd model or a set number")
+    parser.add_argument("--height-map", help="grey image, same size as the silhouette: height in plates")
+    parser.add_argument("--color-map", help="color image, same size as the silhouette: preferred colors")
+    parser.add_argument("--shape-height", type=int, default=defaults.shape_height,
+                        help="plates, for a silhouette without a height map")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -273,9 +300,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     start = time.perf_counter()
-    config = AltConfig(args.n, args.k, args.seed, args.generator, args.height, args.room, not args.no_balance, args.shape, args.strength,
-                       args.max_clutch, args.wfc_time_limit, args.min_size_quantile, defaults.judge_draws,
-                       args.dedupe_threshold, args.diversity)
+    config = AltConfig(
+        n=args.n, k=args.k, seed=args.seed, generator=args.generator, height=args.height, room=args.room,
+        balanced=not args.no_balance,
+        shape=args.shape, height_map=args.height_map, color_map=args.color_map, shape_height=args.shape_height,
+        strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
+        min_size_quantile=args.min_size_quantile, dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
+    )
     source = load_source(args.input, args.data)
     stats, style_label = learned_style(source.name, args.style_dir, args.sets_file)
     out = args.out or Path("out/alt") / source.name
@@ -284,7 +315,10 @@ def main(argv: Sequence[str] | None = None) -> int:
           + (f" (most common: {', '.join(f'{p} x{n}' for p, n in ignored_top[:5])})" if ignored_top else ""))
     print(f"style: {style_label}")
 
-    context = make_context(source, stats, config)
+    target = make_target(source, config, args.data)
+    if target is not None:
+        print(f"shape: {target.description}, {int(target.mask.sum())} cells, grid {target.mask.shape} (Y, Z, X)")
+    context = make_context(source, stats, config, target)
     cache = out / "candidates.jsonl"
     if args.fresh and cache.exists():
         cache.unlink()
@@ -304,6 +338,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                   "ignored_parts": source.ignored_parts, "ignored_top": ignored_top,
                   "colors": [c.name for c in source.colors], "inventory_cells": inventory_cells(source.inventory)},
         "style": style_label, "config": asdict(config), "grid_YZX": list(context.grid),
+        "shape": None if target is None else target.description,
         "shape_cells": None if context.mask is None else int(context.mask.sum()),
         "requested": report.requested, "stages": [asdict(s) for s in report.stages],
         "check_failures": report.check_failures, "size_floor_events": report.size_floor,

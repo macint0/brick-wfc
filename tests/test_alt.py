@@ -7,53 +7,18 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from brickwfc.alt.candidates import Candidate, Context, generate
+from brickwfc.alt.candidates import Candidate, generate
 from brickwfc.alt.features import feature_vector, height_map
 from brickwfc.alt.inputs import all_from_folds, learned_style, load_source
 from brickwfc.alt.output import layer_steps
 from brickwfc.alt.pipeline import AltConfig, cache_key, generate_all, main, make_context
-from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.inventory import inventory_from_csv
-from brickwfc.bricks.parts import BY_FILE, CATALOG, PlacedPart, Shape
+from brickwfc.bricks.parts import BY_FILE
 from brickwfc.bricks.style import StyleStats, merged
 from brickwfc.experiments.style import folds
-from brickwfc.ldraw.export import PLATE_LDU, parse_steps, write_ldr, write_steps
+from brickwfc.ldraw.export import PLATE_LDU, parse_steps, write_steps
 
-RED, BLUE, WHITE, YELLOW = colors_by_name(["red", "blue", "white", "yellow"])
-
-
-def piece(name: str, layer: int, x: int = 0, z: int = 0, color=RED, rotated: bool = False) -> PlacedPart:
-    return PlacedPart(Shape(CATALOG[name], rotated), color, layer, x, z)
-
-
-def tiny_model() -> list[PlacedPart]:
-    """A small stable model: a floor of plates, a ring of bricks, a plate roof."""
-    floor = [piece("plate2x4", 0, x, z, BLUE) for x in (0, 4) for z in (0, 2, 4)]
-    walls = [piece("brick2x4", 1, 0, 0), piece("brick2x4", 1, 4, 4), piece("brick2x2", 1, 6, 0, YELLOW),
-             piece("brick2x2", 1, 0, 4, YELLOW), piece("brick1x2", 1, 0, 2, RED, rotated=True)]
-    roof = [piece("plate2x4", 4, x, z, WHITE) for x in (0, 4) for z in (0, 4)] + [piece("plate1x2", 5, 1, 1, RED)]
-    return floor + walls + roof
-
-
-@pytest.fixture
-def tiny_ldr(tmp_path: Path) -> Path:
-    path = tmp_path / "tiny.ldr"
-    write_ldr([p.placement() for p in tiny_model()], path, "tiny")
-    with path.open("a", encoding="utf-8") as f:
-        f.write("1 4 0 -8 0 1 0 0 0 1 0 0 0 1 3626b.dat\n")  # not in the catalog
-    return path
-
-
-@pytest.fixture
-def style_dir(tmp_path: Path) -> tuple[Path, Path]:
-    """Synthetic M10 fold files and set list (the real ones are results of a long run)."""
-    directory = tmp_path / "style"
-    stats = StyleStats().add(tiny_model())
-    for i in range(4):
-        stats.save(directory / f"style_fold{i}.json")
-    sets_file = tmp_path / "sets.json"
-    sets_file.write_text(json.dumps({"selected": [f"s{i}" for i in range(8)]}), encoding="utf-8")
-    return directory, sets_file
+from conftest import BLUE, RED, piece, tiny_model
 
 
 def bottom_layer(placement) -> int:

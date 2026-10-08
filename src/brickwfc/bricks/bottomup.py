@@ -20,6 +20,10 @@ cell and the parts beside it. Without one, builds are exactly as before.
 With ``balanced=True`` (M12), a part is also refused if it would tip its cluster of stud-connected parts
 over on a table (``balance.Balance``), so every build needs only finite clutch
 (``physics.required_clutch``). Off by default, which reproduces the M9b-M11 tables.
+
+With ``preferred`` colors (M12: a (Z, X) array of color names from a color image, "" for none), parts
+of the cell's preferred color are tried first; if none of them fits or is left, the sampler's own order
+follows.
 """
 
 from __future__ import annotations
@@ -34,6 +38,8 @@ from brickwfc.bricks.parts import PartSet, PlacedPart, Shape, TileInfo
 
 if TYPE_CHECKING:
     from brickwfc.bricks.style import StyleBias
+
+PREFERRED_BOOST = 1e6  # weight factor for parts of a cell's preferred color: in practice, tried first
 
 
 class BottomUpBuilder:
@@ -54,6 +60,7 @@ class BottomUpBuilder:
         self.choices = list(totals)
         weights = np.array([totals[k] for k in self.choices])
         self.choice_p = weights / weights.sum()
+        self.choice_color_names = np.array([color.name for _, color in self.choices])
         self.solid_share = float(weights.sum() / parts.tileset.weights.sum())
         if style is not None:
             from brickwfc.bricks.style import TYPE_INDEX
@@ -67,9 +74,11 @@ class BottomUpBuilder:
         rng: np.random.Generator,
         inventory: Mapping[tuple[str, str], int] | None = None,
         allowed: np.ndarray | None = None,
+        preferred: np.ndarray | None = None,
     ) -> np.ndarray:
         """A (Y, Z, X) grid of tile ids; every placed part is whole, supported, within ``inventory``
-        ((part name, color name) -> count) and inside ``allowed`` (bool, grid-shaped) if given."""
+        ((part name, color name) -> count) and inside ``allowed`` (bool, grid-shaped) if given.
+        ``preferred`` (Z, X) color names, "" for none, reorders the parts tried at each cell."""
         remaining = dict(inventory) if inventory is not None else None
         ny, nz, nx = shape
         allowed = np.ones(shape, dtype=bool) if allowed is None else allowed
@@ -88,6 +97,9 @@ class BottomUpBuilder:
                 # only on its box, so once a box size fails here, other parts of that size are skipped.
                 failed: set[tuple[int, int, int]] = set()
                 p = self.choice_p if self.style is None else self._styled_p(owner, placed, y, z, x)
+                if preferred is not None and preferred[z, x]:
+                    p = p * np.where(self.choice_color_names == preferred[z, x], PREFERRED_BOOST, 1.0)
+                    p = p / p.sum()
                 for choice in rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p):
                     part_shape, color = self.choices[choice]
                     key = (part_shape.part.name, color.name)

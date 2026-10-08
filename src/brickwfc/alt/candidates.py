@@ -3,7 +3,8 @@
 Generators: ``d2`` (default), the bottom-up builder with any-offset placement, the learned style bias and
 the tip-over check (``balance``; off with ``balanced=False``);
 ``wfc``, WFC with the support, inventory (and shape) constraints, backtracking, the same bias and a time
-cap (a compared method, see CLAUDE.md). Both use the same styled tileset.
+cap (a compared method, see CLAUDE.md). Both use the same styled tileset, and both put parts of a
+column's preferred color (from a color image, ``target.py``) first.
 
 Checks, in order: ``integrity`` (every part whole, nothing on a tile), ``inventory`` (no part overused),
 ``support`` (every part rests on a stud), ``shape`` (nothing outside the target shape), and, only for
@@ -24,7 +25,7 @@ from typing import Sequence
 
 import numpy as np
 
-from brickwfc.bricks.bottomup import BottomUpBuilder
+from brickwfc.bricks.bottomup import PREFERRED_BOOST, BottomUpBuilder
 from brickwfc.bricks.colors import BrickColor, color_for_code
 from brickwfc.bricks.inventory import Inventory, InventoryConstraint, overuse
 from brickwfc.bricks.parts import CATALOG, PartSet, PlacedPart, Shape, extract_parts
@@ -33,7 +34,7 @@ from brickwfc.bricks.shapes import Mask, ShapeConstraint, outside
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.style import StyleBias, StyleStats, styled_tileset
 from brickwfc.bricks.support import is_stable
-from brickwfc.wfc import run
+from brickwfc.wfc import Bias, run
 
 GENERATORS = ("d2", "wfc")
 CHECKS = ("generate", "integrity", "inventory", "support", "shape", "physics")
@@ -49,6 +50,7 @@ class Context:
     stats: StyleStats
     grid: tuple[int, int, int]  # (Y, Z, X)
     mask: Mask | None  # target shape, grid-shaped
+    preferred: np.ndarray | None  # (Z, X) preferred color names, "" for none
     empty_weight_per_part: float
     strength: float = 1.0
     generator: str = "d2"
@@ -86,13 +88,28 @@ def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.nd
     """One grid of tile ids for ``seed``, or None if the generator gave up."""
     if context.generator == "d2":
         builder = BottomUpBuilder(parts, any_offset=True, style=bias, balanced=context.balanced)
-        return builder.build(context.grid, np.random.default_rng(seed), context.inventory, allowed=context.mask)
+        return builder.build(context.grid, np.random.default_rng(seed), context.inventory, context.mask,
+                             context.preferred)
     constraints = [SupportConstraint(parts), InventoryConstraint(parts, context.inventory)]
     if context.mask is not None:
         constraints.append(ShapeConstraint(parts, context.mask))
     result = run(parts.tileset, context.grid, seed, WFC_MAX_ATTEMPTS, constraints, WFC_MAX_BACKTRACKS,
-                 context.wfc_time_limit_s, bias.for_tiles)
+                 context.wfc_time_limit_s, wfc_bias(parts, bias, context.preferred))
     return result.grid
+
+
+def wfc_bias(parts: PartSet, bias: StyleBias, preferred: np.ndarray | None) -> Bias:
+    """The style bias, times ``PREFERRED_BOOST`` for tiles of the cell's preferred color."""
+    if preferred is None:
+        return bias.for_tiles
+    tile_colors = np.array([info.color.name if info.solid else "" for info in parts.infos])
+
+    def weights(domain: np.ndarray, cell: tuple[int, int, int]) -> np.ndarray:
+        w = bias.for_tiles(domain, cell)
+        name = preferred[cell[1], cell[2]]
+        return w * np.where(tile_colors == name, PREFERRED_BOOST, 1.0) if name else w
+
+    return weights
 
 
 def verify(context: Context, parts: PartSet, grid: np.ndarray) -> tuple[list[PlacedPart], list[str], float, float]:

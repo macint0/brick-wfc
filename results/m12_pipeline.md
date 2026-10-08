@@ -70,8 +70,29 @@ side = height = ⌈∛(room × inventory cells)⌉. `--height 12` restores the o
   (one cluster, or a minimum share in the largest) would be the next rule if alternate builds should be
   liftable.
 - **A cube in cells is flat in reality.** A plate is 0.4 studs tall, so a 25×25×25-cell grid is 200 × 200 × 80 mm.
-  A cube in millimetres would have height in plates = 2.5 × side.
+  Changed in step 2: the default is now a cube in millimetres (height in plates ≈ 2.5 × side; 10182-1:
+  18 × 18 studs × 44 plates).
 - The required clutch of the remaining builds is large (median 192 plate-cell weights per stud on 10182-1),
   so cantilevers are long. With realistic clutch limits (`--max-clutch`) that becomes the binding
   constraint.
-- The WFC generator in the pipeline has no balance check (it stays a compared method).
+- The WFC generator in the pipeline has no balance check (it stays a compared method). This is one reason
+  its physics pass rate is lower than D2's.
+
+## Step 2 — target shapes from images and models
+
+`--shape` now also takes:
+- a **silhouette image**: top-down, one pixel per stud, opaque or dark pixels inside. It is extruded
+  `--shape-height` plates and the footprint is scaled to the inventory's volume. With `--height-map`
+  (grey value = plates), the whole shape is scaled uniformly instead.
+- an **.ldr/.mpd model or a set number**: voxelized (catalog parts on the stud grid), each column filled from
+  the ground to its top cell, then scaled uniformly.
+- `--color-map`, an image aligned with the silhouette: each column prefers the nearest inventory color.
+  The builder tries that color's parts first and falls back to its normal sampler (WFC: the same preference
+  as a sampling bias).
+
+Code: `bricks/shapes.py` (`column_heights`, `from_heights`, `from_model`, `preferred_colors`, `resample`,
+`bounds`), `alt/target.py`, and `BottomUpBuilder.build(preferred=)`.
+
+Model shapes need the filled columns. 6372-1's parts built into 6380-1's shape (40 seeds) reach 76–84%
+fill using 90–94% of the parts (judge −0.27). From the voxelized cells alone (sparse walls and fragments)
+they reach only 37–49% fill, using 61–72% of the parts (judge −0.32).
