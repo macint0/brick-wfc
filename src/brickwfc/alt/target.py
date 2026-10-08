@@ -65,11 +65,13 @@ class Target:
 def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_map: Path | None = None,
                 color_map: Path | None = None, height: int = 6, data_dir: Path = Path("data/omr"),
                 exact: bool = False, columns: bool = False, brickgpt_dir: Path = brickgpt.DATA_DIR,
-                voxels: int = 32, up: str = "y", hollow: int = 0, supports: bool = False) -> Target:
+                voxels: int = 32, up: str = "y", hollow: int = 0, supports: bool = False,
+                support_height: int = 0) -> Target:
     """The target ``spec`` with a volume of about ``cells`` grid cells. ``exact``: a model keeps its own
     cells instead of solid columns; ``columns``: a 3D target becomes solid columns instead of its own cells;
     ``voxels``, ``up``: mesh resolution and up axis; ``hollow``: shell thickness of a 3D target (0: solid);
-    ``supports``: add support columns under far overhangs of a 3D target."""
+    ``supports``: add support columns under far overhangs of a 3D target; ``support_height`` > 0: only columns
+    at most that many cells tall."""
     path = Path(spec)
     suffix = path.suffix.lower()
     is_image = suffix in IMAGE_SUFFIXES
@@ -84,7 +86,8 @@ def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_ma
     if (hollow or supports) and (is_image or spec in SHAPES):
         raise ValueError("--hollow and --supports go with a 3D target (a model, a BrickGPT structure or a mesh)")
     hollowed = (f", hollow {hollow}" if hollow else "") + (", supports" if supports else "")
-    finish = with_supports if supports else (lambda mask: mask)
+    hollowed += f" up to {support_height} cells" if supports and support_height else ""
+    finish = (lambda mask: with_supports(mask, max_height=support_height)) if supports else (lambda mask: mask)
     if is_3d:
         if is_mesh:
             occupied, name, kind = mesh_mask(path, voxels, up), path.name, f"mesh, {voxels} voxels"

@@ -236,13 +236,14 @@ SUPPORT_REACH = 3  # supports: overhang cells farther than this from a held cell
 
 
 def with_supports(mask: Mask, reach: int = SUPPORT_REACH, period: int = SUPPORT_PERIOD,
-                  width: int = SUPPORT_WIDTH) -> Mask:
+                  width: int = SUPPORT_WIDTH, max_height: int = 0) -> Mask:
     """``mask`` plus support columns outside it (M12b step 1d). On each layer, an overhang cell (nothing of
     the mask below it) more than ``reach`` studs (chessboard distance) from every held cell (mask below) is
     out of reach of a part cantilevered from the held cells; under those cells on the pillar lattice
     (``width`` x ``width`` every ``period`` studs, as in ``hollow``), a column goes down to the next mask
     cell or the ground. The columns are extra cells, not part of the object: measure fill and IoU against
-    ``mask``."""
+    ``mask``. With ``max_height`` > 0, only columns at most that many cells tall are added: short legs under
+    low overhangs (a caster base's hub), not towers under a table top that would use up the inventory."""
     result = mask.copy()
     _, nz, nx = mask.shape
     lattice = (np.arange(nz)[:, None] % period < width) & (np.arange(nx)[None, :] % period < width)
@@ -253,6 +254,9 @@ def with_supports(mask: Mask, reach: int = SUPPORT_REACH, period: int = SUPPORT_
         held = mask[y] & mask[y - 1]
         far = over if not held.any() else over & (ndimage.distance_transform_cdt(~held, metric="chessboard") > reach)
         column = far & lattice
+        if max_height:
+            empty = np.cumprod(~mask[y - 1::-1], axis=0)  # cells straight below, until the mask
+            column &= empty.sum(axis=0) <= max_height
         for below in range(y - 1, -1, -1):
             column = column & ~mask[below]
             if not column.any():
