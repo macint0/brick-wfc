@@ -87,6 +87,7 @@ class AltConfig:
     mesh_up: str = "y"
     hollow: int = 0  # 3D target: shell thickness in cells, plus internal pillars (0: solid)
     supports: bool = False  # 3D target: support columns under overhangs out of a part's reach
+    open_tops: bool = True  # with a target shape: studless top cells only under empty target cells
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = math.inf  # physics: keep builds needing at most this clutch per stud
     wfc_time_limit_s: float = 30.0
@@ -142,7 +143,7 @@ def make_context(source: Source, stats: StyleStats, config: AltConfig, target: T
         grid, empty = mask.shape, SHAPE_EMPTY_WEIGHT
     return Context(source.inventory, source.colors, stats, grid, mask, preferred, empty, config.strength,
                    config.generator, config.max_clutch, config.wfc_time_limit_s, config.balanced,
-                   config.bridge, config.connect, config.connect_rounds)
+                   config.bridge, config.connect, config.connect_rounds, config.open_tops and target is not None)
 
 
 # Generation, resumable ---------------------------------------------------------------------------
@@ -159,6 +160,8 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
         "connect": context.connect, "connect_rounds": context.connect_rounds,        "verify_version": VERIFY_VERSION, "max_clutch": context.max_clutch,
         "wfc_time_limit_s": context.wfc_time_limit_s,
     }
+    if context.open_tops:  # only when on, so caches from before the rule stay valid
+        key["open_tops"] = True
     return json.loads(json.dumps(key))
 
 
@@ -301,6 +304,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--mesh-up", choices=("y", "z"), default=defaults.mesh_up, help="mesh target: up axis")
     parser.add_argument("--hollow", type=int, default=defaults.hollow,
                         help="3D target: a shell this many cells thick plus internal pillars (0: solid)")
+    parser.add_argument("--no-open-tops", action="store_true",
+                        help="with a target shape: let studless tops (tiles) sit under target cells (as before M12b 1d)")
     parser.add_argument("--supports", action="store_true",
                         help="3D target: add support columns under overhangs out of a part's reach (extra cells)")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
@@ -337,7 +342,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         connect=not args.no_connect, connect_rounds=args.connect_rounds,
         shape=args.shape, height_map=args.height_map, color_map=args.color_map, shape_height=args.shape_height,
         shape_exact=args.shape_exact, shape_columns=args.shape_columns, voxels=args.voxels, mesh_up=args.mesh_up,
-        hollow=args.hollow, supports=args.supports,
+        hollow=args.hollow, supports=args.supports, open_tops=not args.no_open_tops,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
     )

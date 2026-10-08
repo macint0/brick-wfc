@@ -53,6 +53,6 @@ def test_supports_target(tmp_path) -> None:
     supported = load_target(str(tmp_path / "table.txt"), 900, [RED], supports=True)
     assert supported.mask.shape == plain.mask.shape and (supported.mask >= plain.mask).all()
     assert supported.mask.sum() > plain.mask.sum() and "supports" in supported.description
-    assert variant_args("supports") == ["--supports"]
+    assert variant_args("supports") == ["--no-open-tops", "--supports"]
     with pytest.raises(ValueError):
         load_target("pyramid", 500, [RED], supports=True)

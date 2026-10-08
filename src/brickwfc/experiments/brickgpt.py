@@ -20,13 +20,16 @@ we report its size and the share of its outer surface the build covers. Figure: 
 enlarges most (the vessel) on the demo sets, solid | hollow.
 
 Step 1d (``--steps 1d``): overhangs. The overhang loss is the share of target cells a build leaves empty
-with nothing built under them (``shapes.unsupported_empty``). Two remedies, kept if they recover fill with
+with nothing built under them (``shapes.unsupported_empty``). Remedies, kept if they recover fill with
 every build still standing: (i) a clutch limit calibrated to real bricks (StableLego's per-knob friction
 capacity, 0.98 N, over the weight of a plate cell from its measured 2x4 brick mass, 2.16 g), turned into
 the cantilever length it allows with our physics model, and applied to the exact runs' builds (their
 clutch is cached); (ii) support columns under overhangs out of a part's reach (``--supports``), extra
-cells outside the object, so fill and IoU are measured against the object without them. Figure: the
-object with the most overhang loss (the table), exact | supports, on the demo sets.
+cells outside the object, so fill and IoU are measured against the object without them; (iii) open tops
+(the pipeline default from 1d on; ``--no-open-tops`` before): studless top cells only under empty target
+cells, so tiles cannot cap thin parts (the cause of the table's and chair's low builds on 10182-1). Runs
+of the other variants pass ``--no-open-tops`` so they match the 1a runs. Figure: the table, exact | open
+tops, on the demo sets.
 
 Runs reuse the pipeline's candidate cache, so a killed run resumes. Writes, under ``--out``: step 1a
 ``results.md``, ``summary.json``, ``objects.png`` (their structure, then our best build per set, per object)
@@ -123,21 +126,25 @@ def theirs(structure: brickgpt.Structure, out: Path) -> dict:
 
 
 def variant_args(variant: str) -> list[str]:
-    """Pipeline arguments of a target variant: "exact", "columns" or "hollow<N>"."""
-    if variant == "exact":
+    """Pipeline arguments of a target variant: "exact", "columns", "hollow<N>", "supports" (as run before
+    open tops, M12b 1d (iii), so they match the 1a runs), or "opentops" (exact with open tops on)."""
+    if variant == "opentops":
         return []
+    before = ["--no-open-tops"]
+    if variant == "exact":
+        return before
     if variant == "columns":
-        return ["--shape-columns"]
+        return [*before, "--shape-columns"]
     if variant.startswith("hollow"):
-        return ["--hollow", variant.removeprefix("hollow")]
+        return [*before, "--hollow", variant.removeprefix("hollow")]
     if variant == "supports":
-        return ["--supports"]
+        return [*before, "--supports"]
     raise ValueError(f"unknown variant {variant!r}")
 
 
 def target_for(set_number: str, structure: brickgpt.Structure, variant: str) -> Target:
     source = load_source(set_number)
-    hollow = int(variant.removeprefix("hollow")) if variant.startswith("hollow") else 0
+    hollow = int(variant.removeprefix("hollow")) if variant.startswith("hollow") else 0  # opentops: as exact
     return load_target(BRICKGPT_PREFIX + structure.structure_id, inventory_cells(source.inventory),
                        source.colors, columns=variant == "columns", hollow=hollow, supports=variant == "supports")
 
@@ -166,7 +173,7 @@ def ours(set_number: str, structure: brickgpt.Structure, directory: Path, varian
     # The object itself (without support columns), on the same grid, for the overhang measures.
     obj = target_for(set_number, structure, "exact").mask if variant == "supports" else target.mask
     extra = {}
-    if variant in ("exact", "supports"):
+    if variant in ("exact", "supports", "opentops"):
         extra = {
             "object_cells": int(obj.sum()),
             "object_fill_pct": 100 * mean([fill(f, obj) for f in filled]),
@@ -385,21 +392,22 @@ def step_1c(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
 
 def step_1d(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
     rows = [ours(set_number, s, run_ours(set_number, s, args.out, args.n, args.workers, variant), variant)
-            for s in picked for set_number in args.sets for variant in ("exact", "supports")]
+            for s in picked for set_number in args.sets for variant in ("exact", "opentops", "supports")]
     table = next((s for s in picked if s.category_id == OVERHANG_FIGURE_CATEGORY), picked[0])
     figure = [ours(set_number, table, run_ours(set_number, table, args.out, args.n, args.workers, variant), variant)
-              for set_number in args.figure_sets for variant in ("exact", "supports")]
+              for set_number in args.figure_sets for variant in ("exact", "opentops")]
     (args.out / "overhangs_summary.json").write_text(json.dumps({"ours": rows, "before_after": figure}, indent=2),
                                                      encoding="utf-8")
     exact = [r for r in rows if r["variant"] == "exact"]
     text = (f"### Calibration\n\n{calibration_table()}\n\n### (i) Clutch limits on the exact runs\n\n"
-            f"{clutch_limit_table(exact)}\n\n### (ii) Support columns vs exact\n\n{overhang_table(rows)}\n\n"
+            f"{clutch_limit_table(exact)}\n\n### (ii) Support columns and (iii) open tops vs exact\n\n"
+            f"{overhang_table(rows)}\n\n"
             f"### Figure runs ({category(table)})\n\n{overhang_table(figure)}\n")
     (args.out / "overhangs.md").write_text(text, encoding="utf-8")
     print(text)
-    before_after(table, figure, ("exact", "supports"),
-                 ("before: exact target\n(overhangs out of reach stay empty)",
-                  "after: + support columns under far overhangs\n(extra cells, outside the object)"),
+    before_after(table, figure, ("exact", "opentops"),
+                 ("before: exact target\n(tiles may cap thin parts)",
+                  "after: open tops\n(studless tops only under empty target cells)"),
                  args.figure_sets[-1], args.out, args.out / "overhangs_before_after.png")
 
 

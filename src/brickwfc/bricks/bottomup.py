@@ -32,6 +32,11 @@ With ``preferred`` colors (M12: a (Z, X) array of color names from a color image
 of the cell's preferred color are tried first; if none of them fits or is left, the sampler's own order
 follows.
 
+With ``open_tops=True`` (M12b step 1d, for target shapes), a part's studless top cells (``TileInfo.stud_top``
+false: a tile's top) may only sit where ``allowed`` is empty directly above. Nothing can rest on them, so
+elsewhere they would make the target cells above unfillable; a thin column capped by a few tiles dies. The
+rule removes only such placements, so every guarantee stays. Off by default (builds as before).
+
 Speed (M12b): above the ground, a cell with no stud below within a part's reach (``_reachable``) cannot
 take any part, so its placement attempts are skipped; the random draws they would have made are still made,
 so builds are identical to trying them. This matters on 3D targets, whose overhangs leave many such cells.
@@ -40,7 +45,7 @@ so builds are identical to trying them. This matters on 3D targets, whose overha
 from __future__ import annotations
 
 from collections import Counter
-from typing import TYPE_CHECKING, Mapping
+from typing import TYPE_CHECKING, Callable, Mapping
 
 import numpy as np
 from scipy import ndimage
@@ -58,10 +63,12 @@ PREFERRED_BOOST = 1e6  # weight factor for parts of a cell's preferred color: in
 class BottomUpBuilder:
     def __init__(self, parts: PartSet, any_offset: bool = False, style: StyleBias | None = None,
                  balanced: bool = False, bridge: bool = False, connect: bool = False,
-                 connect_rounds: int = 1) -> None:
+                 connect_rounds: int = 1, open_tops: bool = False) -> None:
         if bridge and not (balanced and any_offset):
             raise ValueError("bridge needs balanced=True and any_offset=True")
         self.parts = parts
+        self.open_tops = open_tops
+        self._studless: dict[Shape, np.ndarray] = {}
         self.any_offset = any_offset
         self.style = style
         self.balanced = balanced
@@ -130,7 +137,7 @@ class BottomUpBuilder:
         for y in layers:
             # Parts placed on layer y never add studs to layer y - 1, so this holds for the whole layer.
             reachable = self._reachable(state.studs, y)
-            fit_map = _FitMap(state.filled, state.studs, allowed, y)
+            fit_map = _FitMap(state.filled, state.studs, allowed, y, self._studless_top if self.open_tops else None)
             for flat in rng.permutation(nz * nx):
                 z, x = divmod(int(flat), nx)
                 if state.filled[y, z, x] or not allowed[y, z, x] or rng.random() >= self.solid_share:
@@ -203,7 +210,8 @@ class BottomUpBuilder:
 
         def ok(part: PlacedPart) -> bool:
             if valid is None:
-                fits = self._fits(part, filled, studs, allowed)
+                studless = self._studless_top(part.shape) if self.open_tops else None
+                fits = self._fits(part, filled, studs, allowed, studless)
             else:
                 fits = 0 <= part.z < valid.shape[0] and 0 <= part.x < valid.shape[1] and bool(valid[part.z, part.x])
             return fits and (balance is None or balance.can_add(part, self._below(part, owner)))
@@ -247,8 +255,20 @@ class BottomUpBuilder:
         y, z, x = part.layer, part.z, part.x
         return set(np.unique(owner[y - 1, z : z + part.shape.size_z, x : x + part.shape.size_x]).tolist()) - {-1}
 
+    def _studless_top(self, shape: Shape) -> np.ndarray:
+        """(size_z, size_x) bool: the shape's top-layer cells without a stud."""
+        if shape not in self._studless:
+            top = shape.size_y - 1
+            self._studless[shape] = np.array(
+                [[not TileInfo(shape, dx, dz, None, top).stud_top for dx in range(shape.size_x)]
+                 for dz in range(shape.size_z)], dtype=bool)
+        return self._studless[shape]
+
     @staticmethod
-    def _fits(part: PlacedPart, filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray) -> bool:
+    def _fits(part: PlacedPart, filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray,
+              studless: np.ndarray | None = None) -> bool:
+        """Whether the part can go here; with ``studless`` (its studless top cells, ``open_tops``), those
+        cells must also have no allowed cell directly above."""
         y, z, x = part.layer, part.z, part.x
         sy, sz, sx = part.shape.size_y, part.shape.size_z, part.shape.size_x
         ny, nz, nx = filled.shape
@@ -259,6 +279,8 @@ class BottomUpBuilder:
             return False
         # Nothing may rest on a tile; only the connect pass can put a part under existing ones.
         if not part.shape.part.studs and y + sy < ny and filled[y + sy, z : z + sz, x : x + sx].any():
+            return False
+        if studless is not None and y + sy < ny and (studless & allowed[y + sy, z : z + sz, x : x + sx]).any():
             return False
         if y == 0:
             return True
@@ -279,9 +301,11 @@ class _FitMap:
     box is first asked for and kept until ``reset`` (call it after every placement; within a layer's pass only
     placements change ``filled``, and nothing changes ``studs`` below the layer or ``allowed``)."""
 
-    def __init__(self, filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray, y: int) -> None:
+    def __init__(self, filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray, y: int,
+                 studless_top: Callable[[Shape], np.ndarray] | None = None) -> None:
         self.filled, self.studs, self.allowed, self.y = filled, studs, allowed, y
-        self.maps: dict[tuple[int, int, int, bool], np.ndarray] = {}
+        self.studless_top = studless_top  # open_tops: a shape's studless top cells
+        self.maps: dict[tuple, np.ndarray] = {}
 
     def reset(self) -> None:
         self.maps.clear()
@@ -290,12 +314,13 @@ class _FitMap:
         """(Z, X) bool, indexed by a placement's min corner (z, x): it fits (may be empty or smaller than
         the layer; corners outside it do not fit)."""
         sy, sz, sx, studded = shape.size_y, shape.size_z, shape.size_x, shape.part.studs
-        key = (sy, sz, sx, studded)
+        studless = None if self.studless_top is None else self.studless_top(shape)
+        key = (sy, sz, sx, studded, None if studless is None else studless.tobytes())
         if key not in self.maps:
-            self.maps[key] = self._compute(sy, sz, sx, studded)
+            self.maps[key] = self._compute(sy, sz, sx, studded, studless)
         return self.maps[key]
 
-    def _compute(self, sy: int, sz: int, sx: int, studded: bool) -> np.ndarray:
+    def _compute(self, sy: int, sz: int, sx: int, studded: bool, studless: np.ndarray | None) -> np.ndarray:
         filled, studs, y = self.filled, self.studs, self.y
         ny, nz, nx = filled.shape
         if y + sy > ny or sz > nz or sx > nx:
@@ -305,6 +330,11 @@ class _FitMap:
         # Nothing may rest on a tile; only the connect pass can put a part under existing ones.
         if not studded and y + sy < ny:
             fits &= _window_sums(filled[y + sy], sz, sx) == 0
+        if studless is not None and studless.any() and y + sy < ny:
+            # open_tops: no studless top cell under an allowed cell.
+            above = self.allowed[y + sy]
+            for dz, dx in np.argwhere(studless):
+                fits &= ~above[dz : dz + nz - sz + 1, dx : dx + nx - sx + 1]
         if y > 0:
             # A stud below somewhere, and no tile top (a filled cell below without a stud).
             fits &= _window_sums(studs[y - 1], sz, sx) > 0
