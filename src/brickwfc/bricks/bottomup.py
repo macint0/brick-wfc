@@ -130,6 +130,7 @@ class BottomUpBuilder:
         for y in layers:
             # Parts placed on layer y never add studs to layer y - 1, so this holds for the whole layer.
             reachable = self._reachable(state.studs, y)
+            fit_map = _FitMap(state.filled, state.studs, allowed, y)
             for flat in rng.permutation(nz * nx):
                 z, x = divmod(int(flat), nx)
                 if state.filled[y, z, x] or not allowed[y, z, x] or rng.random() >= self.solid_share:
@@ -152,11 +153,12 @@ class BottomUpBuilder:
                             rng.permutation(part_shape.size_z * part_shape.size_x)
                         continue
                     part = self._place(part_shape, color, y, z, x, state.filled, state.studs, allowed, rng,
-                                       state.owner, state.balance)
+                                       state.owner, state.balance, fit_map)
                     if part is None:
                         failed.add(box)
                     else:
                         self._put(state, part)
+                        fit_map.reset()
                         break
 
     def _put(self, state: "_State", part: PlacedPart) -> None:
@@ -193,18 +195,31 @@ class BottomUpBuilder:
     def _place(
         self, part_shape: Shape, color: BrickColor, y: int, z: int, x: int,
         filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray, rng: np.random.Generator,
-        owner: np.ndarray | None = None, balance: Balance | None = None,
+        owner: np.ndarray | None = None, balance: Balance | None = None, fit_map: "_FitMap | None" = None,
     ) -> PlacedPart | None:
-        """A fitting placement of the part with its bottom layer covering cell (y, z, x), or None."""
+        """A fitting placement of the part with its bottom layer covering cell (y, z, x), or None.
+        ``fit_map`` (the current layer's, up to date) answers ``_fits`` by lookup."""
+        valid = None if fit_map is None else fit_map.corners(part_shape)
+
         def ok(part: PlacedPart) -> bool:
-            return self._fits(part, filled, studs, allowed) and (
-                balance is None or balance.can_add(part, self._below(part, owner)))
+            if valid is None:
+                fits = self._fits(part, filled, studs, allowed)
+            else:
+                fits = 0 <= part.z < valid.shape[0] and 0 <= part.x < valid.shape[1] and bool(valid[part.z, part.x])
+            return fits and (balance is None or balance.can_add(part, self._below(part, owner)))
 
         if not self.any_offset:
             part = PlacedPart(part_shape, color, y, x, z)
             return part if ok(part) else None
         best, best_joined = None, -1
-        for flat in rng.permutation(part_shape.size_z * part_shape.size_x):
+        order = rng.permutation(part_shape.size_z * part_shape.size_x)
+        if valid is not None:  # keep the offsets that fit, in the same order
+            corner_z, corner_x = z - order // part_shape.size_x, x - order % part_shape.size_x
+            inside = (corner_z >= 0) & (corner_x >= 0) & (corner_z < valid.shape[0]) & (corner_x < valid.shape[1])
+            fits = np.zeros(len(order), dtype=bool)
+            fits[inside] = valid[corner_z[inside], corner_x[inside]]
+            order = order[fits]
+        for flat in order:
             dz, dx = divmod(int(flat), part_shape.size_x)
             part = PlacedPart(part_shape, color, y, x - dx, z - dz)
             if not ok(part):
@@ -250,6 +265,51 @@ class BottomUpBuilder:
         below_filled, below_studs = filled[y - 1, z : z + sz, x : x + sx], studs[y - 1, z : z + sz, x : x + sx]
         # A filled cell below without a stud is a tile's top: nothing may rest on it.
         return bool(below_studs.any()) and not (below_filled & ~below_studs).any()
+
+
+def _window_sums(cells: np.ndarray, sz: int, sx: int) -> np.ndarray:
+    """(Z - sz + 1, X - sx + 1): number of True cells in the sz x sx window at each min corner."""
+    total = np.zeros((cells.shape[0] + 1, cells.shape[1] + 1), dtype=np.int64)
+    total[1:, 1:] = cells.cumsum(axis=0).cumsum(axis=1)
+    return total[sz:, sx:] - total[:-sz, sx:] - total[sz:, :-sx] + total[:-sz, :-sx]
+
+
+class _FitMap:
+    """``BottomUpBuilder._fits`` for every min corner on layer ``y`` at once, per part box: computed when a
+    box is first asked for and kept until ``reset`` (call it after every placement; within a layer's pass only
+    placements change ``filled``, and nothing changes ``studs`` below the layer or ``allowed``)."""
+
+    def __init__(self, filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray, y: int) -> None:
+        self.filled, self.studs, self.allowed, self.y = filled, studs, allowed, y
+        self.maps: dict[tuple[int, int, int, bool], np.ndarray] = {}
+
+    def reset(self) -> None:
+        self.maps.clear()
+
+    def corners(self, shape: Shape) -> np.ndarray:
+        """(Z, X) bool, indexed by a placement's min corner (z, x): it fits (may be empty or smaller than
+        the layer; corners outside it do not fit)."""
+        sy, sz, sx, studded = shape.size_y, shape.size_z, shape.size_x, shape.part.studs
+        key = (sy, sz, sx, studded)
+        if key not in self.maps:
+            self.maps[key] = self._compute(sy, sz, sx, studded)
+        return self.maps[key]
+
+    def _compute(self, sy: int, sz: int, sx: int, studded: bool) -> np.ndarray:
+        filled, studs, y = self.filled, self.studs, self.y
+        ny, nz, nx = filled.shape
+        if y + sy > ny or sz > nz or sx > nx:
+            return np.zeros((0, 0), dtype=bool)
+        blocked = (filled[y : y + sy] | ~self.allowed[y : y + sy]).any(axis=0)
+        fits = _window_sums(blocked, sz, sx) == 0
+        # Nothing may rest on a tile; only the connect pass can put a part under existing ones.
+        if not studded and y + sy < ny:
+            fits &= _window_sums(filled[y + sy], sz, sx) == 0
+        if y > 0:
+            # A stud below somewhere, and no tile top (a filled cell below without a stud).
+            fits &= _window_sums(studs[y - 1], sz, sx) > 0
+            fits &= _window_sums(filled[y - 1] & ~studs[y - 1], sz, sx) == 0
+        return fits
 
 
 class _State:
