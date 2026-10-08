@@ -40,6 +40,12 @@ rule removes only such placements, so every guarantee stays. Off by default (bui
 Speed (M12b): above the ground, a cell with no stud below within a part's reach (``_reachable``) cannot
 take any part, so its placement attempts are skipped; the random draws they would have made are still made,
 so builds are identical to trying them. This matters on 3D targets, whose overhangs leave many such cells.
+
+With a ``proposal`` (M12b, ``proposal.Proposal``: a learned model of the next part in raster order), the
+choice probabilities at a cell are also multiplied by the model's weights for a part starting there, raised
+to ``proposal_strength``; every mask (inventory, support, balance, shape, one piece) is unchanged. The model
+reads the parts in the order they are placed, so pair it with ``order="raster"`` (cells of a layer visited
+by z, then x, as in its training data) rather than the default random order.
 """
 
 from __future__ import annotations
@@ -55,6 +61,7 @@ from brickwfc.bricks.colors import BrickColor
 from brickwfc.bricks.parts import PartSet, PlacedPart, Shape, TileInfo
 
 if TYPE_CHECKING:
+    from brickwfc.bricks.proposal import Proposal, Session
     from brickwfc.bricks.style import StyleBias
 
 PREFERRED_BOOST = 1e6  # weight factor for parts of a cell's preferred color: in practice, tried first
@@ -63,9 +70,15 @@ PREFERRED_BOOST = 1e6  # weight factor for parts of a cell's preferred color: in
 class BottomUpBuilder:
     def __init__(self, parts: PartSet, any_offset: bool = False, style: StyleBias | None = None,
                  balanced: bool = False, bridge: bool = False, connect: bool = False,
-                 connect_rounds: int = 1, open_tops: bool = False) -> None:
+                 connect_rounds: int = 1, open_tops: bool = False, order: str = "random",
+                 proposal: Proposal | None = None, proposal_strength: float = 1.0) -> None:
         if bridge and not (balanced and any_offset):
             raise ValueError("bridge needs balanced=True and any_offset=True")
+        if order not in ("random", "raster"):
+            raise ValueError(f"order must be 'random' or 'raster', not {order!r}")
+        self.order = order
+        self.proposal = proposal
+        self.proposal_strength = proposal_strength
         self.parts = parts
         self.open_tops = open_tops
         self._studless: dict[Shape, np.ndarray] = {}
@@ -95,6 +108,8 @@ class BottomUpBuilder:
 
             self.choice_types = np.array([TYPE_INDEX[shape.part.name] for shape, _ in self.choices])
             self.choice_colors = np.array([style.color_id(color.name) for _, color in self.choices])
+        if proposal is not None:
+            self.choice_tokens = proposal.choice_tokens(self.choices)
 
     def build(
         self,
@@ -107,8 +122,10 @@ class BottomUpBuilder:
         """A (Y, Z, X) grid of tile ids; every placed part is whole, supported, within ``inventory``
         ((part name, color name) -> count) and inside ``allowed`` (bool, grid-shaped) if given.
         ``preferred`` (Z, X) color names, "" for none, reorders the parts tried at each cell."""
+        target = allowed
         allowed = np.ones(shape, dtype=bool) if allowed is None else allowed
         state = _State(shape, self.index[TileInfo(None)], inventory, self.balanced)
+        state.session = None if self.proposal is None else self.proposal.session(shape, target)
         self._fill(state, range(shape[0]), rng, allowed, preferred)
         for round_ in range(self.connect_rounds if self.connect else 0):
             found = clusters(state.placed)
@@ -122,6 +139,7 @@ class BottomUpBuilder:
             remaining = None if state.remaining is None else dict(Counter(state.remaining) + returned)
             kept = sorted((state.placed[i] for i in keep), key=lambda p: p.layer)
             state = _State(shape, self.index[TileInfo(None)], None, self.balanced)
+            state.session = None if self.proposal is None else self.proposal.session(shape, target)
             for part in kept:  # already counted against the inventory
                 self._put(state, part)
             state.remaining = remaining
@@ -138,7 +156,7 @@ class BottomUpBuilder:
             # Parts placed on layer y never add studs to layer y - 1, so this holds for the whole layer.
             reachable = self._reachable(state.studs, y)
             fit_map = _FitMap(state.filled, state.studs, allowed, y, self._studless_top if self.open_tops else None)
-            for flat in rng.permutation(nz * nx):
+            for flat in rng.permutation(nz * nx) if self.order == "random" else range(nz * nx):
                 z, x = divmod(int(flat), nx)
                 if state.filled[y, z, x] or not allowed[y, z, x] or rng.random() >= self.solid_share:
                     continue
@@ -149,6 +167,8 @@ class BottomUpBuilder:
                 if preferred is not None and preferred[z, x]:
                     p = p * np.where(self.choice_color_names == preferred[z, x], PREFERRED_BOOST, 1.0)
                     p = p / p.sum()
+                if state.session is not None and reachable[z, x]:
+                    p = self._proposed_p(p, state.session, y, z, x)
                 for choice in rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p):
                     part_shape, color = self.choices[choice]
                     key = (part_shape.part.name, color.name)
@@ -183,6 +203,16 @@ class BottomUpBuilder:
         if state.balance is not None:
             state.balance.add(part, self._below(part, state.owner))
         state.placed.append(part)
+        if state.session is not None:
+            state.session.add(part)
+
+    def _proposed_p(self, p: np.ndarray, session: Session, y: int, z: int, x: int) -> np.ndarray:
+        """Choice probabilities ``p`` times the proposal's weights (normalized, floored so that every choice
+        stays possible) raised to ``proposal_strength``."""
+        q = session.weights(y, z, x, *self.choice_tokens)
+        q = q / q.sum() + 1e-6
+        weights = p * q**self.proposal_strength
+        return weights / weights.sum()
 
     def _styled_p(self, owner: np.ndarray, placed: list[PlacedPart], y: int, z: int, x: int) -> np.ndarray:
         """Choice probabilities at cell (y, z, x): base weights times the style's likelihood ratios for
@@ -354,3 +384,4 @@ class _State:
         self.placed: list[PlacedPart] = []
         self.balance = Balance() if balanced else None
         self.grid = np.full(shape, empty_tile, dtype=np.int64)
+        self.session: Session | None = None  # the proposal model's view of this build

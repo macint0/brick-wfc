@@ -1,6 +1,5 @@
 """M12b step 2: numpy inference of the proposal model (parity with PyTorch, key/value cache, sessions, speed)."""
 
-import json
 import time
 from pathlib import Path
 
@@ -9,7 +8,7 @@ import pytest
 
 from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.parts import CATALOG, Shape
-from brickwfc.bricks.proposal import Proposal
+from brickwfc.bricks.proposal import Proposal, random_weights
 from brickwfc.bricks.tokens import MASK_PATCHES, PATCH_BITS, PREFIX, Vocab, build_vocab, ordered, part_tokens
 from conftest import tiny_model
 
@@ -17,19 +16,8 @@ FIXTURE = Path(__file__).parent / "fixtures" / "proposal"
 
 
 def random_proposal(d: int = 32, layers: int = 2, heads: int = 4, max_len: int = 128, seed: int = 0) -> Proposal:
-    """A model with random weights in the exported layout."""
     vocab = build_vocab()
-    rng = np.random.default_rng(seed)
-    r = lambda *shape: (0.1 * rng.standard_normal(shape)).astype(np.float32)  # noqa: E731
-    w = {"tok": r(len(vocab), d), "patch_w": r(PATCH_BITS, d), "patch_b": r(d), "pos": r(max_len, d),
-         "ln_f_g": 1 + r(d), "ln_f_b": r(d)}
-    for i in range(layers):
-        w.update({f"b{i}.ln1_g": 1 + r(d), f"b{i}.ln1_b": r(d), f"b{i}.ln2_g": 1 + r(d), f"b{i}.ln2_b": r(d),
-                  f"b{i}.qkv_w": r(d, 3 * d), f"b{i}.qkv_b": r(3 * d), f"b{i}.proj_w": r(d, d), f"b{i}.proj_b": r(d),
-                  f"b{i}.fc1_w": r(d, 4 * d), f"b{i}.fc1_b": r(4 * d), f"b{i}.fc2_w": r(4 * d, d), f"b{i}.fc2_b": r(d)})
-    w["config"] = np.array(json.dumps({"vocab": len(vocab), "d_model": d, "layers": layers, "heads": heads,
-                                       "max_len": max_len, "mlp": 4, "patch_bits": PATCH_BITS, "prefix": PREFIX}))
-    return Proposal(w, vocab)
+    return Proposal(random_weights(vocab, np.random.default_rng(seed), d, layers, heads, max_len), vocab)
 
 
 def test_numpy_forward_matches_pytorch_fixture() -> None:

@@ -26,7 +26,7 @@ import numpy as np
 
 from brickwfc.bricks.parts import PlacedPart, Shape
 from brickwfc.bricks.colors import BrickColor
-from brickwfc.bricks.tokens import (HEADER, MASK_PATCHES, MAX_XZ, MAX_Y, PART_TOKENS, PREFIX, Vocab, coarse_mask, header,
+from brickwfc.bricks.tokens import (HEADER, MAX_XZ, MAX_Y, PART_TOKENS, PATCH_BITS, PREFIX, Vocab, coarse_mask, header,
                                     mask_scale, part_tokens, patches)
 
 LN_EPS = 1e-5
@@ -41,6 +41,14 @@ def layer_norm(x: np.ndarray, g: np.ndarray, b: np.ndarray) -> np.ndarray:
 
 def gelu(x: np.ndarray) -> np.ndarray:
     return 0.5 * x * (1 + np.tanh(GELU_C * (x + 0.044715 * x**3)))
+
+
+def dense(x: np.ndarray, w: np.ndarray) -> np.ndarray:
+    """``x @ w``. A single row is computed as two: numpy's vector-matrix product is several times slower than a
+    two-row matrix product, and every decoding step has one row."""
+    if len(x) == 1:
+        return (np.concatenate([x, x]) @ w)[:1]
+    return x @ w
 
 
 def softmax(logits: np.ndarray) -> np.ndarray:
@@ -67,6 +75,7 @@ class Proposal:
             raise ValueError("weights and vocabulary do not match")
         self.vocab = vocab
         self.head_dim = self.d // self.heads
+        self.head = np.ascontiguousarray(self.w["tok"].T)  # output head, tied to the token embedding
         self.shape_tokens = vocab.shape_ids()
         self.color_tokens = vocab.color_ids()
 
@@ -92,7 +101,7 @@ class Proposal:
 
     def embed_prefix(self, head: Sequence[int], mask_patches: np.ndarray) -> np.ndarray:
         """(PREFIX, d) input embeddings of the header tokens and the mask patches (positions not added)."""
-        return np.concatenate([self.w["tok"][list(head)], mask_patches @ self.w["patch_w"] + self.w["patch_b"]])
+        return np.concatenate([self.w["tok"][list(head)], dense(mask_patches, self.w["patch_w"]) + self.w["patch_b"]])
 
     def run(self, cache: Cache, x: np.ndarray) -> np.ndarray:
         """Append input embeddings ``x`` (n, d) to the cache; logits (n, V) at those positions."""
@@ -103,18 +112,19 @@ class Proposal:
         causal = np.triu(np.full((n, start + n), -np.inf, np.float32), k=start + 1)
         for i in range(self.layers):
             p = f"b{i}."
-            qkv = layer_norm(x, self.w[p + "ln1_g"], self.w[p + "ln1_b"]) @ self.w[p + "qkv_w"] + self.w[p + "qkv_b"]
+            qkv = dense(layer_norm(x, self.w[p + "ln1_g"], self.w[p + "ln1_b"]), self.w[p + "qkv_w"]) + self.w[p + "qkv_b"]
             q, k, v = (a.reshape(n, self.heads, self.head_dim).transpose(1, 0, 2) for a in np.split(qkv, 3, axis=-1))
             cache.keys[i][:, start : start + n] = k
             cache.values[i][:, start : start + n] = v
             keys, values = cache.keys[i][:, : start + n], cache.values[i][:, : start + n]
-            scores = q @ keys.transpose(0, 2, 1) / math.sqrt(self.head_dim) + causal
-            attn = (softmax(scores) @ values).transpose(1, 0, 2).reshape(n, self.d)
-            x = x + attn @ self.w[p + "proj_w"] + self.w[p + "proj_b"]
-            h = gelu(layer_norm(x, self.w[p + "ln2_g"], self.w[p + "ln2_b"]) @ self.w[p + "fc1_w"] + self.w[p + "fc1_b"])
-            x = x + h @ self.w[p + "fc2_w"] + self.w[p + "fc2_b"]
+            rows = np.concatenate([q, q], axis=1) if n == 1 else q  # one row as two: see ``dense``
+            scores = rows @ keys.transpose(0, 2, 1) / math.sqrt(self.head_dim) + causal  # (1, T) mask broadcasts
+            attn = (softmax(scores) @ values)[:, :n].transpose(1, 0, 2).reshape(n, self.d)
+            x = x + dense(attn, self.w[p + "proj_w"]) + self.w[p + "proj_b"]
+            h = gelu(dense(layer_norm(x, self.w[p + "ln2_g"], self.w[p + "ln2_b"]), self.w[p + "fc1_w"]) + self.w[p + "fc1_b"])
+            x = x + dense(h, self.w[p + "fc2_w"]) + self.w[p + "fc2_b"]
         cache.length = start + n
-        return layer_norm(x, self.w["ln_f_g"], self.w["ln_f_b"]) @ self.w["tok"].T
+        return dense(layer_norm(x, self.w["ln_f_g"], self.w["ln_f_b"]), self.head)
 
     def step(self, cache: Cache, ids: Sequence[int]) -> np.ndarray:
         """Append tokens; logits (n, V) after each."""
@@ -193,3 +203,19 @@ class Session:
             color_p = lookup[color_ids]
         self.cache.length = before  # roll the query back
         return shape_p * color_p
+
+
+def random_weights(vocab: Vocab, rng: np.random.Generator, d_model: int = 32, layers: int = 2, heads: int = 4,
+                   max_len: int = 128, scale: float = 0.1) -> dict[str, np.ndarray]:
+    """Weights of an untrained model in the exported layout: for tests and smoke runs before training."""
+    r = lambda *shape: (scale * rng.standard_normal(shape)).astype(np.float32)  # noqa: E731
+    d = d_model
+    w = {"tok": r(len(vocab), d), "patch_w": r(PATCH_BITS, d), "patch_b": r(d), "pos": r(max_len, d),
+         "ln_f_g": 1 + r(d), "ln_f_b": r(d)}
+    for i in range(layers):
+        w.update({f"b{i}.ln1_g": 1 + r(d), f"b{i}.ln1_b": r(d), f"b{i}.ln2_g": 1 + r(d), f"b{i}.ln2_b": r(d),
+                  f"b{i}.qkv_w": r(d, 3 * d), f"b{i}.qkv_b": r(3 * d), f"b{i}.proj_w": r(d, d), f"b{i}.proj_b": r(d),
+                  f"b{i}.fc1_w": r(d, 4 * d), f"b{i}.fc1_b": r(4 * d), f"b{i}.fc2_w": r(4 * d, d), f"b{i}.fc2_b": r(d)})
+    w["config"] = np.array(json.dumps({"vocab": len(vocab), "d_model": d, "layers": layers, "heads": heads,
+                                       "max_len": max_len, "mlp": 4, "patch_bits": PATCH_BITS, "prefix": PREFIX}))
+    return w
