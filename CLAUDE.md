@@ -167,8 +167,8 @@ brick-wfc/
 ### M12b — 3D targets, learned proposal, looks (Mac, 2026-10-08)
 Mac's framing: BrickGPT-style generation from a real inventory with a bigger catalog, constraints guaranteed at
 decode time. The bottom-up builder is the decoder; the *proposal* in it is pluggable (today: M10 statistics).
-**Status (2026-10-09):** steps 1 and 4 done, step 2 trained and compared (inventory-only: narrow loss; shape arm
-running), step 3 not started. **Three decisions for Mac** at the end of this entry.
+**Status (2026-10-09, 05:00):** steps 1, 2 and 4 done; the "Done when" below holds. Step 3 is open and conditional.
+**Three decisions for Mac** at the end of this entry.
 1. **True 3D targets — done** (`results/m12b_brickgpt.md`, `m12b_overhangs_tables.md`, figures
    `m12b_before_after.png`, `m12b_opentops_before_after.png`, `m12b_hollow_before_after.png`).
    `--shape brickgpt:<id>` loads a StableText2Brick structure (`bricks/brickgpt.py`; their data, not their model;
@@ -197,9 +197,13 @@ running), step 3 not started. **Three decisions for Mac** at the end of this ent
    `results/m12b_proposal.md`). **Inventory-only result: the proposal loses narrowly** (higher judge on 1/7 sets,
    mean −0.0025, 7× the time; the gain over M10's random-order builder is the raster order's, not the model's; an
    independent check against each set's own statistics agrees; 5–30% of each set's parts are outside the
-   model's vocabulary, which does not explain the result). Shape arm (car on 3 fold-0 sets, `--proposal`,
-   `--order` in the pipeline, `results/m12b_proposal_shape.md`) tests the mask conditioning. Keep the
-   statistics as the no-training baseline in every table.
+   model's vocabulary, which does not explain the result). **With a target** (car 4b15b71c on the 3 smallest fold-0
+   sets, 20 candidates, `--proposal` / `--order` in the pipeline, `results/m12b_proposal_shape.md`): the model wins
+   the judge on 2/3 sets (+0.0065 vs the raster control; the judge-free distance confirms one of the two), loses
+   fill by 1.4 points, costs 4–20× per candidate; every candidate valid, standing, one piece. Net: the learned
+   proposal is not a clear win over statistics at this size (5M params, 1500 steps); the statistics stay the
+   no-training baseline and the pipeline default. Step 3 (symmetry, clean skins) is therefore still open:
+   measure whether either arm produces them before building anything.
 3. **Mirror symmetry** and **clean skins** (largest fitting part on exposed surfaces): only if step 2 does not
    already produce them; measure first.
 4. **Slopes and corner parts — done** (`results/m12b_catalog.md`): catalog 63 → 88 parts (corner plates/bricks,
@@ -213,9 +217,11 @@ paper skeleton in `paper/`. Not now: style-bias tuning, color logic, WFC.
 **Decisions for Mac (2026-10-09):** (a) make `--supports --support-height 6` the default for 3D targets;
 (b) make `--max-clutch 1111` (real clutch) the pipeline default; (c) rerun 1a/1d on the 88-part catalog with
 whatever defaults you choose and redraw the figures (the cached runs predate the catalog). ee does (c) on a go.
+(d) Whether to spend more on the proposal model (bigger, longer, plates-heavy data) or to close step 2 with the
+result as is and move to step 3 / M13.
 **Done when:** the six-set demo re-rendered with a 3D target looks clearly better side by side (yes:
 `m12b_before_after.png`), every build still valid/stable/one piece (yes), the learned proposal is compared to
-statistics under the judge (running), and the per-set coverage rises (yes).
+statistics under the judge (yes, `m12b_proposal.md`, `m12b_proposal_shape.md`), and the per-set coverage rises (yes).
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
