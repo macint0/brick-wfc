@@ -42,11 +42,27 @@ def stud_position(x: float, z: float, layer_top: float) -> tuple[float, float, f
     return (x * STUD_LDU, -layer_top * PLATE_LDU, z * STUD_LDU)
 
 
+STEP = "0 STEP"
+
+
+def _header(path: Path, title: str) -> list[str]:
+    return [f"0 {title}", f"0 Name: {path.name}", "0 Author: brickwfc", ""]
+
+
 def write_ldr(placements: Iterable[Placement], path: str | Path, title: str) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    lines = [f"0 {title}", f"0 Name: {path.name}", "0 Author: brickwfc", ""]
-    lines += [p.to_line() for p in placements]
+    lines = _header(path, title) + [p.to_line() for p in placements]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_steps(steps: Iterable[Iterable[Placement]], path: str | Path, title: str) -> None:
+    """An .ldr with building instructions: each group of placements is one step, closed by ``0 STEP``."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = _header(path, title)
+    for step in steps:
+        lines += [p.to_line() for p in step] + [STEP]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -62,3 +78,15 @@ def parse_ldr(text: str) -> list[Placement]:
             Placement(int(tokens[1]), tuple(numbers[:3]), tuple(numbers[3:]), " ".join(tokens[14:]))
         )
     return placements
+
+
+def parse_steps(text: str) -> list[list[Placement]]:
+    """The placements of a single-file .ldr grouped by ``0 STEP`` lines (parts after the last STEP form
+    a final step); empty steps are dropped."""
+    steps: list[list[Placement]] = [[]]
+    for line in text.splitlines():
+        if line.split() == STEP.split():
+            steps.append([])
+        else:
+            steps[-1] += parse_ldr(line)
+    return [step for step in steps if step]

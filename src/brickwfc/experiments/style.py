@@ -57,11 +57,9 @@ import numpy as np
 from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.inventory import Inventory, overuse, usage, utilization
-from brickwfc.bricks.parts import CATALOG, PartSet, PlacedPart, Shape, extract_parts, part_tileset, shapes_of
+from brickwfc.bricks.parts import CATALOG, PartSet, PlacedPart, Shape, extract_parts
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.style import (
-    ALPHA,
-    TYPE_INDEX,
     Events,
     StyleBias,
     StyleStats,
@@ -71,6 +69,7 @@ from brickwfc.bricks.style import (
     matched_divergence,
     merged,
     size_matched,
+    styled_tileset,
 )
 from brickwfc.bricks.support import is_stable
 from scipy.stats import spearmanr
@@ -119,23 +118,10 @@ def folds(sets: Sequence[str], k: int, seed: int) -> list[list[str]]:
 
 
 def setup(real: list[PlacedPart], empty_weight_per_part: float, stats: StyleStats | None = None) -> tuple[Inventory, PartSet]:
-    """X's inventory (its real model's parts) and a tileset over X's (part, color) pairs. Each pair is
-    equally likely per part placed, or, with ``stats``, as likely as the learned part-type frequency
-    times the learned color frequency (both smoothed and restricted to X's parts and colors)."""
+    """X's inventory (its real model's parts) and ``style.styled_tileset`` over its (part, color) pairs."""
     inventory = dict(usage(real))
-    names = sorted({name for name, _ in inventory})
     colors = sorted({p.color for p in real}, key=lambda c: c.ldraw)
-    coverage = {}
-    for name, color in inventory:
-        part = CATALOG[name]
-        share = 1.0
-        if stats is not None:
-            share = (stats.parts[TYPE_INDEX[name]] + ALPHA) * (stats.colors.get(color, 0.0) + 1)
-        for shape in shapes_of([part]):
-            orientations = 2 if part.width != part.depth else 1
-            coverage[(shape.name, color)] = share * shape.cells / orientations
-    parts = part_tileset([CATALOG[n] for n in names], colors, len(names) * empty_weight_per_part, coverage=coverage)
-    return inventory, parts
+    return inventory, styled_tileset(inventory, colors, empty_weight_per_part, stats)
 
 
 def evaluate(set_number: str, fold: int, condition: str, style: str, seed: int, grid: np.ndarray | None, timed_out: bool,

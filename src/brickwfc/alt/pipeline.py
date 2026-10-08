@@ -1,0 +1,309 @@
+"""Alternate builds from a set or a parts list (M12): generate -> verify -> dedupe -> judge -> select.
+
+    python -m brickwfc.alt 6372-1 --n 200 --k 8
+    python -m brickwfc.alt my_parts.csv --shape pyramid --out out/alt/mine
+
+Input: an OMR set number, an .mpd/.ldr model or a .csv parts list (``inputs.py``). Style: the M10
+statistics, from the fold that held the set out if it is one of the M10 sets, else from all of them.
+
+  generate  ``--n`` candidates, seeds ``--seed`` .. ``--seed + n - 1``, with the bottom-up builder D2
+            and the learned style bias (or ``--generator wfc``), in parallel (``candidates.py``)
+  verify    integrity, inventory, support, shape, physics on a table (``candidates.py``), then a size
+            floor: candidates with fewer contact events than the ``--min-size-quantile`` quantile of the
+            verified ones fail "too_small", so one tiny build cannot shrink every judge sample
+  dedupe    near-duplicates in feature space (``features.py``, ``funnel.dedupe``)
+  judge     minus the divergence of the build's contact statistics from the learned ones (``style``),
+            size-matched: every build subsampled to the smallest one's number of contact events
+  select    top ``--k`` by judge + ``--diversity`` x distance to the builds already picked
+            (``funnel.select``); judge scores are standardized and feature distances divided by their
+            median, so the two terms are on comparable scales
+
+Without a target shape, the grid is ``--height`` plates tall with volume ``--room`` x the inventory's
+(as in M10); with ``--shape`` (a primitive of ``bricks.shapes``), the shape is scaled to the
+inventory's volume and the generators are told to fill it. Writes, under ``--out``: build_NN.ldr (one
+``0 STEP`` per layer, bottom to top), build_NN.png, sheet.png, stats.json, and candidates.jsonl (every
+candidate as it is generated, so a killed run resumes: rerun the same command).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import os
+import time
+from collections import Counter
+from concurrent.futures import ProcessPoolExecutor
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Sequence
+
+import numpy as np
+
+from brickwfc.alt.candidates import GENERATORS, Candidate, Context, generate
+from brickwfc.alt.features import feature_vector, occupancy
+from brickwfc.alt.inputs import DATA_DIR, SETS_FILE, STYLE_DIR, Source, learned_style, load_source
+from brickwfc.alt.output import layer_steps, write_build, write_sheet
+from brickwfc.bricks.inventory import inventory_cells, utilization
+from brickwfc.bricks.shapes import SHAPES, fill, iou, sized_for
+from brickwfc.bricks.style import StyleStats, events, matched_divergence
+from brickwfc.bricks.voxelize import voxelize
+from brickwfc.experiments.inventory import grid_for
+from brickwfc.experiments.style import InlineExecutor
+from brickwfc.funnel.dedupe import dedupe
+from brickwfc.funnel.pipeline import StageStats, format_stages
+from brickwfc.funnel.select import select
+from brickwfc.ldraw.mpd import flatten
+
+SHAPE_EMPTY_WEIGHT = 0.05  # per part type: a solid share of ~95%, so the builders try to fill the shape
+CHUNKS_PER_WORKER = 4
+
+
+@dataclass(frozen=True)
+class AltConfig:
+    n: int = 200
+    k: int = 8
+    seed: int = 0
+    generator: str = "d2"
+    height: int = 12  # plates (no target shape)
+    room: float = 1.5  # grid volume / inventory volume (no target shape)
+    shape: str | None = None
+    strength: float = 1.0  # exponent on the learned style weights
+    max_clutch: float = math.inf  # physics: keep builds needing at most this clutch per stud
+    wfc_time_limit_s: float = 30.0
+    min_size_quantile: float = 0.1
+    judge_draws: int = 5
+    dedupe_threshold: float = 0.05
+    diversity: float = 0.5
+
+
+@dataclass(frozen=True)
+class Selected:
+    candidate: Candidate
+    judge: float
+
+
+@dataclass
+class FunnelReport:
+    requested: int
+    stages: list[StageStats]
+    check_failures: dict[str, int]
+    size_floor: int  # contact events
+    judge_size: int  # contact events every judged build was subsampled to
+    selected: list[Selected]
+    candidates: list[Candidate]
+
+
+def make_context(source: Source, stats: StyleStats, config: AltConfig) -> Context:
+    if config.shape is None:
+        grid, mask, empty = grid_for(source.inventory, config.height, config.room), None, config.room - 1
+    else:
+        mask = sized_for(config.shape, inventory_cells(source.inventory))
+        grid, empty = mask.shape, SHAPE_EMPTY_WEIGHT
+    return Context(source.inventory, source.colors, stats, grid, mask, empty, config.strength, config.generator,
+                   config.max_clutch, config.wfc_time_limit_s)
+
+
+# Generation, resumable ---------------------------------------------------------------------------
+
+
+def cache_key(source: Source, style_label: str, context: Context) -> dict:
+    """What a cached candidate depends on (besides its seed); normalized through JSON."""
+    key = {
+        "source": source.name, "inventory": sorted([*k, v] for k, v in source.inventory.items()), "style": style_label,
+        "grid": list(context.grid), "mask": None if context.mask is None else np.argwhere(context.mask).tolist(),
+        "empty_weight_per_part": context.empty_weight_per_part, "strength": context.strength,
+        "generator": context.generator, "max_clutch": context.max_clutch, "wfc_time_limit_s": context.wfc_time_limit_s,
+    }
+    return json.loads(json.dumps(key))
+
+
+def load_cache(path: Path, key: dict) -> dict[int, Candidate]:
+    if not path.exists():
+        return {}
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if not lines or json.loads(lines[0]).get("key") != key:
+        raise SystemExit(f"{path} holds candidates of a different setup; pass --fresh or choose another --out")
+    candidates = (Candidate.from_json(json.loads(line)) for line in lines[1:] if line.strip())
+    return {c.seed: c for c in candidates}
+
+
+def generate_all(context: Context, seeds: Sequence[int], cache: Path, key: dict, workers: int) -> list[Candidate]:
+    """Candidates for ``seeds``, reusing and extending ``cache``; returned in seed order."""
+    done = load_cache(cache, key)
+    if not cache.exists():
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps({"key": key}) + "\n", encoding="utf-8")
+    pending = [s for s in seeds if s not in done]
+    size = max(1, math.ceil(len(pending) / (workers * CHUNKS_PER_WORKER)))
+    chunks = [pending[i : i + size] for i in range(0, len(pending), size)]
+    with ProcessPoolExecutor(workers) if workers > 1 else InlineExecutor() as pool:
+        futures = [pool.submit(generate, context, chunk) for chunk in chunks]
+        for i, future in enumerate(futures):  # collected in seed order: the cache is the same for any worker count
+            batch = future.result()
+            with cache.open("a", encoding="utf-8") as f:
+                f.writelines(json.dumps(c.to_json()) + "\n" for c in batch)
+            done.update((c.seed, c) for c in batch)
+            if (i + 1) % workers == 0 or i + 1 == len(futures):
+                print(f"  generated {sum(s in done for s in seeds)}/{len(seeds)}", flush=True)
+    return [done[s] for s in seeds]
+
+
+# The rest of the funnel ----------------------------------------------------------------------------
+
+
+def run_funnel(candidates: list[Candidate], context: Context, stats: StyleStats, config: AltConfig,
+               generate_seconds: float) -> FunnelReport:
+    stages = [StageStats("generate", sum("generate" not in c.failed for c in candidates), generate_seconds)]
+    failures = dict(Counter(name for c in candidates for name in c.failed))
+
+    clock = time.perf_counter()
+    valid = [c for c in candidates if c.valid]
+    found = {c.seed: events(c.placed) for c in valid}
+    floor = int(np.quantile([found[c.seed].count for c in valid], config.min_size_quantile, method="lower")) if valid else 0
+    verified = [c for c in valid if found[c.seed].count >= floor]
+    if len(verified) < len(valid):
+        failures["too_small"] = len(valid) - len(verified)
+    stages.append(StageStats("verify", len(verified), time.perf_counter() - clock))
+
+    clock = time.perf_counter()
+    colors = [color.name for color in context.colors]
+    features = np.array([feature_vector(c.placed, context.grid, colors) for c in verified]).reshape(len(verified), -1)
+    kept = dedupe(features, config.dedupe_threshold)
+    unique, features = [verified[i] for i in kept], features[kept]
+    stages.append(StageStats("dedupe", len(unique), time.perf_counter() - clock))
+
+    clock = time.perf_counter()
+    size = min((found[c.seed].count for c in unique), default=0)
+    scores = np.array([-matched_divergence(found[c.seed], size, stats, np.random.default_rng([0, c.seed]),
+                                           config.judge_draws) for c in unique])
+    stages.append(StageStats("judge", len(unique), time.perf_counter() - clock))
+
+    clock = time.perf_counter()
+    picks: list[int] = []
+    if unique:
+        z = (scores - scores.mean()) / (scores.std() or 1.0)
+        distances = np.linalg.norm(features[:, None] - features[None, :], axis=-1)[np.triu_indices(len(unique), 1)]
+        scale = float(np.median(distances)) if distances.size and np.median(distances) > 0 else 1.0
+        picks = select(z, features / scale, config.k, config.diversity)
+    stages.append(StageStats("select", len(picks), time.perf_counter() - clock))
+    selected = [Selected(unique[i], float(scores[i])) for i in picks]
+    return FunnelReport(len(candidates), stages, failures, floor, size, selected, candidates)
+
+
+def real_model_judge(source: Source, stats: StyleStats, size: int, draws: int) -> tuple[float, int] | None:
+    """The real model's judge (its on-grid parts, voxelized) at the builds' judge size, or at its own size
+    if it is smaller; None without a model or with no on-grid parts."""
+    if source.model is None:
+        return None
+    placed, _ = voxelize(flatten(source.model))
+    if not placed:
+        return None
+    found = events(placed)
+    if found.count == 0:
+        return None
+    return -matched_divergence(found, size, stats, np.random.default_rng([1]), draws), min(size, found.count)
+
+
+# Output -----------------------------------------------------------------------------------------------
+
+
+def write_outputs(source: Source, context: Context, report: FunnelReport, out: Path) -> list[dict]:
+    rows, previews = [], []
+    for rank, chosen in enumerate(report.selected, 1):
+        c = chosen.candidate
+        ldr, png = write_build(c.placed, context.grid, out / f"build_{rank:02d}",
+                               f"Alternate build {rank} from {source.name} (seed {c.seed})")
+        previews.append(png)
+        row = {"rank": rank, "seed": c.seed, "ldr": ldr.name, "png": png.name, "parts": len(c.placed),
+               "steps": len(layer_steps(c.placed)), "judge": chosen.judge, "clutch": c.clutch,
+               "utilization_pct": 100 * utilization(list(c.placed), source.inventory),
+               "seconds": c.seconds, "physics_seconds": c.physics_seconds}
+        if context.mask is not None:
+            filled = occupancy(c.placed, context.grid)
+            row.update(fill_pct=100 * fill(filled, context.mask), iou=iou(filled, context.mask))
+        rows.append(row)
+    if previews:
+        write_sheet(previews, out / "sheet.png")
+    return rows
+
+
+def format_selected(rows: list[dict]) -> str:
+    lines = ["rank  seed  parts  used%   judge   clutch  steps"]
+    lines += [f"{r['rank']:4d} {r['seed']:5d} {r['parts']:6d} {r['utilization_pct']:6.1f} {r['judge']:7.3f} "
+              f"{r['clutch']:8.1f} {r['steps']:6d}" for r in rows]
+    return "\n".join(lines)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    defaults = AltConfig()
+    parser = argparse.ArgumentParser(prog="python -m brickwfc.alt", description=__doc__.splitlines()[0])
+    parser.add_argument("input", help="OMR set number (e.g. 6372-1), .mpd/.ldr model, or .csv parts list")
+    parser.add_argument("--shape", choices=sorted(SHAPES), help="target shape, scaled to the inventory's volume")
+    parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
+    parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
+    parser.add_argument("--seed", type=int, default=defaults.seed)
+    parser.add_argument("--generator", choices=GENERATORS, default=defaults.generator)
+    parser.add_argument("--height", type=int, default=defaults.height, help="grid height in plates (no --shape)")
+    parser.add_argument("--room", type=float, default=defaults.room, help="grid volume / inventory volume (no --shape)")
+    parser.add_argument("--strength", type=float, default=defaults.strength, help="exponent on the style weights")
+    parser.add_argument("--max-clutch", type=float, default=defaults.max_clutch, help="physics limit per stud")
+    parser.add_argument("--wfc-time-limit", type=float, default=defaults.wfc_time_limit_s, help="seconds per WFC build")
+    parser.add_argument("--min-size-quantile", type=float, default=defaults.min_size_quantile)
+    parser.add_argument("--dedupe-threshold", type=float, default=defaults.dedupe_threshold)
+    parser.add_argument("--diversity", type=float, default=defaults.diversity, help="lambda in selection")
+    parser.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 3) - 2))
+    parser.add_argument("--wfc-workers", type=int, default=2, help="worker cap for --generator wfc (memory-heavy)")
+    parser.add_argument("--data", type=Path, default=DATA_DIR, help="OMR download cache")
+    parser.add_argument("--style-dir", type=Path, default=STYLE_DIR)
+    parser.add_argument("--sets-file", type=Path, default=SETS_FILE)
+    parser.add_argument("--out", type=Path, help="output directory (default out/alt/<input name>)")
+    parser.add_argument("--fresh", action="store_true", help="discard cached candidates")
+    args = parser.parse_args(argv)
+
+    start = time.perf_counter()
+    config = AltConfig(args.n, args.k, args.seed, args.generator, args.height, args.room, args.shape, args.strength,
+                       args.max_clutch, args.wfc_time_limit, args.min_size_quantile, defaults.judge_draws,
+                       args.dedupe_threshold, args.diversity)
+    source = load_source(args.input, args.data)
+    stats, style_label = learned_style(source.name, args.style_dir, args.sets_file)
+    out = args.out or Path("out/alt") / source.name
+    ignored_top = sorted(source.ignored.items(), key=lambda kv: (-kv[1], kv[0]))[:10]
+    print(f"{source.name}: {source.recognized_parts} parts recognized, {source.ignored_parts} ignored"
+          + (f" (most common: {', '.join(f'{p} x{n}' for p, n in ignored_top[:5])})" if ignored_top else ""))
+    print(f"style: {style_label}")
+
+    context = make_context(source, stats, config)
+    cache = out / "candidates.jsonl"
+    if args.fresh and cache.exists():
+        cache.unlink()
+    workers = min(args.workers, args.wfc_workers) if config.generator == "wfc" else args.workers
+    clock = time.perf_counter()
+    seeds = range(config.seed, config.seed + config.n)
+    candidates = generate_all(context, seeds, cache, cache_key(source, style_label, context), workers)
+    report = run_funnel(candidates, context, stats, config, time.perf_counter() - clock)
+    real = real_model_judge(source, stats, report.judge_size, config.judge_draws)
+    rows = write_outputs(source, context, report, out)
+    print(format_stages(report.requested, report.stages, report.check_failures))
+    print(format_selected(rows))
+
+    clutches = [c.clutch for c in candidates if not math.isnan(c.clutch)]
+    stats_json = {
+        "input": {"name": source.name, "recognized_parts": source.recognized_parts,
+                  "ignored_parts": source.ignored_parts, "ignored_top": ignored_top,
+                  "colors": [c.name for c in source.colors], "inventory_cells": inventory_cells(source.inventory)},
+        "style": style_label, "config": asdict(config), "grid_YZX": list(context.grid),
+        "shape_cells": None if context.mask is None else int(context.mask.sum()),
+        "requested": report.requested, "stages": [asdict(s) for s in report.stages],
+        "check_failures": report.check_failures, "size_floor_events": report.size_floor,
+        "judge_size_events": report.judge_size,
+        "real_model_judge": None if real is None else {"judge": real[0], "events": real[1]},
+        "generation_cpu_s": sum(c.seconds for c in candidates),
+        "physics_cpu_s": sum(c.physics_seconds for c in candidates),
+        "physics_checked": len(clutches), "physics_stable": sum(math.isfinite(v) for v in clutches),
+        "wall_time_s": time.perf_counter() - start,
+        "selected": rows,
+    }
+    (out / "stats.json").write_text(json.dumps(stats_json, indent=2), encoding="utf-8")
+    print(f"wrote {len(rows)} builds, sheet.png and stats.json to {out}")
+    return 0 if rows else 1

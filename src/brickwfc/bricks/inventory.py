@@ -14,7 +14,7 @@ import numpy as np
 
 from brickwfc.bricks.colors import BrickColor, color_for_code
 from brickwfc.bricks.parts import BY_FILE, CATALOG, PLATE_FILES, Part, PartSet, PlacedPart, shapes_of
-from brickwfc.ldraw.mpd import flatten
+from brickwfc.ldraw.mpd import flatten, parse_color
 from brickwfc.wfc import Cell, Wave
 
 Inventory = dict[tuple[str, str], int]  # (part name, color name) -> count
@@ -37,6 +37,37 @@ def inventory_from_mpd(text: str, known: Mapping[str, Part] = BY_FILE) -> tuple[
         color = color_for_code(inst.color)
         colors[color.name] = color
         inventory[(part.name, color.name)] += 1
+    return dict(inventory), unsupported, sorted(colors.values(), key=lambda c: c.ldraw)
+
+
+def inventory_from_csv(text: str, known: Mapping[str, Part] = BY_FILE) -> tuple[Inventory, Counter[str], list[BrickColor]]:
+    """Like ``inventory_from_mpd``, from a parts list: one ``part file, LDraw color code, count`` row per
+    line (e.g. ``3001.dat,4,12``; ".dat" may be left out). Blank lines, ``#`` comments and a header row
+    whose count is not a number are skipped."""
+    inventory: Counter[tuple[str, str]] = Counter()
+    unsupported: Counter[str] = Counter()
+    colors: dict[str, BrickColor] = {}
+    for number, line in enumerate(text.splitlines(), 1):
+        fields = [f.strip() for f in line.split("#")[0].split(",")]
+        if fields == [""]:
+            continue
+        if len(fields) != 3:
+            raise ValueError(f"line {number}: expected 'part file, color code, count', got {line!r}")
+        file, code, count = fields
+        if not count.isdigit():
+            if number == 1:
+                continue  # header
+            raise ValueError(f"line {number}: count {count!r} is not a whole number")
+        file = file.lower() if file.lower().endswith(".dat") else f"{file.lower()}.dat"
+        part = known.get(file)
+        if int(count) == 0:
+            continue
+        if part is None:
+            unsupported[file] += int(count)
+            continue
+        color = color_for_code(parse_color(code))
+        colors[color.name] = color
+        inventory[(part.name, color.name)] += int(count)
     return dict(inventory), unsupported, sorted(colors.values(), key=lambda c: c.ldraw)
 
 

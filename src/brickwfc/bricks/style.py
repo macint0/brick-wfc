@@ -32,7 +32,8 @@ from typing import Sequence
 
 import numpy as np
 
-from brickwfc.bricks.parts import CATALOG, PartSet, PlacedPart
+from brickwfc.bricks.colors import BrickColor
+from brickwfc.bricks.parts import CATALOG, PartSet, PlacedPart, part_tileset, shapes_of
 
 TYPES: list[str] = list(CATALOG)
 TYPE_INDEX: dict[str, int] = {name: i for i, name in enumerate(TYPES)}
@@ -120,6 +121,12 @@ class StyleStats:
         return StyleStats(self.parts + other.parts, colors, self.vertical + other.vertical,
                           self.horizontal + other.horizontal, self.same_color + other.same_color,
                           self.supports + other.supports, self.models + other.models)
+
+    def scaled(self, factor: float) -> "StyleStats":
+        """Every count times ``factor`` (the model count rounded)."""
+        return StyleStats(self.parts * factor, {name: count * factor for name, count in self.colors.items()},
+                          self.vertical * factor, self.horizontal * factor, self.same_color * factor,
+                          self.supports * factor, round(self.models * factor))
 
     # Smoothed probabilities -------------------------------------------------------------------
 
@@ -319,6 +326,25 @@ def distance(a: StyleStats, b: StyleStats) -> dict[str, float]:
     result["mean"] = float(np.mean(list(result.values())))
     return result
 
+
+
+def styled_tileset(inventory: dict[tuple[str, str], int], colors: Sequence[BrickColor], empty_weight_per_part: float,
+                   stats: StyleStats | None = None) -> PartSet:
+    """A tileset over the inventory's (part, color) pairs. Each pair is equally likely per part placed,
+    or, with ``stats``, as likely as the learned part-type frequency times the learned color frequency
+    (both smoothed and restricted to the inventory's parts and colors). The empty tile weighs
+    ``empty_weight_per_part`` per part type."""
+    names = sorted({name for name, _ in inventory})
+    coverage = {}
+    for name, color in inventory:
+        part = CATALOG[name]
+        share = 1.0
+        if stats is not None:
+            share = (stats.parts[TYPE_INDEX[name]] + ALPHA) * (stats.colors.get(color, 0.0) + 1)
+        for shape in shapes_of([part]):
+            orientations = 2 if part.width != part.depth else 1
+            coverage[(shape.name, color)] = share * shape.cells / orientations
+    return part_tileset([CATALOG[n] for n in names], colors, len(names) * empty_weight_per_part, coverage=coverage)
 
 # Sampling bias for the generators --------------------------------------------------------------
 

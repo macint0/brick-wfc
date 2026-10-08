@@ -114,16 +114,21 @@ def run_funnel(tileset: Tileset, config: FunnelConfig, judge: Judge | None = Non
     return FunnelResult([unique[i] for i in picks], stats)
 
 
-def format_counts(stats: FunnelStats) -> str:
-    lines = [f"{'requested':>10}: {stats.requested:5d}"]
-    previous = stats.requested
-    for stage in stats.stages:
+def format_stages(requested: int, stages: Sequence[StageStats], check_failures: dict[str, int]) -> str:
+    """Survivors after each stage, how many it removed, and its time; then the failed checks."""
+    lines = [f"{'requested':>10}: {requested:5d}"]
+    previous = requested
+    for stage in stages:
         lines.append(f"{stage.stage:>10}: {stage.survivors:5d}  (-{previous - stage.survivors})  {stage.seconds:.2f}s")
         previous = stage.survivors
-    if stats.check_failures:
-        lines.append("check failures: " + ", ".join(f"{k}={v}" for k, v in stats.check_failures.items()))
-    lines.append(f"WFC contradictions: {stats.wfc_contradictions}")
+    if check_failures:
+        lines.append("check failures: " + ", ".join(f"{k}={v}" for k, v in check_failures.items()))
     return "\n".join(lines)
+
+
+def format_counts(stats: FunnelStats) -> str:
+    return (format_stages(stats.requested, stats.stages, stats.check_failures)
+            + f"\nWFC contradictions: {stats.wfc_contradictions}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
