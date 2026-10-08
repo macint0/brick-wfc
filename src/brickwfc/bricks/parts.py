@@ -115,7 +115,6 @@ _LOOKALIKES = (
     _family("plate", "6141:1x1 4073:1x1 4032a:2x2 4032b:2x2", suffix=True)
     + _family("brick", "3062a:1x1 3062b:1x1 4070:1x1 3065:1x2 2877:1x2 3066:1x4 3941:2x2 6143:2x2", suffix=True)
     + _family("tile", "2555:1x1 2412a:1x2 2412b:1x2", suffix=True)
-    + _family("brick", "4216:1x2", suffix=True)  # M12b: brick with groove
 )
 
 
@@ -146,6 +145,7 @@ def _roof(name: str, file: str, width: int, depth: int, height: int = 3, origin_
 
 # Non-rectangular parts (M12b), after the M8 ones so that style statistics keep their part indices.
 # Geometry (cells, studs, flat bottoms, origin, height) read from the LDraw library's .dat files.
+_M12B_LOOKALIKES = _family("brick", "4216:1x2", suffix=True)  # brick with groove
 _CORNERS = [_corner("plate", "2420"), _corner("brick", "2357")]
 _SLOPES = [
     _slope("slope45_2x1", "3040b", 1, 2),
@@ -168,12 +168,16 @@ _SLOPES = [
     Part("slope45concave_2x2", "3046.dat", 2, 2, 3, True, "slope", ((0, 0), (1, 0), (0, -1), (1, -1)),
          stud_cells=((0, 0), (1, 0), (0, -1))),
     _roof("slope45double_2x2", "3043", 2, 2),
+    _roof("slope45double_2x3", "3042", 3, 2),
+    _roof("slope45double_2x4", "3041", 4, 2),
     _roof("slope45double_2x1", "3044b", 1, 2, aliases=("3044",)),
     _roof("slope31_1x1x2", "54200", 1, 1, height=2, origin_top=False),  # "cheese slope"; origin on its bottom
     _roof("slope45double_1x1x2", "35464", 1, 1, height=2, origin_top=False),
 ]
-CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES + _CORNERS + _SLOPES}
+CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES + _M12B_LOOKALIKES + _CORNERS + _SLOPES}
 BY_FILE: dict[str, Part] = {file: p for p in CATALOG.values() for file in (p.ldraw, *p.aliases)}
+# The M8 catalog (before corners and slopes), for before/after comparisons.
+M8_FILES: dict[str, Part] = {p.ldraw: p for p in _PLAIN + _LOOKALIKES}
 
 # M4-M11 used these four plates only; experiments that reproduce those tables still do.
 PLATES: dict[str, Part] = {name: CATALOG[name] for name in ("plate1x1", "plate1x2", "plate2x2", "plate2x4")}

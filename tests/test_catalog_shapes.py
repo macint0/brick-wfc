@@ -71,6 +71,8 @@ LDRAW.update({
     "3045.dat": {"studs": [(0, 0)], "x": (-10, 30), "z": (-30, 10), "y": (0, 24)},
     "3046.dat": {"studs": [(0, -20), (0, 0), (20, 0)], "x": (-10, 30), "z": (-30, 10), "y": (0, 24)},
     "3043.dat": {"studs": [], "x": (-20, 20), "z": (-20, 20), "y": (0, 24)},
+    "3042.dat": {"studs": [], "x": (-30, 30), "z": (-20, 20), "y": (0, 24)},
+    "3041.dat": {"studs": [], "x": (-40, 40), "z": (-20, 20), "y": (0, 24)},
     "3044b.dat": {"studs": [], "x": (-10, 10), "z": (-20, 20), "y": (0, 24)},
     "54200.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (-16, 0)},  # origin on the bottom
     "35464.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (-16, 0)},
@@ -352,3 +354,18 @@ def test_slope_physics() -> None:
     # A cheese slope is 2 plates tall: a plate next to it on the same brick has its top one layer lower.
     cheese = PlacedPart(Shape(CATALOG["slope31_1x1x2"]), RED, 3, 0, 0)
     assert cheese.top == 4 and required_clutch([tower[0], cheese], (9, 2, 2)) == 0.0
+
+
+def test_coverage_counts_m8_and_new_parts() -> None:
+    from brickwfc.experiments.coverage import set_coverage
+
+    mpd = """0 FILE main.ldr
+1 4 0 -8 0 1 0 0 0 1 0 0 0 1 3020.dat
+1 4 0 -32 10 1 0 0 0 1 0 0 0 1 3039.dat
+1 4 80 -24 10 1 0 0 0 1 0 0 0 1 3660a.dat
+1 4 0 -40 0 1 0 0 0 1 0 0 0 1 3794b.dat
+0 NOFILE
+"""
+    row = set_coverage("fake-1", mpd, on_grid=True)
+    assert (row.parts, row.catalog_m8, row.catalog) == (4, 1, 3)
+    assert (row.on_grid_m8, row.on_grid) == (1, 3)
