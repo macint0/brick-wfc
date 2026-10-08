@@ -176,6 +176,26 @@ python -m brickwfc.experiments.paper_tables
 - Then `python paper/tables.py` turns the tables into LaTeX for `paper/`, and `powershell -File paper/build.ps1`
   builds the PDF.
 
+### `results/m12b_proposal_training.md` (M12b step 2)
+
+Trained on a local GPU (RTX 3060 Laptop, 6 GB) with PyTorch 2.6.0+cu124 in a separate venv; PyTorch is not a project
+dependency. One data process; mixed precision.
+
+```
+python training/train.py --data data/tokens --out out/proposal_run1 --batch 64 --steps 7000 --minutes 62
+python training/train.py --data data/tokens --out out/proposal_run2 --batch 64 --steps 7000 --minutes 62 \
+    --set-share 0.05 --val-sets 6378-1 31048-1
+PYTHONPATH=src python training/parity.py check --weights out/proposal_run2/proposal.npz --data data/tokens --windows 4
+```
+
+- Run 1: 55 minutes.
+- Run 2 was stopped by hand at step 3000 (24 minutes), after its selection loss rose for three evaluations; the
+  selected weights are step 1500's.
+- Resumable: a checkpoint is saved at every evaluation.
+- Copy `proposal.npz`, `vocab.json` and `log.jsonl` into `data/models/` (as `proposal_run{1,2}.npz` and
+  `proposal_run{1,2}_log.jsonl`).
+- On Colab instead: `training/train.ipynb`.
+
 ## Not on main yet, or not run yet
 
 Commands for results that are on branches or still to be run:

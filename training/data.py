@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Sequence
 
 import numpy as np
 
@@ -102,12 +103,16 @@ class Sampler:
     """Random training windows: a source is drawn (real sets with probability ``set_share``), then a build
     of that source with probability proportional to its number of windows, then a start uniformly."""
 
-    def __init__(self, split: Split, max_len: int, set_share: float, mask_drop: float) -> None:
+    def __init__(self, split: Split, max_len: int, set_share: float, mask_drop: float,
+                 exclude: Sequence[int] = ()) -> None:
+        """``exclude``: build indices never sampled (held out for validation)."""
         self.split, self.count, self.mask_drop = split, max_parts(max_len), mask_drop
         weights = np.array([min(split.size(i), 10 * self.count) / self.count + 1 for i in range(len(split))])
+        excluded = np.zeros(len(split), dtype=bool)
+        excluded[list(exclude)] = True
         self.pools = []
         for source in ("brickgpt", "set"):
-            members = np.flatnonzero(split.source == source)
+            members = np.flatnonzero((split.source == source) & ~excluded)
             if len(members):
                 self.pools.append((source, members, weights[members] / weights[members].sum()))
         shares = {"brickgpt": 1 - set_share, "set": set_share}
@@ -124,12 +129,26 @@ class Sampler:
         return collate([self.sample(rng) for _ in range(size)], self.split.pad)
 
 
-def eval_windows(split: Split, max_len: int, limit: int | None = None) -> list[tuple[np.ndarray, np.ndarray]]:
-    """Deterministic windows covering the first ``limit`` builds (all if None) at half-window stride, with
-    their target masks."""
+def set_builds(split: Split, sets: Sequence[str]) -> tuple[list[int], list[int]]:
+    """(every build of the given real sets, in all their symmetries; only their untransformed builds) as
+    indices into ``split``. Set builds are named ``<set>/sym<k>``; ``sym0`` is the set itself."""
+    wanted = set(sets)
+    found = {str(name).split("/")[0] for name in split.name}
+    missing = wanted - found
+    if missing:
+        raise ValueError(f"sets not in this split: {sorted(missing)}")
+    every = [i for i, name in enumerate(split.name) if str(name).split("/")[0] in wanted]
+    return every, [i for i in every if str(split.name[i]).endswith("/sym0")]
+
+
+def eval_windows(split: Split, max_len: int, limit: int | None = None,
+                 indices: Sequence[int] | None = None) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Deterministic windows covering the first ``limit`` builds (all if None), or the builds ``indices``, at
+    half-window stride, with their target masks."""
     count = max_parts(max_len)
     out = []
-    for i in range(len(split) if limit is None else min(limit, len(split))):
+    chosen = indices if indices is not None else range(len(split) if limit is None else min(limit, len(split)))
+    for i in chosen:
         n = split.size(i)
         starts = [0] if n <= count else list(range(0, n - count, count // 2)) + [n - count]
         out += [split.window(i, s, count, False) for s in starts]

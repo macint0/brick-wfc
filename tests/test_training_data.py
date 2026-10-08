@@ -65,3 +65,20 @@ def test_eval_windows_cover_every_part(tmp_path: Path) -> None:
     first = [ids for ids, _ in windows if ids[0] == build_vocab().id("BOS")]
     assert len(first) == len(split)
     assert all(len(ids) <= max_len for ids, _ in windows)
+
+
+def test_val_sets_are_held_out_of_sampling(tmp_path: Path) -> None:
+    split, _ = exported(tmp_path)  # builds 0-2: set "t" in 3 symmetries; build 3: a BrickGPT structure
+    every, identity = data.set_builds(split, ["t"])
+    assert every == [0, 1, 2] and identity == [0]
+    try:
+        data.set_builds(split, ["nope"])
+        raise AssertionError("expected ValueError")
+    except ValueError:
+        pass
+    sampler = data.Sampler(split, max_len=PREFIX + 1 + 5 * 6, set_share=0.5, mask_drop=0.0, exclude=every)
+    ids, _ = sampler.batch(50, np.random.default_rng(0))
+    vocab = build_vocab()
+    assert (ids[:, 1] == vocab.id("SRC_brickgpt")).all()  # no window from the held-out set
+    windows = data.eval_windows(split, PREFIX + 1 + 5 * 6, indices=identity)
+    assert windows and all(w[0][1] == vocab.id("SRC_set") for w in windows)
