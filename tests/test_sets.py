@@ -8,7 +8,7 @@ from brickwfc.experiments.sets import CANDIDATES, evaluate, markdown, select
 HOUSE = """0 FILE main.ldr
 1 4 0 -24 0 1 0 0 0 1 0 0 0 1 3001.dat
 1 4 0 -32 0 1 0 0 0 1 0 0 0 1 3020.dat
-1 4 0 -40 0 1 0 0 0 1 0 0 0 1 3039.dat
+1 4 0 -40 0 1 0 0 0 1 0 0 0 1 3794b.dat
 0 NOFILE
 """
 
@@ -38,7 +38,7 @@ def test_evaluate_marks_rereleases_and_missing_files(tmp_path: Path, monkeypatch
     assert rows[0]["parts"] == 3 and rows[0]["catalog_pct"] == pytest.approx(200 / 3)
     assert [r["set"] for r in select(rows, min_share=50, min_parts=3)] == ["1-1"]
     assert select(rows, min_share=70, min_parts=3) == [] and select(rows, min_share=50, min_parts=4) == []
-    assert rows[0]["on_grid"] == 2 and rows[0]["catalog"] == 2  # the slope (3039) is not a catalog part
+    assert rows[0]["on_grid"] == 2 and rows[0]["catalog"] == 2  # the jumper plate (3794b) is not a catalog part
     assert "| 1-1 | House | Town | 1980 | 3 | 66.7 | 2 | 100 | 0 | 0 | 0 | yes |" in markdown(rows, 50, 3, 50)
     assert "| 2-1 | House again | Town | 1990 | 3 | 66.7 | 2 | 100 | 0 | 0 | 0 | re-release of 1-1 |" in markdown(rows, 50, 3)
     rows[0]["on_grid"] = 0  # nothing on the grid

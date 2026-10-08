@@ -124,9 +124,55 @@ def _corner(kind: Kind, file: str) -> Part:
     return Part(f"{kind}2x2_corner", f"{file}.dat", 2, 2, HEIGHTS[kind], True, kind, cells=((0, 0), (1, 0), (0, 1)))
 
 
+def _slope(name: str, file: str, width: int, depth: int, stud_rows: int = 1, height: int = 3,
+           inverted: bool = False, aliases: tuple[str, ...] = ()) -> Part:
+    """A slope ``depth`` studs along its fall (LDraw -Z) and ``width`` across (X). As in its .dat file, the
+    origin is on the top face over the back row (z = 0) and the slope runs toward -Z. A plain slope has
+    studs on its ``stud_rows`` back rows and a flat bottom; an inverted one has studs everywhere and a flat
+    bottom under its back row only."""
+    cells = tuple((x - (width - 1) / 2, -z) for z in range(depth) for x in range(width))
+    back = tuple(c for c in cells if c[1] > -stud_rows)
+    return Part(name, f"{file}.dat", width, depth, height, True, "slope", cells,
+                stud_cells=cells if inverted else back, seated_cells=back if inverted else None,
+                aliases=tuple(f"{a}.dat" for a in aliases))
+
+
+def _roof(name: str, file: str, width: int, depth: int, height: int = 3, origin_top: bool = True,
+          aliases: tuple[str, ...] = ()) -> Part:
+    """A slope with no stud at all (a ridge or a 1x1 cheese slope): a studless box, centred on its origin."""
+    return Part(name, f"{file}.dat", width, depth, height, False, "slope", origin_top=origin_top,
+                aliases=tuple(f"{a}.dat" for a in aliases))
+
+
 # Non-rectangular parts (M12b), after the M8 ones so that style statistics keep their part indices.
+# Geometry (cells, studs, flat bottoms, origin, height) read from the LDraw library's .dat files.
 _CORNERS = [_corner("plate", "2420"), _corner("brick", "2357")]
-CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES + _CORNERS}
+_SLOPES = [
+    _slope("slope45_2x1", "3040b", 1, 2),
+    _slope("slope45_2x2", "3039", 2, 2),
+    _slope("slope45_2x3", "3038", 3, 2),
+    _slope("slope45_2x4", "3037", 4, 2),
+    _slope("slope45_2x8", "4445", 8, 2),
+    _slope("slope33_3x1", "4286", 1, 3),
+    _slope("slope33_3x2", "3298", 2, 3),
+    _slope("slope33_3x4", "3297", 4, 3),
+    _slope("slope18_4x2", "30363", 2, 4),
+    _slope("slope65_2x1x2", "60481a", 1, 2, height=6, aliases=("60481",)),
+    _slope("slope75_2x1x3", "4460a", 1, 2, height=9, aliases=("4460",)),
+    _slope("slope45inv_2x1", "3665a", 1, 2, inverted=True, aliases=("3665",)),
+    _slope("slope45inv_2x2", "3660", 2, 2, inverted=True, aliases=("3660a",)),
+    _slope("slope33inv_3x2", "3747a", 2, 3, inverted=True),
+    # Corner slopes: 2x2 with one stud (convex) or three (concave); the sloped cells are studless.
+    Part("slope45convex_2x2", "3045.dat", 2, 2, 3, True, "slope", ((0, 0), (1, 0), (0, -1), (1, -1)),
+         stud_cells=((0, 0),)),
+    Part("slope45concave_2x2", "3046.dat", 2, 2, 3, True, "slope", ((0, 0), (1, 0), (0, -1), (1, -1)),
+         stud_cells=((0, 0), (1, 0), (0, -1))),
+    _roof("slope45double_2x2", "3043", 2, 2),
+    _roof("slope45double_2x1", "3044b", 1, 2, aliases=("3044",)),
+    _roof("slope31_1x1x2", "54200", 1, 1, height=2, origin_top=False),  # "cheese slope"; origin on its bottom
+    _roof("slope45double_1x1x2", "35464", 1, 1, height=2, origin_top=False),
+]
+CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES + _CORNERS + _SLOPES}
 BY_FILE: dict[str, Part] = {file: p for p in CATALOG.values() for file in (p.ldraw, *p.aliases)}
 
 # M4-M11 used these four plates only; experiments that reproduce those tables still do.
@@ -178,7 +224,7 @@ def geometry(part: Part, turn: int) -> Geometry:
     footprint = tuple(sorted(offsets(part.footprint_cells)))
     return Geometry(
         footprint, frozenset(offsets(part.studded_cells)), frozenset(offsets(part.flat_bottom_cells)),
-        (float(-min_x), float(-min_z)), 1 + max(dx for _, dx in footprint), 1 + max(dz for dz, _ in footprint),
+        (float(-min_x) + 0.0, float(-min_z) + 0.0), 1 + max(dx for _, dx in footprint), 1 + max(dz for dz, _ in footprint),
     )
 
 

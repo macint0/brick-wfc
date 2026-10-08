@@ -57,6 +57,8 @@ def piece(name: str, layer: int, x: int = 0, z: int = 0, rotated: bool = False, 
 def test_catalog() -> None:
     assert len({p.ldraw for p in CATALOG.values()}) == len(CATALOG)
     for part in CATALOG.values():
+        if part.kind == "slope":  # M12b: long along their fall (LDraw Z); see test_catalog_shapes
+            continue
         assert part.width >= part.depth  # LDraw parts are long along X
         assert part.height == {"plate": 1, "brick": 3, "tile": 1}[part.kind]
         assert part.studs == (part.kind != "tile")
@@ -198,7 +200,7 @@ def test_coverage_counts_parts_not_primitives(tmp_path: Path) -> None:
     mpd = """0 FILE main.ldr
 1 4 0 -8 0 1 0 0 0 1 0 0 0 1 3020.dat
 1 4 0 -32 0 1 0 0 0 1 0 0 0 1 3001.dat
-1 4 0 -40 0 1 0 0 0 1 0 0 0 1 3039.dat
+1 4 0 -40 0 1 0 0 0 1 0 0 0 1 3794b.dat
 1 4 0 0 0 1 0 0 0 1 0 0 0 1 custom.dat
 0 NOFILE
 0 FILE custom.dat
@@ -208,7 +210,7 @@ def test_coverage_counts_parts_not_primitives(tmp_path: Path) -> None:
 """
     row = set_coverage("fake-1", mpd)
     assert (row.parts, row.primitives, row.plates4, row.catalog) == (3, 2, 1, 2)
-    assert row.top_missing == [("3039.dat", 1)]
+    assert row.top_missing == [("3794b.dat", 1)]
     data = tmp_path / "omr"
     data.mkdir()
     (data / "fake-1.mpd").write_text(mpd)

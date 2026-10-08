@@ -13,6 +13,8 @@ from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.parts import (
     BY_FILE,
     CATALOG,
+    DOWN,
+    UP,
     PartSet,
     PlacedPart,
     Shape,
@@ -24,7 +26,7 @@ from brickwfc.bricks.parts import (
 from brickwfc.bricks.physics import required_clutch, tipping_clusters
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.support import is_stable
-from brickwfc.bricks.voxelize import voxelize
+from brickwfc.bricks.voxelize import tile_grid, voxelize
 from brickwfc.ldraw.export import PLATE_LDU, STUD_LDU, write_ldr
 from brickwfc.ldraw.mpd import flatten
 from brickwfc.wfc import run
@@ -40,6 +42,40 @@ LDRAW = {
     "2420.dat": {"studs": [(0, 0), (20, 0), (0, 20)], "x": (-10, 30), "z": (-10, 30), "y": (0, 8)},
     "2357.dat": {"studs": [(0, 0), (20, 0), (0, 20)], "x": (-10, 30), "z": (-10, 30), "y": (0, 24)},
 }
+
+
+def _row(xs: tuple[int, ...], z: int = 0) -> list[tuple[int, int]]:
+    return [(x, z) for x in xs]
+
+
+# Slopes: studs on the back row (z = 0), body falling toward -Z; ``flat`` lists the centres of the cells
+# with a flat bottom where that is not every cell (inverted slopes: the back row only).
+LDRAW.update({
+    "3040b.dat": {"studs": _row((0,)), "x": (-10, 10), "z": (-30, 10), "y": (0, 24)},
+    "3039.dat": {"studs": _row((-10, 10)), "x": (-20, 20), "z": (-30, 10), "y": (0, 24)},
+    "3038.dat": {"studs": _row((-20, 0, 20)), "x": (-30, 30), "z": (-30, 10), "y": (0, 24)},
+    "3037.dat": {"studs": _row((-30, -10, 10, 30)), "x": (-40, 40), "z": (-30, 10), "y": (0, 24)},
+    "4445.dat": {"studs": _row(tuple(range(-70, 71, 20))), "x": (-80, 80), "z": (-30, 10), "y": (0, 24)},
+    "4286.dat": {"studs": _row((0,)), "x": (-10, 10), "z": (-50, 10), "y": (0, 24)},
+    "3298.dat": {"studs": _row((-10, 10)), "x": (-20, 20), "z": (-50, 10), "y": (0, 24)},
+    "3297.dat": {"studs": _row((-30, -10, 10, 30)), "x": (-40, 40), "z": (-50, 10), "y": (0, 24)},
+    "30363.dat": {"studs": _row((-10, 10)), "x": (-20, 20), "z": (-70, 10), "y": (0, 24)},
+    "60481a.dat": {"studs": _row((0,)), "x": (-10, 10), "z": (-30, 10), "y": (0, 48)},
+    "4460a.dat": {"studs": _row((0,)), "x": (-10, 10), "z": (-30, 10), "y": (0, 72)},
+    "3665a.dat": {"studs": _row((0,)) + _row((0,), -20), "x": (-10, 10), "z": (-30, 10), "y": (0, 24),
+                  "flat": _row((0,))},
+    "3660.dat": {"studs": _row((-10, 10)) + _row((-10, 10), -20), "x": (-20, 20), "z": (-30, 10), "y": (0, 24),
+                 "flat": _row((-10, 10))},
+    "3747a.dat": {"studs": _row((-10, 10)) + _row((-10, 10), -20) + _row((-10, 10), -40), "x": (-20, 20),
+                  "z": (-50, 10), "y": (0, 24), "flat": _row((-10, 10))},
+    "3045.dat": {"studs": [(0, 0)], "x": (-10, 30), "z": (-30, 10), "y": (0, 24)},
+    "3046.dat": {"studs": [(0, -20), (0, 0), (20, 0)], "x": (-10, 30), "z": (-30, 10), "y": (0, 24)},
+    "3043.dat": {"studs": [], "x": (-20, 20), "z": (-20, 20), "y": (0, 24)},
+    "3044b.dat": {"studs": [], "x": (-10, 10), "z": (-20, 20), "y": (0, 24)},
+    "54200.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (-16, 0)},  # origin on the bottom
+    "35464.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (-16, 0)},
+})
+SLOPES = [p for p in CATALOG.values() if p.kind == "slope"]
 CORNERS = [CATALOG["plate2x2_corner"], CATALOG["brick2x2_corner"]]
 FAMILY = CORNERS + [CATALOG[n] for n in ("plate1x1", "plate1x2", "brick1x2", "brick2x2", "tile1x1")]
 
@@ -75,8 +111,12 @@ def test_placement_matches_the_ldraw_part(file: str) -> None:
         placed = PlacedPart(shape, RED, 2, 3, 4)
         p = placed.placement()
         r, origin = np.array(p.rotation, dtype=float).reshape(3, 3), np.array(p.position)
-        studs = {tuple(np.round((r @ (x, 0, z) + origin)[[0, 2]] / STUD_LDU).astype(int)) for x, z in facts["studs"]}
-        assert studs == {(x, z) for _, z, x in placed.stud_cells()}, shape.name
+        def cells(points: list[tuple[int, int]]) -> set[tuple[int, int]]:
+            return {tuple(np.round((r @ (x, 0, z) + origin)[[0, 2]] / STUD_LDU).astype(int)) for x, z in points}
+
+        assert cells(facts["studs"]) == {(x, z) for _, z, x in placed.stud_cells()}, shape.name
+        flat = cells(facts["flat"]) if "flat" in facts else {(x, z) for _, z, x in placed.bottom_cells()}
+        assert flat == {(x, z) for _, z, x in placed.seated_cells()}, shape.name
         corners = np.array([r @ (x, 0, z) + origin for x in facts["x"] for z in facts["z"]])
         assert corners[:, 0].min() / STUD_LDU == placed.x - 0.5 and corners[:, 0].max() / STUD_LDU == placed.x + shape.size_x - 0.5
         assert corners[:, 2].min() / STUD_LDU == placed.z - 0.5 and corners[:, 2].max() / STUD_LDU == placed.z + shape.size_z - 0.5
@@ -143,7 +183,7 @@ def test_corner_physics() -> None:
 
 def test_every_orientation_roundtrips_through_ldraw(tmp_path: Path) -> None:
     placed, x = [], 0
-    for part in CORNERS + [CATALOG["plate2x4"], CATALOG["brick1x2"]]:
+    for part in CORNERS + SLOPES + [CATALOG["plate2x4"], CATALOG["brick1x2"]]:
         for turn in range(4):
             shape = Shape(part, turn)
             placed.append(PlacedPart(shape, RED, turn, x, turn))
@@ -161,8 +201,8 @@ def test_catalog_check_has_every_orientation_without_overlaps() -> None:
     cells = [cell for p in placed for cell in p.cells()]
     assert len(cells) == len(set(cells))
     shown = {(p.shape.part.name, p.shape.turn) for p in placed}
-    for part in CORNERS:
-        assert {(part.name, t) for t in range(4)} <= shown
+    for part in CORNERS + SLOPES:
+        assert {(part.name, s.turn) for s in shapes_of([part])} <= shown
 
 
 # Builds from the M8 catalog are unchanged by the M12b geometry (fingerprints recorded before it).
@@ -194,3 +234,121 @@ def test_m8_builds_are_unchanged() -> None:
         assert [digest(builder.build((9, 6, 6), np.random.default_rng(s), inventory)) for s in range(3)] == M8_FINGERPRINTS[name]
     wfc = [digest(run(parts.tileset, (5, 4, 4), s, 20, [SupportConstraint(parts)]).grid) for s in range(3)]
     assert wfc == M8_FINGERPRINTS["wfc"]
+
+
+# Slopes ------------------------------------------------------------------------------------------------
+
+SLOPE_FAMILY = [CATALOG[n] for n in ("slope45_2x1", "slope45_2x2", "slope45inv_2x1", "slope45inv_2x2",
+                                     "slope45convex_2x2", "slope31_1x1x2", "brick2x2_corner", "plate1x1",
+                                     "plate1x2", "plate2x2", "brick1x1", "brick1x2")]
+SLOPE_KINDS = {"slope45_2x1", "slope45_2x2", "slope45inv_2x1", "slope45inv_2x2", "slope45convex_2x2", "slope31_1x1x2"}
+
+
+def faces_clear(placed: list[PlacedPart], shape: tuple[int, int, int]) -> bool:
+    """Independent of ``extract_parts``: nothing directly above a studless top cell (a sloped face, a tile)
+    or directly below an open bottom cell (an inverted slope's underside), and no cell taken twice."""
+    taken: dict[tuple[int, int, int], PlacedPart] = {}
+    for part in placed:
+        for cell in part.cells():
+            assert cell not in taken
+            taken[cell] = part
+    for part in placed:
+        studs, seated = set(part.stud_cells()), set(part.seated_cells())
+        if any((y + 1, z, x) in taken for y, z, x in part.top_cells() if (y, z, x) not in studs):
+            return False
+        if any((y - 1, z, x) in taken for y, z, x in part.bottom_cells() if (y, z, x) not in seated):
+            return False
+    return True
+
+
+def test_slope_shapes() -> None:
+    plain = shapes_of([CATALOG["slope45_2x2"]])
+    assert [s.name for s in plain] == ["slope45_2x2", "slope45_2x2_r90", "slope45_2x2_r180", "slope45_2x2_r270"]
+    # The studs (back row) face a different side in each turn; the bottom is flat everywhere.
+    studded_rows = {frozenset(s.geometry.studded) for s in plain}
+    assert len(studded_rows) == 4 and all(len(s.geometry.seated) == 4 for s in plain)
+    inverted = Shape(CATALOG["slope45inv_2x2"])
+    assert len(inverted.geometry.studded) == 4 and len(inverted.geometry.seated) == 2
+    assert [s.turn for s in shapes_of([CATALOG["slope45double_2x1"]])] == [0, 1]  # a ridge: 180 degrees is the same
+    assert CATALOG["slope31_1x1x2"].height == 2 and CATALOG["slope75_2x1x3"].height == 9
+    assert BY_FILE["3660a.dat"] is BY_FILE["3660.dat"] and BY_FILE["3665.dat"] is CATALOG["slope45inv_2x1"]
+
+
+def test_nothing_on_a_slope_face_or_under_an_inverted_slope() -> None:
+    parts = part_tileset(SLOPE_FAMILY, [RED])
+    slope = PlacedPart(Shape(CATALOG["slope45_2x2"]), RED, 0, 0, 0)
+    stud = next(c for c in slope.stud_cells())
+    face = next(c for c in slope.top_cells() if c not in slope.stud_cells())
+
+    def errors(*placed: PlacedPart) -> list[str]:
+        return extract_parts(tile_grid(list(placed), parts), parts)[1]
+
+    on_studs = PlacedPart(Shape(CATALOG["plate1x1"]), RED, 3, stud[2], stud[1])
+    on_face = PlacedPart(Shape(CATALOG["plate1x1"]), RED, 3, face[2], face[1])
+    assert errors(slope, on_studs) == []
+    assert any("sits on" in e for e in errors(slope, on_face))
+    inverted = PlacedPart(Shape(CATALOG["slope45inv_2x1"]), RED, 3, 0, 0)
+    seat = inverted.seated_cells()[0]
+    hang = next(c for c in inverted.bottom_cells() if c not in inverted.seated_cells())
+    under_seat = PlacedPart(Shape(CATALOG["brick1x1"]), RED, 0, seat[2], seat[1])
+    under_hang = PlacedPart(Shape(CATALOG["brick1x1"]), RED, 0, hang[2], hang[1])
+    assert errors(under_seat, inverted) == []
+    assert any("open bottom" in e for e in errors(under_seat, under_hang, inverted))
+    # Only the back row's stud holds it up: a part under the open bottom alone does not count, and is refused.
+    assert not is_stable([under_hang, inverted], np.ones((6, 2, 1), dtype=bool))
+    # The rules are in the tileset too: no tile above a sloped face, no solid tile below an open bottom.
+    face_tile = next(t for t, i in enumerate(parts.infos) if i.studless_top and i.shape == slope.shape)
+    open_tile = next(t for t, i in enumerate(parts.infos) if i.open_bottom)
+    assert parts.tileset.compat[UP][face_tile].tolist() == (~parts.solid).tolist()
+    assert parts.tileset.compat[DOWN][open_tile].tolist() == (~parts.solid).tolist()
+
+
+@pytest.mark.parametrize("seed_block", range(4))
+def test_wfc_builds_with_slopes_are_whole_and_supported(seed_block: int) -> None:
+    parts = part_tileset(SLOPE_FAMILY, [RED], empty_weight=1.0)
+    names: set[str] = set()
+    for seed in range(seed_block * BUILDS // 4, (seed_block + 1) * BUILDS // 4):
+        result = run(parts.tileset, (7, 4, 4), seed, constraints=[SupportConstraint(parts)], max_backtracks=500)
+        assert result.grid is not None
+        placed = check_build(result.grid, parts)
+        assert faces_clear(placed, result.grid.shape)
+        names |= {p.shape.part.name for p in placed}
+    assert names & SLOPE_KINDS
+
+
+def test_bottom_up_builds_with_slopes_are_whole_and_supported() -> None:
+    parts = part_tileset(SLOPE_FAMILY, [RED, BLUE], empty_weight=1.0)
+    for kwargs in ({}, {"any_offset": True}, {"any_offset": True, "balanced": True, "bridge": True, "connect": True}):
+        builder = BottomUpBuilder(parts, **kwargs)
+        shapes: set[tuple[str, int]] = set()
+        for seed in range(BUILDS):
+            grid = builder.build((10, 4, 4), np.random.default_rng(seed))
+            placed = check_build(grid, parts)
+            assert faces_clear(placed, grid.shape)
+            shapes |= {(p.shape.part.name, p.shape.turn) for p in placed}
+            if kwargs.get("balanced"):
+                assert not tipping_clusters(placed)
+                assert required_clutch(placed, grid.shape) < np.inf
+        assert {name for name, _ in shapes} >= SLOPE_KINDS
+        assert {turn for name, turn in shapes if name == "slope45_2x2"} == {0, 1, 2, 3}
+
+
+def test_slope_physics() -> None:
+    # A tower of two 2x2 bricks with a 2x2 slope on top stands without grip and is supported.
+    tower = [PlacedPart(Shape(CATALOG["brick2x2"]), RED, 0, 0, 0), PlacedPart(Shape(CATALOG["brick2x2"]), BLUE, 3, 0, 0),
+             PlacedPart(Shape(CATALOG["slope45_2x2"]), RED, 6, 0, 0)]
+    filled = np.zeros((9, 2, 2), dtype=bool)
+    for cell in (c for p in tower for c in p.cells()):
+        filled[cell] = True
+    assert is_stable(tower, filled) and required_clutch(tower, (9, 2, 2)) == 0.0
+    # A 33-degree inverted slope alone on the table touches it with its back row only: it tips over.
+    inverted = PlacedPart(Shape(CATALOG["slope33inv_3x2"]), RED, 0, 0, 0)
+    assert tipping_clusters([inverted]) and required_clutch([inverted], (3, 3, 2)) == np.inf
+    # Raised on a 1x2 brick under its back row, it hangs out 2 studs; clicked onto a baseplate, grip holds it.
+    seat_z = inverted.seated_cells()[0][1]
+    base = PlacedPart(Shape(CATALOG["brick1x2"]), BLUE, 0, 0, seat_z)
+    raised = PlacedPart(inverted.shape, RED, 3, 0, 0)
+    assert 0 < required_clutch([base, raised], (6, 3, 2), baseplate=True) < np.inf
+    # A cheese slope is 2 plates tall: a plate next to it on the same brick has its top one layer lower.
+    cheese = PlacedPart(Shape(CATALOG["slope31_1x1x2"]), RED, 3, 0, 0)
+    assert cheese.top == 4 and required_clutch([tower[0], cheese], (9, 2, 2)) == 0.0
