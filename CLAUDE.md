@@ -29,6 +29,17 @@ constraints (its propagation sees dead ends early), that is the paper's main res
 beats WFC on stability, physics, inventory validity/utilization and speed (10–100×). WFC's only measured
 win is filling shapes with large overhangs (at the cost of grip). Decision pending with Mac.
 
+**Open items (handoff, 2026-10-08):**
+- **Decision pending:** pivot (bottom-up builder as main generator, WFC as a compared method) or keep pushing
+  WFC (e.g. M10 learned style). Claude recommended the pivot; Mac has not decided.
+- **3D check pending:** Mac is to open these in BrickLink Studio (File → Import → Import LDraw) or LeoCAD:
+  `out/check/orientation_check.ldr` (6 parts; turned 1×2/2×4 must not overlap — tests the assumption that
+  3023/3020 are long along LDraw X), `out/m5/build_seed1.ldr`, `out/m6_example/build_seed3.ldr`.
+  `out/` is gitignored, so these exist only on Mac's PC (regenerate with `python -m brickwfc.bricks`).
+- **Offered, not started:** a browser 3D viewer for builds (no LDraw parts library needed).
+- Package is installed editable (`pip install -e ".[dev]"`); no `PYTHONPATH=src` needed.
+- Mac's PC runs low on memory during long experiments; experiments are resumable — rerun the same command.
+
 **Positioning vs BrickGPT** (closest prior work): BrickGPT generates from *text* with a fine-tuned LLM
 trained on ShapeNet-derived builds, and enforces stability by *rollback* (98.8% stable, ~40 s/build on GPU).
 We generate from an *inventory* (+ optional shape), learn from *real official sets*, guarantee constraints
