@@ -44,6 +44,7 @@ import argparse
 import json
 import math
 import statistics
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Sequence
@@ -428,6 +429,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=Path("out/m12b_brickgpt"))
     args = parser.parse_args(argv)
 
+    sys.stdout.reconfigure(encoding="utf-8")  # tables use symbols the Windows console codepage lacks
     args.out.mkdir(parents=True, exist_ok=True)
     picked = pick_objects(brickgpt.load_split("test", args.data), args.categories)
     for step in args.steps:

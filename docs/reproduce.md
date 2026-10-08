@@ -196,6 +196,17 @@ PYTHONPATH=src python training/parity.py check --weights out/proposal_run2/propo
   `proposal_run{1,2}_log.jsonl`).
 - On Colab instead: `training/train.ipynb`.
 
+### `results/m12b_overhangs_tables.md` (M12b step 1d), with `m12b_opentops_before_after.png`
+
+```
+python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt --steps 1d --workers 6
+```
+
+- Writes `overhangs.md`, `overhangs_summary.json` and `overhangs_before_after.png` under `--out`. The write-up's
+  tables are `overhangs.md`; the figure is `overhangs_before_after.png`.
+- Runs the six BrickGPT objects × 3 sets × {exact, open tops, supports} and the table on the six demo sets.
+- 31 CPU-hours over these runs (the exact runs are shared with step 1a). Resumable through the pipeline caches.
+
 ## Not on main yet, or not run yet
 
 Commands for results that are on branches or still to be run:
