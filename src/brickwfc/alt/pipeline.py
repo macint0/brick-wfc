@@ -11,13 +11,16 @@ statistics, from the fold that held the set out if it is one of the M10 sets, el
             and the learned style bias (or ``--generator wfc``), in parallel (``candidates.py``)
   verify    integrity, inventory, support, shape, physics on a table (``candidates.py``), then a size
             floor: candidates with fewer contact events than the ``--min-size-quantile`` quantile of the
-            verified ones fail "too_small", so one tiny build cannot shrink every judge sample
+            verified ones fail "too_small", so one tiny build cannot shrink every judge sample; with a
+            target shape, a fill floor: candidates filling less than ``--fill-floor`` x the 90th
+            percentile of the verified ones' fill fail "low_fill" (M12b)
   dedupe    near-duplicates in feature space (``features.py``, ``funnel.dedupe``)
   judge     minus the divergence of the build's contact statistics from the learned ones (``style``),
             size-matched: every build subsampled to the smallest one's number of contact events
   select    top ``--k`` by judge + ``--diversity`` x distance to the builds already picked
             (``funnel.select``); judge scores are standardized and feature distances divided by their
-            median, so the two terms are on comparable scales
+            median, so the two terms are on comparable scales. With a target shape the score is
+            z(judge) + ``--fill-weight`` x z(fill) (M12b; 0 restores judge only)
 
 Without a target shape, the grid is a cube in millimetres (2.5 plates tall per stud of width) with
 volume ``--room`` x the inventory's; ``--height`` fixes the height instead (M10's grid: ``--height 12``). With
@@ -92,6 +95,8 @@ class AltConfig:
     max_clutch: float = math.inf  # physics: keep builds needing at most this clutch per stud
     wfc_time_limit_s: float = 30.0
     min_size_quantile: float = 0.1
+    fill_floor: float = 0.5  # with a target: fail builds filling < this x the 90th-percentile fill (0: off)
+    fill_weight: float = 1.0  # with a target: selection score z(judge) + this x z(fill) (0: judge only)
     judge_draws: int = 5
     dedupe_threshold: float = 0.05
     diversity: float = 0.5
@@ -199,6 +204,11 @@ def generate_all(context: Context, seeds: Sequence[int], cache: Path, key: dict,
 # The rest of the funnel ----------------------------------------------------------------------------
 
 
+def standardized(values: np.ndarray) -> np.ndarray:
+    """z-scores (0 everywhere when the values are all equal)."""
+    return (values - values.mean()) / (values.std() or 1.0)
+
+
 def run_funnel(candidates: list[Candidate], context: Context, stats: StyleStats, config: AltConfig,
                generate_seconds: float) -> FunnelReport:
     stages = [StageStats("generate", sum("generate" not in c.failed for c in candidates), generate_seconds)]
@@ -211,6 +221,16 @@ def run_funnel(candidates: list[Candidate], context: Context, stats: StyleStats,
     verified = [c for c in valid if found[c.seed].count >= floor]
     if len(verified) < len(valid):
         failures["too_small"] = len(valid) - len(verified)
+    # With a target shape: how much of it each build fills, and a floor relative to the best builds, so a
+    # stub that happens to match the style statistics is not selected over builds that fill the shape.
+    filled_share: dict[int, float] = {}
+    if context.mask is not None and verified:
+        filled_share = {c.seed: fill(occupancy(c.placed, context.grid), context.mask) for c in verified}
+        fill_floor = config.fill_floor * float(np.quantile(list(filled_share.values()), 0.9))
+        kept = [c for c in verified if filled_share[c.seed] >= fill_floor]
+        if len(kept) < len(verified):
+            failures["low_fill"] = len(verified) - len(kept)
+        verified = kept
     stages.append(StageStats("verify", len(verified), time.perf_counter() - clock))
 
     clock = time.perf_counter()
@@ -230,7 +250,9 @@ def run_funnel(candidates: list[Candidate], context: Context, stats: StyleStats,
     clock = time.perf_counter()
     picks: list[int] = []
     if unique:
-        z = (scores - scores.mean()) / (scores.std() or 1.0)
+        z = standardized(scores)
+        if filled_share and config.fill_weight:  # with a target: judge and fill, both standardized
+            z = z + config.fill_weight * standardized(np.array([filled_share[c.seed] for c in unique]))
         distances = np.linalg.norm(features[:, None] - features[None, :], axis=-1)[np.triu_indices(len(unique), 1)]
         scale = float(np.median(distances)) if distances.size and np.median(distances) > 0 else 1.0
         picks = select(z, features / scale, config.k, config.diversity)
@@ -324,6 +346,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--max-clutch", type=float, default=defaults.max_clutch, help="physics limit per stud")
     parser.add_argument("--wfc-time-limit", type=float, default=defaults.wfc_time_limit_s, help="seconds per WFC build")
     parser.add_argument("--min-size-quantile", type=float, default=defaults.min_size_quantile)
+    parser.add_argument("--fill-floor", type=float, default=defaults.fill_floor,
+                        help="target shape: fail builds filling less than this x the 90th-percentile fill (0: off)")
+    parser.add_argument("--fill-weight", type=float, default=defaults.fill_weight,
+                        help="target shape: selection score z(judge) + this x z(fill) (0: judge only)")
     parser.add_argument("--dedupe-threshold", type=float, default=defaults.dedupe_threshold)
     parser.add_argument("--diversity", type=float, default=defaults.diversity, help="lambda in selection")
     parser.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 3) - 2))
@@ -344,7 +370,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         shape_exact=args.shape_exact, shape_columns=args.shape_columns, voxels=args.voxels, mesh_up=args.mesh_up,
         hollow=args.hollow, supports=args.supports, open_tops=not args.no_open_tops,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
-        min_size_quantile=args.min_size_quantile, dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
+        min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
+        dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
     )
     source = load_source(args.input, args.data)
     stats, style_label = learned_style(source.name, args.style_dir, args.sets_file)
