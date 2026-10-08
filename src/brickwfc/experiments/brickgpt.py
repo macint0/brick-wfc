@@ -11,13 +11,14 @@ exact cells as the target, scaled to that inventory's volume. Every brick size t
 brick, so their structures convert exactly into our parts and the stability (``physics.table_clutch``)
 and piece counts (``balance.clusters``) are the same measurements on both sides.
 
-Also the before/after figure for step 1 on the M12 demo sets: one object (the chair) as solid columns
-(``--shape-columns``, the heightfield inputs had before) and as its exact cells.
+Also the before/after figure for step 1 on the M12 demo sets: one object (the chair) as the pipeline saw it
+before M12b (solid columns, ``--shape-columns``: the heightfield inputs) and after step 1 (its exact cells,
+with open tops, see 1d).
 
 Step 1c (``--steps 1c``): the same objects and sets hollowed (``--hollow``, default 2: a 2-cell shell plus
-internal pillars), against their solid runs; the same inventory then makes a larger object, so besides fill
-we report its size and the share of its outer surface the build covers. Figure: the object hollowing
-enlarges most (the vessel) on the demo sets, solid | hollow.
+internal pillars), against their solid runs (both with open tops); the same inventory then makes a larger
+object, so besides fill we report its size and the share of its outer surface the build covers. Figure: the
+object hollowing enlarges most (the vessel) on the demo sets, solid | hollow.
 
 Step 1d (``--steps 1d``): overhangs. The overhang loss is the share of target cells a build leaves empty
 with nothing built under them (``shapes.unsupported_empty``). Remedies, kept if they recover fill with
@@ -27,9 +28,9 @@ the cantilever length it allows with our physics model, and applied to the exact
 clutch is cached); (ii) support columns under overhangs out of a part's reach (``--supports``), extra
 cells outside the object, so fill and IoU are measured against the object without them; (iii) open tops
 (the pipeline default from 1d on; ``--no-open-tops`` before): studless top cells only under empty target
-cells, so tiles cannot cap thin parts (the cause of the table's and chair's low builds on 10182-1). Runs
-of the other variants pass ``--no-open-tops`` so they match the 1a runs. Figure: the table, exact | open
-tops, on the demo sets.
+cells, so tiles cannot cap thin parts (the cause of the table's and chair's low builds on 10182-1). Exact
+runs pass ``--no-open-tops`` so they match the 1a runs; support columns are measured with open tops on.
+Figure: the table, exact | open tops, on the demo sets.
 
 Runs reuse the pipeline's candidate cache, so a killed run resumes. Writes, under ``--out``: step 1a
 ``results.md``, ``summary.json``, ``objects.png`` (their structure, then our best build per set, per object)
@@ -126,19 +127,19 @@ def theirs(structure: brickgpt.Structure, out: Path) -> dict:
 
 
 def variant_args(variant: str) -> list[str]:
-    """Pipeline arguments of a target variant: "exact", "columns", "hollow<N>", "supports" (as run before
-    open tops, M12b 1d (iii), so they match the 1a runs), or "opentops" (exact with open tops on)."""
+    """Pipeline arguments of a target variant. As in 1a, before open tops (M12b 1d (iii)), so they match
+    the 1a runs: "exact", "columns" (the heightfield inputs of M12). With open tops, the pipeline default
+    from 1d on: "opentops" (exact cells), "hollow<N>", "supports"."""
+    if variant == "exact":
+        return ["--no-open-tops"]
+    if variant == "columns":
+        return ["--no-open-tops", "--shape-columns"]
     if variant == "opentops":
         return []
-    before = ["--no-open-tops"]
-    if variant == "exact":
-        return before
-    if variant == "columns":
-        return [*before, "--shape-columns"]
     if variant.startswith("hollow"):
-        return [*before, "--hollow", variant.removeprefix("hollow")]
+        return ["--hollow", variant.removeprefix("hollow")]
     if variant == "supports":
-        return [*before, "--supports"]
+        return ["--supports"]
     raise ValueError(f"unknown variant {variant!r}")
 
 
@@ -236,7 +237,7 @@ def tables(objects: list[dict], rows: list[dict], figure: list[dict]) -> str:
                      f"{r['best_parts']} | {f(r['best_fill_pct'], '{:.1f}')} | {f(r['best_clutch'], '{:.1f}')} | "
                      f"{f(their_clutch[r['structure_id']], '{:.1f}')} | {r['best_clusters']} | "
                      f"{r['seconds_per_candidate']:.2f} |")
-    lines += ["", "### Before / after on the demo sets (chair; before: solid columns, after: exact cells)", "",
+    lines += ["", "### Before / after on the demo sets (chair; before: solid columns, after: exact cells with open tops)", "",
               "| set | target | grid (WxDxH) | target cells | valid % | fill % | IoU | best: parts | best: fill % "
               "| best: clutch | s/candidate |", "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in figure:
@@ -349,7 +350,7 @@ def step_1a(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
             for s in picked for set_number in args.sets]
     chair = next((s for s in picked if s.category_id == FIGURE_CATEGORY), picked[0])
     figure = [ours(set_number, chair, run_ours(set_number, chair, args.out, args.n, args.workers, variant), variant)
-              for set_number in args.figure_sets for variant in ("columns", "exact")]
+              for set_number in args.figure_sets for variant in ("columns", "opentops")]
 
     (args.out / "summary.json").write_text(json.dumps({"objects": objects, "ours": rows, "before_after": figure},
                                                       indent=2), encoding="utf-8")
@@ -366,25 +367,25 @@ def step_1a(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
                 images.append(Path(r["best_png"]))
                 labels.append(build_label(r))
     labeled_sheet(images, labels, args.out / "objects.png", columns=1 + len(args.sets))
-    before_after(chair, figure, ("columns", "exact"),
+    before_after(chair, figure, ("columns", "opentops"),
                  ("before: target as solid columns\n(heightfield, scaled to each set)",
-                  "after: target as exact 3D cells\n(scaled to each set)"),
+                  "after: target as exact 3D cells, open tops\n(scaled to each set)"),
                  args.figure_sets[-1], args.out, args.out / "before_after.png")
 
 
 def step_1c(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
     hollow = f"hollow{args.hollow}"
     rows = [ours(set_number, s, run_ours(set_number, s, args.out, args.n, args.workers, variant), variant)
-            for s in picked for set_number in args.sets for variant in ("exact", hollow)]
+            for s in picked for set_number in args.sets for variant in ("opentops", hollow)]
     vessel = next((s for s in picked if s.category_id == HOLLOW_FIGURE_CATEGORY), picked[0])
     figure = [ours(set_number, vessel, run_ours(set_number, vessel, args.out, args.n, args.workers, variant), variant)
-              for set_number in args.figure_sets for variant in ("exact", hollow)]
+              for set_number in args.figure_sets for variant in ("opentops", hollow)]
     (args.out / "hollow_summary.json").write_text(json.dumps({"ours": rows, "before_after": figure}, indent=2),
                                                   encoding="utf-8")
     text = f"{hollow_table(rows)}\n\n### Figure runs ({category(vessel)})\n\n{hollow_table(figure)}\n"
     (args.out / "hollow.md").write_text(text, encoding="utf-8")
     print(text)
-    before_after(vessel, figure, ("exact", hollow),
+    before_after(vessel, figure, ("opentops", hollow),
                  ("before: solid target\n(exact cells, scaled to each set)",
                   f"after: hollow target ({args.hollow}-cell shell + pillars)\n(same volume: a larger object)"),
                  args.figure_sets[-1], args.out, args.out / "hollow_before_after.png")

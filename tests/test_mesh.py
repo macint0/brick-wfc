@@ -90,7 +90,7 @@ def test_variant_args() -> None:
 
     assert variant_args("exact") == ["--no-open-tops"] and variant_args("opentops") == []
     assert variant_args("columns") == ["--no-open-tops", "--shape-columns"]
-    assert variant_args("hollow2") == ["--no-open-tops", "--hollow", "2"]
+    assert variant_args("hollow2") == ["--hollow", "2"]
     with pytest.raises(ValueError):
         variant_args("solid")
 
