@@ -6,7 +6,10 @@
   value = height in plates) the whole shape is scaled uniformly instead;
 - an LDraw model (.ldr/.mpd file, or an OMR set number), voxelized (catalog parts on the stud grid only),
   each column filled from the ground to its top cell (or, with ``exact``, its own cells, which keeps
-  overhangs and rooms but is a sparse view of the model), and scaled uniformly.
+  overhangs and rooms but is a sparse view of the model), and scaled uniformly;
+- a BrickGPT structure (``brickgpt:<structure id>`` from the StableText2Brick test split, or a local
+  ``.txt`` file in its format; ``bricks.brickgpt``): a true 3D target, its exact cells scaled uniformly
+  (with ``columns``, solid columns instead: the heightfield view of the same object).
 
 With a silhouette, an optional color image of the same size gives each column a preferred color: the
 inventory color nearest to its pixel (transparent pixels: no preference).
@@ -21,6 +24,7 @@ from typing import Sequence
 import numpy as np
 from PIL import Image
 
+from brickwfc.bricks import brickgpt
 from brickwfc.bricks.colors import BrickColor
 from brickwfc.bricks.shapes import (
     SHAPES,
@@ -31,6 +35,7 @@ from brickwfc.bricks.shapes import (
     from_model,
     preferred_colors,
     resample,
+    scaled_to,
     sized_for,
 )
 from brickwfc.bricks.voxelize import voxelize
@@ -38,6 +43,7 @@ from brickwfc.ldraw.fetch import fetch_set
 from brickwfc.ldraw.mpd import flatten
 
 IMAGE_SUFFIXES = (".png", ".gif", ".bmp")
+BRICKGPT_PREFIX = "brickgpt:"
 
 
 @dataclass(frozen=True, eq=False)
@@ -49,15 +55,28 @@ class Target:
 
 def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_map: Path | None = None,
                 color_map: Path | None = None, height: int = 6, data_dir: Path = Path("data/omr"),
-                exact: bool = False) -> Target:
+                exact: bool = False, columns: bool = False, brickgpt_dir: Path = brickgpt.DATA_DIR) -> Target:
     """The target ``spec`` with a volume of about ``cells`` grid cells. ``exact``: a model keeps its own
-    cells instead of solid columns."""
+    cells instead of solid columns; ``columns``: a 3D target becomes solid columns instead of its own cells."""
     path = Path(spec)
     is_image = path.suffix.lower() in IMAGE_SUFFIXES
+    is_3d = spec.startswith(BRICKGPT_PREFIX) or path.suffix.lower() == ".txt"
     if (height_map or color_map) and not is_image:
         raise ValueError("--height-map and --color-map go with a silhouette image as --shape")
-    if exact and (is_image or spec in SHAPES):
-        raise ValueError("--shape-exact goes with a model as --shape")
+    if exact and (is_image or is_3d or spec in SHAPES):
+        raise ValueError("--shape-exact goes with an LDraw model or set number as --shape")
+    if columns and not is_3d:
+        raise ValueError("--shape-columns goes with a 3D target (a BrickGPT structure) as --shape")
+    if is_3d:
+        if spec.startswith(BRICKGPT_PREFIX):
+            structure = brickgpt.find(spec[len(BRICKGPT_PREFIX):], brickgpt_dir)
+            bricks, name = structure.bricks, f"{BRICKGPT_PREFIX}{structure.structure_id[:8]}"
+        else:
+            bricks, name = brickgpt.parse(path.read_text(encoding="utf-8")), path.name
+        if not bricks:
+            raise ValueError(f"{spec}: no bricks")
+        kind = "solid columns" if columns else "exact cells"
+        return Target(scaled_to(brickgpt.occupancy(bricks), cells, columns), None, f"{name} (BrickGPT structure, {kind})")
     if spec in SHAPES:
         return Target(sized_for(spec, cells), None, f"{spec} (primitive)")
     if is_image:

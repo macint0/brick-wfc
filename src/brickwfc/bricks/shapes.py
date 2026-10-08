@@ -4,8 +4,8 @@
 parts inside it too (a part's continuation tile can't sit in a cell that must stay empty).
 
 Besides the primitives, shapes come from a top-down silhouette image (optionally with a height map),
-or from a voxelized model, rescaled to a target volume (M12); ``preferred_colors`` reads a color image
-aligned with the silhouette.
+or from a voxelized model, rescaled to a target volume (M12), or from any 3D mask (M12b: ``scaled_to``);
+``preferred_colors`` reads a color image aligned with the silhouette.
 """
 
 from __future__ import annotations
@@ -185,6 +185,12 @@ def from_model(placed: Sequence[PlacedPart], cells: float, solid_columns: bool =
     for part in placed:
         for cell in part.cells():
             occupied[cell] = True
+    return scaled_to(occupied, cells, solid_columns)
+
+
+def scaled_to(occupied: Mask, cells: float, solid_columns: bool = False) -> Mask:
+    """A 3D mask in cells (1 stud x 1 stud x 1 plate), scaled uniformly so the volume is about ``cells``
+    and cut to its bounds; with ``solid_columns``, each column filled from the ground to its top cell first."""
     if solid_columns:
         occupied = extrude(np.round(height_map_of(occupied)).astype(np.int64))
     f = fit_scale(lambda f: int(resample(occupied, (f, f, f)).sum()), cells, 3)
