@@ -134,7 +134,7 @@ brick-wfc/
   on tiles, support needs a stud, physics knows bricks and tiles. Usable share of the 20 OMR sets: 8% → 51%
   (`results/m8_parts.md`, `experiments/coverage.py`). Bottom-up builds full inventories (746 parts) in 2–5 s;
   WFC does not scale to full inventories yet. `PLATE_FILES` keeps M7/M9/M11 reproducible.
-  To do (Mac): open `out/check/catalog_check.ldr` (`python -m brickwfc.bricks.catalog_check`) in Studio.
+  Mac checked `out/check/catalog_check.ldr` in Studio (2026-10-08): sizes and orientations look right.
 - **M9b — Inventory with the full catalog + set selection.** `experiments/inventory.py --catalog full`
   (`results/m9b_inventory_catalog.md`): builds use 35–67% of each set's parts; bottom-up D/D2 100% valid,
   99.5% used, up to 746 parts in ≤ 4.4 s; WFC + inventory (`wfc.run(time_limit_s=30)`) 2.5% valid, 0/20 on
