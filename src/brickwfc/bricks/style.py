@@ -341,9 +341,9 @@ def styled_tileset(inventory: dict[tuple[str, str], int], colors: Sequence[Brick
         share = 1.0
         if stats is not None:
             share = (stats.parts[TYPE_INDEX[name]] + ALPHA) * (stats.colors.get(color, 0.0) + 1)
-        for shape in shapes_of([part]):
-            orientations = 2 if part.width != part.depth else 1
-            coverage[(shape.name, color)] = share * shape.cells / orientations
+        shapes = shapes_of([part])
+        for shape in shapes:
+            coverage[(shape.name, color)] = share * shape.cells / len(shapes)
     return part_tileset([CATALOG[n] for n in names], colors, len(names) * empty_weight_per_part, coverage=coverage)
 
 # Sampling bias for the generators --------------------------------------------------------------

@@ -15,7 +15,7 @@ from typing import Mapping
 import numpy as np
 
 from brickwfc.bricks.colors import color_for_code
-from brickwfc.bricks.parts import BY_FILE, Part, PartSet, PlacedPart, Shape, TileInfo
+from brickwfc.bricks.parts import BY_FILE, Part, PartSet, PlacedPart, Shape, TileInfo, canonical, turn_rotation
 from brickwfc.ldraw.export import PLATE_LDU, STUD_LDU
 from brickwfc.ldraw.mpd import PartInstance
 
@@ -33,17 +33,21 @@ class VoxelizeReport:
     unrecognized_top: list[tuple[str, int]] = field(default_factory=list)
 
 
+def quarter_turns(rotation: np.ndarray) -> int | None:
+    """For a rotation about LDraw Y by a multiple of 90 degrees, how many quarter turns
+    (``parts.turn_rotation``) it is. None for any other rotation (tilted, mirrored, upside down)."""
+    r = np.asarray(rotation, dtype=float).reshape(3, 3)
+    for turn in range(4):
+        if np.allclose(r, np.array(turn_rotation(turn)).reshape(3, 3), atol=TOLERANCE):
+            return turn
+    return None
+
+
 def axis_aligned_turn(rotation: np.ndarray) -> bool | None:
     """For a rotation about LDraw Y by a multiple of 90 degrees, whether local X maps onto world Z
     (a quarter turn). None for any other rotation (tilted, mirrored, upside down)."""
-    r = np.asarray(rotation)
-    if not np.allclose(np.abs(r), np.round(np.abs(r)), atol=TOLERANCE):
-        return None
-    if not (np.isclose(r[1, 1], 1, atol=TOLERANCE) and np.isclose(abs(np.linalg.det(r)), 1, atol=TOLERANCE)):
-        return None
-    if np.linalg.det(r) < 0:
-        return None
-    return bool(np.isclose(abs(r[2, 0]), 1, atol=TOLERANCE))
+    turn = quarter_turns(rotation)
+    return None if turn is None else turn % 2 == 1
 
 
 def most_common_fraction(values: list[float]) -> float:
@@ -63,16 +67,17 @@ def voxelize(instances: list[PartInstance], known: Mapping[str, Part] = BY_FILE)
             report.unrecognized += 1
             unrecognized[inst.part] += 1
             continue
-        turned = axis_aligned_turn(inst.rotation)
-        if turned is None:
+        turn = quarter_turns(inst.rotation)
+        if turn is None:
             report.tilted += 1
             continue
-        shape = Shape(part, rotated=turned and part.width != part.depth)  # a turned square is the same shape
+        origin_x, origin_z = Shape(part, turn).geometry.origin  # from the min-corner cell, in this turn
         px, py, pz = inst.position
-        corner_x = px / STUD_LDU - (shape.size_x - 1) / 2
-        corner_z = pz / STUD_LDU - (shape.size_z - 1) / 2
-        layer = -py / PLATE_LDU - part.height  # the part's origin is its top face; -Y is up
-        candidates.append((shape, inst.color, corner_x, corner_z, layer))
+        corner_x = px / STUD_LDU - origin_x
+        corner_z = pz / STUD_LDU - origin_z
+        layer = -py / PLATE_LDU - (part.height if part.origin_top else 0)  # -Y is up
+        # A turn with the same cells as an earlier one (a rectangle turned twice) is that shape.
+        candidates.append((canonical(part, turn), inst.color, corner_x, corner_z, layer))
     report.unrecognized_top = unrecognized.most_common(10)
 
     offsets = [most_common_fraction([c[i] for c in candidates]) for i in (2, 3, 4)]

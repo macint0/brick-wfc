@@ -22,9 +22,9 @@ def test_tile_count(parts: PartSet) -> None:
 
 
 def test_footprint() -> None:
-    info = TileInfo(Shape(PLATES["plate2x4"], rotated=False), offset_x=1, offset_z=1)
+    info = TileInfo(Shape(PLATES["plate2x4"], False), offset_x=1, offset_z=1)
     assert sorted(info.footprint()) == sorted((dz, dx) for dz in (-1, 0) for dx in (-1, 0, 1, 2))
-    rotated = Shape(PLATES["plate2x4"], rotated=True)
+    rotated = Shape(PLATES["plate2x4"], True)
     assert (rotated.size_x, rotated.size_z) == (2, 4)
 
 

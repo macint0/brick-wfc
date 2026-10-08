@@ -55,9 +55,10 @@ def load(directory: Path) -> tuple[list[Candidate], list[int]]:
     return [Candidate.from_json(json.loads(line)) for line in lines if line.strip()], grid
 
 
-def summarize(set_number: str, runs: dict[str, tuple[list[Candidate], list[int]]], draws: int = 5) -> list[dict]:
-    source = load_source(set_number)
-    stats, _ = learned_style(source.name)
+def summarize(set_number: str, runs: dict[str, tuple[list[Candidate], list[int]]], draws: int = 5,
+              catalog: str = "m8", style_version: str = "v1") -> list[dict]:
+    source = load_source(set_number, catalog=catalog)
+    stats, _ = learned_style(source.name, version=style_version)
     counts = {name: {c.seed: events(c.placed) for c in cs if c.valid} for name, (cs, _) in runs.items()}
     floors = [int(np.quantile([e.count for e in found.values()], 0.1, method="lower")) for found in counts.values() if found]
     size = min(floors) if floors else 0
@@ -99,6 +100,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--n", type=int, default=200)
     parser.add_argument("--workers", type=int, help="passed to the pipeline")
     parser.add_argument("--out", type=Path, default=Path("out/m12_2b"))
+    parser.add_argument("--catalog", choices=("m8", "full"), default="m8", help="M12b: full adds corners and slopes")
+    parser.add_argument("--style-version", choices=("v1", "v2"), default="v1", help="M10 style statistics")
     args = parser.parse_args(argv)
     rows = []
     for set_number in args.sets:
@@ -106,9 +109,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         for name, extra in STUDIES[args.study].items():
             directory = args.out / set_number / name
             workers = ["--workers", str(args.workers)] if args.workers else []
-            alt_main([set_number, "--n", str(args.n), "--out", str(directory), *extra, *workers])
+            alt_main([set_number, "--n", str(args.n), "--out", str(directory), *extra, *workers,
+                      "--catalog", args.catalog, "--style-version", args.style_version])
             runs[name] = load(directory)
-        rows += summarize(set_number, runs)
+        rows += summarize(set_number, runs, catalog=args.catalog, style_version=args.style_version)
     (args.out / "summary.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")
     text = table(rows) + "\n"
     (args.out / "results.md").write_text(text, encoding="utf-8")

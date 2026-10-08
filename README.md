@@ -124,7 +124,7 @@ regenerates each one.
 | M11 | target shapes, quick test (shape only) | [m11_shape_quick.md](results/m11_shape_quick.md) |
 | M11 | target shapes with inventories (10 sets x 5 shapes) | [m11_shape_inventory.md](results/m11_shape_inventory.md) |
 | M12 | the alternate-build pipeline: tip-over check, one piece, image/model targets, six-set demo | [m12_pipeline.md](results/m12_pipeline.md) |
-| M12b | 3D targets, learned proposal, slopes and corners (in progress) | (check: m12b results files as they merge) |
+| M12b | 3D targets, learned proposal, slopes and corners (in progress) | [m12b_catalog.md](results/m12b_catalog.md) (corners, slopes); others as they merge |
 | M12c | inventories from Rebrickable, checked against 28 OMR models | (check: `results/m12c_rebrickable.md` after merge) |
 | M13 | paper tables, diversity, budget curve, user-study helper | [m13_tables.md](results/m13_tables.md), [m13_diversity.md](results/m13_diversity.md) |
 

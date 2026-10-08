@@ -82,14 +82,14 @@ class Candidate:
         return not self.failed
 
     def to_json(self) -> dict:
-        parts = [[p.shape.part.name, int(p.shape.rotated), p.color.ldraw, p.layer, p.x, p.z] for p in self.placed]
+        parts = [[p.shape.part.name, p.shape.turn, p.color.ldraw, p.layer, p.x, p.z] for p in self.placed]
         return {"seed": self.seed, "failed": list(self.failed), "clutch": self.clutch, "seconds": self.seconds,
                 "physics_seconds": self.physics_seconds, "clusters": self.clusters, "placed": parts}
 
     @classmethod
     def from_json(cls, data: dict) -> "Candidate":
-        placed = tuple(PlacedPart(Shape(CATALOG[name], bool(rotated)), color_for_code(code), layer, x, z)
-                       for name, rotated, code, layer, x, z in data["placed"])
+        placed = tuple(PlacedPart(Shape(CATALOG[name], turn), color_for_code(code), layer, x, z)
+                       for name, turn, code, layer, x, z in data["placed"])
         count = data["clusters"] if "clusters" in data else len(clusters(placed))  # older caches lack it
         return cls(data["seed"], placed, tuple(data["failed"]), data["clutch"], data["seconds"], data["physics_seconds"],
                    count)

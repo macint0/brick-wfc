@@ -27,12 +27,12 @@ from brickwfc.wfc import Cell, Wave
 class SupportConstraint:
     def __init__(self, parts: PartSet) -> None:
         self.stud_top = parts.stud_top
-        # Bottom-layer tiles grouped by footprint (offsets from the cell to every cell of its part's
+        # Bottom-layer tiles grouped by footprint (offsets from the cell to every seated cell of its part's
         # layer); tiles of different colors share a footprint, so each group is checked once per layer.
         groups: dict[tuple[tuple[int, int], ...], list[int]] = {}
         for tile, info in enumerate(parts.infos):
             if info.bottom:
-                groups.setdefault(tuple(sorted(info.footprint())), []).append(tile)
+                groups.setdefault(tuple(sorted(info.seats())), []).append(tile)
         self.groups = [(footprint, np.array(tiles)) for footprint, tiles in groups.items()]
         self.pad = max(abs(v) for footprint, _ in self.groups for offset in footprint for v in offset)
 
