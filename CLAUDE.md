@@ -150,7 +150,12 @@ brick-wfc/
   sets for D2 (23/28 sets with X's parts, 25/28 without counts) and WFC (12/13). Under the judge, D2 beats
   WFC on 13/13 sets at ~1/100 of the time. Contacts help more than frequencies when counts are fixed.
 
-### M12 — Alternate-build pipeline
+### M12 — Alternate-build pipeline (in progress)
+- Step 1 done (eaa8bde): `python -m brickwfc.alt SET|parts.csv|model.mpd [--shape] [--k] [--n]` runs the 3D funnel
+  and writes `build_XX.ldr` with `0 STEP` per layer, previews, `sheet.png`, `stats.json`. Mac stepped through
+  `out/alt/10182-1/build_01.ldr` in Studio (2026-10-08): instructions play back correctly.
+  Found: 186/200 candidates fail physics as tip-overs; no-shape builds are flat slabs. Step 1b (tip-over fix in
+  the builder, cube default grid) comes before step 2 (shapes from PNG/model) and step 3 (same shape, many sets).
 - One command: set number or parts list (+ optional shape) → 3D funnel (generate → verify stability,
   inventory, integrity → dedupe → judge → select top-k).
 - Output: `.ldr` files with `0 STEP` building instructions (layer by layer), isometric previews, contact
