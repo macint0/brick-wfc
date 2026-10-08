@@ -12,6 +12,8 @@ offset) using exactly the set's parts. Conditions:
   stats_raster     statistics only, raster order: the control, so a gain of the model is not the order's
   proposal_raster  statistics x the learned proposal (``--proposal-strength``), raster order
 
+Statistics: ``--style-version`` (default v2, relearned with corners and slopes; see ``alt.inputs.STYLE_FILES``)
+of the fold's file in ``--style-dir``. They drive both the style bias and the judge.
 Metrics as in M10 (``experiments.style.evaluate``): validity, utilization, the judge and the size-matched
 judge against the real model, the distance to the set's own statistics, time.
 ``--random-weights`` uses an untrained model (a smoke test of the plumbing; its numbers mean nothing).
@@ -32,6 +34,7 @@ from typing import Sequence
 
 import numpy as np
 
+from brickwfc.alt.inputs import STYLE_FILES, STYLE_VERSION
 from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.parts import PlacedPart
 from brickwfc.bricks.proposal import Proposal, random_weights
@@ -59,6 +62,10 @@ class Job:
     room: float
     strength: float
     proposal_strength: float
+
+
+def style_file(style_dir: Path, fold: int, version: str) -> Path:
+    return style_dir / STYLE_FILES[version].format(i=fold)
 
 
 def load_proposal(weights: str) -> Proposal:
@@ -115,6 +122,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     group.add_argument("--random-weights", action="store_true", help="untrained model: a smoke test")
     parser.add_argument("--sets-file", type=Path, default=Path("results/sets_selection.json"))
     parser.add_argument("--style-dir", type=Path, default=Path("results/m10_style_stats"))
+    parser.add_argument("--style-version", choices=sorted(STYLE_FILES), default=STYLE_VERSION,
+                        help="M10 style statistics: v1 (M8 catalog) or v2 (relearned with corners and slopes)")
     parser.add_argument("--data", type=Path, default=Path("data/omr"))
     parser.add_argument("--fold", type=int, default=0)
     parser.add_argument("--sets", nargs="*", help="only these sets of the fold")
@@ -130,7 +139,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     all_sets = json.loads(args.sets_file.read_text(encoding="utf-8"))["selected"]
     sets = [s for s in folds(all_sets, 4, 0)[args.fold] if not args.sets or s in args.sets]
-    stats = StyleStats.load(args.style_dir / f"style_fold{args.fold}.json")
+    stats = StyleStats.load(style_file(args.style_dir, args.fold, args.style_version))
     if args.weights:
         Vocab.load(args.weights.with_name("vocab.json"))  # fail early if it is missing
     models = {s: voxelize(flatten(fetch_set(s, args.data).read_text(encoding="utf-8", errors="replace")))[0] for s in sets}
@@ -138,6 +147,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     runs = args.out / "runs.jsonl"
     rows = [json.loads(line) for line in runs.open(encoding="utf-8")] if runs.exists() else []
+    other = {r.get("style_version", "v1") for r in rows} - {args.style_version}
+    if other:
+        parser.error(f"{runs} has builds with style statistics {sorted(other)}; use another --out")
     done = {(r["set_number"], r["condition"], r["seed"]) for r in rows}
     jobs = [Job(s, args.fold, c, seed, tuple(models[s]), stats, str(args.weights or ""), args.height, args.room,
                 args.strength, args.proposal_strength)
@@ -146,6 +158,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     executor = InlineExecutor() if args.workers == 1 else ProcessPoolExecutor(max_workers=args.workers)
     with executor:
         for job, row in zip(jobs, executor.map(run_job, jobs)):
+            row["style_version"] = args.style_version
             rows.append(row)
             with runs.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(row) + "\n")
