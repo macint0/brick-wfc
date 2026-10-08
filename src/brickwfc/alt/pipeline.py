@@ -22,7 +22,7 @@ statistics, from the fold that held the set out if it is one of the M10 sets, el
 Without a target shape, the grid is a cube in millimetres (2.5 plates tall per stud of width) with
 volume ``--room`` x the inventory's; ``--height`` fixes the height instead (M10's grid: ``--height 12``). With
 ``--shape`` (a primitive, a silhouette image with optional ``--height-map`` and ``--color-map``, a
-model, or a BrickGPT structure; ``target.py``), the shape is scaled to the inventory's volume and the generators are told to fill
+model, a BrickGPT structure or a mesh; ``target.py``), the shape is scaled to the inventory's volume and the generators are told to fill
 it. Writes, under ``--out``: build_NN.ldr (one
 ``0 STEP`` per layer, bottom to top), build_NN.png, sheet.png, stats.json, and candidates.jsonl (every
 candidate as it is generated, so a killed run resumes: rerun the same command).
@@ -82,7 +82,10 @@ class AltConfig:
     color_map: str | None = None
     shape_height: int = 6  # plates, for a silhouette without a height map
     shape_exact: bool = False  # a model shape keeps its exact cells (overhangs) instead of solid columns
-    shape_columns: bool = False  # a 3D target (BrickGPT structure) becomes solid columns (its heightfield)
+    shape_columns: bool = False  # a 3D target (BrickGPT structure, mesh) becomes solid columns (its heightfield)
+    voxels: int = 32  # mesh target: cells along its longest side before scaling
+    mesh_up: str = "y"
+    hollow: int = 0  # 3D target: shell thickness in cells, plus internal pillars (0: solid)
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = math.inf  # physics: keep builds needing at most this clutch per stud
     wfc_time_limit_s: float = 30.0
@@ -123,7 +126,8 @@ def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) ->
     return load_target(config.shape, inventory_cells(source.inventory), source.colors,
                        Path(config.height_map) if config.height_map else None,
                        Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
-                       config.shape_exact, config.shape_columns)
+                       config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
+                       hollow=config.hollow)
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
@@ -281,8 +285,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.alt", description=__doc__.splitlines()[0])
     parser.add_argument("input", help="OMR set number (e.g. 6372-1), .mpd/.ldr model, or .csv parts list")
     parser.add_argument("--shape", help=f"target shape, scaled to the inventory's volume: one of {sorted(SHAPES)}, "
-                        "a silhouette image, an .ldr/.mpd model or a set number, or a BrickGPT structure "
-                        "(brickgpt:<structure id> or a .txt in its format)")
+                        "a silhouette image, an .ldr/.mpd model or a set number, a BrickGPT structure "
+                        "(brickgpt:<structure id> or a .txt in its format), or a watertight .obj/.stl/.ply/.off mesh")
     parser.add_argument("--height-map", help="grey image, same size as the silhouette: height in plates")
     parser.add_argument("--color-map", help="color image, same size as the silhouette: preferred colors")
     parser.add_argument("--shape-height", type=int, default=defaults.shape_height,
@@ -290,7 +294,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--shape-exact", action="store_true",
                         help="model shape: keep its exact cells (overhangs, rooms) instead of solid columns")
     parser.add_argument("--shape-columns", action="store_true",
-                        help="3D target (brickgpt:<id> or .txt): solid columns (its heightfield) instead of its cells")
+                        help="3D target (brickgpt:<id>, .txt or mesh): solid columns (its heightfield) instead of its cells")
+    parser.add_argument("--voxels", type=int, default=defaults.voxels,
+                        help="mesh target: cells along its longest side before scaling (detail kept)")
+    parser.add_argument("--mesh-up", choices=("y", "z"), default=defaults.mesh_up, help="mesh target: up axis")
+    parser.add_argument("--hollow", type=int, default=defaults.hollow,
+                        help="3D target: a shell this many cells thick plus internal pillars (0: solid)")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -324,7 +333,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         balanced=not args.no_balance, bridge=not args.no_balance and not args.no_bridge,
         connect=not args.no_connect, connect_rounds=args.connect_rounds,
         shape=args.shape, height_map=args.height_map, color_map=args.color_map, shape_height=args.shape_height,
-        shape_exact=args.shape_exact, shape_columns=args.shape_columns,
+        shape_exact=args.shape_exact, shape_columns=args.shape_columns, voxels=args.voxels, mesh_up=args.mesh_up,
+        hollow=args.hollow,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
     )

@@ -14,6 +14,7 @@ from typing import Callable, Sequence
 
 import numpy as np
 from PIL import Image
+from scipy import ndimage
 
 from brickwfc.bricks.colors import BrickColor
 from brickwfc.bricks.parts import PartSet, PlacedPart
@@ -175,7 +176,7 @@ def from_heights(heights: np.ndarray, cells: float, scale_height: bool) -> tuple
     return extrude(scaled_heights(f)), f
 
 
-def from_model(placed: Sequence[PlacedPart], cells: float, solid_columns: bool = True) -> Mask:
+def from_model(placed: Sequence[PlacedPart], cells: float, solid_columns: bool = True, shell: int = 0) -> Mask:
     """The cells of a (voxelized) model, scaled uniformly so the volume is about ``cells``. With
     ``solid_columns``, each column is filled from the ground to its top cell first: the model's massing
     rather than its exact cells (a voxelized model keeps only the catalog parts on the stud grid, so its
@@ -185,17 +186,41 @@ def from_model(placed: Sequence[PlacedPart], cells: float, solid_columns: bool =
     for part in placed:
         for cell in part.cells():
             occupied[cell] = True
-    return scaled_to(occupied, cells, solid_columns)
+    return scaled_to(occupied, cells, solid_columns, shell)
 
 
-def scaled_to(occupied: Mask, cells: float, solid_columns: bool = False) -> Mask:
+def scaled_to(occupied: Mask, cells: float, solid_columns: bool = False, shell: int = 0) -> Mask:
     """A 3D mask in cells (1 stud x 1 stud x 1 plate), scaled uniformly so the volume is about ``cells``
-    and cut to its bounds; with ``solid_columns``, each column filled from the ground to its top cell first."""
+    and cut to its bounds; with ``solid_columns``, each column filled from the ground to its top cell first;
+    with ``shell`` > 0, hollowed after scaling (``hollow``), so the same volume makes a larger object."""
     if solid_columns:
         occupied = extrude(np.round(height_map_of(occupied)).astype(np.int64))
-    f = fit_scale(lambda f: int(resample(occupied, (f, f, f)).sum()), cells, 3)
-    mask = resample(occupied, (f, f, f))
+
+    def at(f: float) -> Mask:
+        mask = resample(occupied, (f, f, f))
+        return hollow(mask, shell) if shell else mask
+
+    # A shell's volume grows with its surface, about f ** 2.
+    f = fit_scale(lambda f: int(at(f).sum()), cells, 2 if shell else 3)
+    mask = at(f)
     return mask[bounds(mask)]
+
+
+SUPPORT_PERIOD, SUPPORT_WIDTH = 4, 2  # hollow: 2 x 2-stud pillars every 4 studs
+
+
+def hollow(mask: Mask, thickness: int, period: int = SUPPORT_PERIOD, width: int = SUPPORT_WIDTH) -> Mask:
+    """The shell of ``mask`` (its cells within ``thickness`` face steps of the outside or the grid's
+    border) plus internal supports: under every shell cell over the hollow interior, on a lattice of
+    ``width`` x ``width``-stud pillars every ``period`` studs, a column down through the interior to the
+    next shell cell or the ground. Between pillars the shell spans ``period - width`` studs."""
+    interior = ndimage.binary_erosion(mask, iterations=thickness) if thickness > 0 else np.zeros_like(mask)
+    result = mask & ~interior
+    _, nz, nx = mask.shape
+    lattice = (np.arange(nz)[:, None] % period < width) & (np.arange(nx)[None, :] % period < width)
+    for y in range(mask.shape[0] - 1, 0, -1):
+        result[y - 1] |= result[y] & interior[y - 1] & lattice
+    return result
 
 
 def preferred_colors(image: Image.Image, colors: Sequence[BrickColor]) -> np.ndarray:
@@ -205,6 +230,13 @@ def preferred_colors(image: Image.Image, colors: Sequence[BrickColor]) -> np.nda
     nearest = np.argmin(((rgba[..., None, :3] - palette) ** 2).sum(axis=-1), axis=-1)
     names = np.array([c.name for c in colors], dtype=object)[nearest]
     return np.where(rgba[..., 3] >= 128, names, "")
+
+
+def surface(mask: Mask) -> Mask:
+    """The cells of ``mask`` on its outer surface: next to the outside (or the grid's border) across a face.
+    Enclosed voids (a hollowed shape's inside) do not count as outside."""
+    solid = ndimage.binary_fill_holes(mask)
+    return mask & ~ndimage.binary_erosion(solid)
 
 
 def fill(filled: np.ndarray, mask: Mask) -> float:

@@ -1,6 +1,6 @@
 """M12b step 1a: BrickGPT's structures as true 3D targets, and a head-to-head on their data.
 
-    python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt
+    python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt [--steps 1a 1c]
 
 Objects: from the StableText2Brick test split (``bricks.brickgpt``), the median-size structure (by brick
 count, ties by id) of each of the ``--categories`` most common categories. This compares against
@@ -14,9 +14,14 @@ and piece counts (``balance.clusters``) are the same measurements on both sides.
 Also the before/after figure for step 1 on the M12 demo sets: one object (the chair) as solid columns
 (``--shape-columns``, the heightfield inputs had before) and as its exact cells.
 
-Runs reuse the pipeline's candidate cache, so a killed run resumes. Writes ``results.md``,
-``summary.json``, ``objects.png`` (their structure, then our best build per set, per object) and
-``before_after.png`` under ``--out``.
+Step 1c (``--steps 1c``): the same objects and sets hollowed (``--hollow``, default 2: a 2-cell shell plus
+internal pillars), against their solid runs; the same inventory then makes a larger object, so besides fill
+we report its size and the share of its outer surface the build covers. Figure: the object hollowing
+enlarges most (the vessel) on the demo sets, solid | hollow.
+
+Runs reuse the pipeline's candidate cache, so a killed run resumes. Writes, under ``--out``: step 1a
+``results.md``, ``summary.json``, ``objects.png`` (their structure, then our best build per set, per object)
+and ``before_after.png``; step 1c ``hollow.md``, ``hollow_summary.json`` and ``hollow_before_after.png``.
 """
 
 from __future__ import annotations
@@ -36,19 +41,20 @@ from brickwfc.alt.features import occupancy
 from brickwfc.alt.inputs import load_source
 from brickwfc.alt.output import write_build
 from brickwfc.alt.pipeline import main as alt_main
-from brickwfc.alt.target import BRICKGPT_PREFIX, load_target
+from brickwfc.alt.target import BRICKGPT_PREFIX, Target, load_target
 from brickwfc.bricks import brickgpt
 from brickwfc.bricks.balance import clusters
 from brickwfc.bricks.colors import color_for_code
 from brickwfc.bricks.inventory import inventory_cells, utilization
 from brickwfc.bricks.physics import table_clutch
-from brickwfc.bricks.shapes import fill, iou
+from brickwfc.bricks.shapes import fill, iou, surface
 from brickwfc.experiments.demo import SETS as DEMO_SETS
 from brickwfc.experiments.demo import labeled_sheet, load_run
 from brickwfc.render3d import save_voxels_png
 
 SETS = ("6378-1", "5891-1", "10182-1")
 FIGURE_CATEGORY = "03001627"  # chair
+HOLLOW_FIGURE_CATEGORY = "04530566"  # vessel: hollowing enlarges it most of the six
 GRAY = color_for_code(71)  # light bluish gray, for their structures
 TARGET_RGB = (160, 165, 169)
 CATEGORIES = {  # ShapeNetCore synset ids in the StableText2Brick test split
@@ -97,30 +103,51 @@ def theirs(structure: brickgpt.Structure, out: Path) -> dict:
     }
 
 
+def variant_args(variant: str) -> list[str]:
+    """Pipeline arguments of a target variant: "exact", "columns" or "hollow<N>"."""
+    if variant == "exact":
+        return []
+    if variant == "columns":
+        return ["--shape-columns"]
+    if variant.startswith("hollow"):
+        return ["--hollow", variant.removeprefix("hollow")]
+    raise ValueError(f"unknown variant {variant!r}")
+
+
+def target_for(set_number: str, structure: brickgpt.Structure, variant: str) -> Target:
+    source = load_source(set_number)
+    hollow = int(variant.removeprefix("hollow")) if variant.startswith("hollow") else 0
+    return load_target(BRICKGPT_PREFIX + structure.structure_id, inventory_cells(source.inventory),
+                       source.colors, columns=variant == "columns", hollow=hollow)
+
+
 def run_ours(set_number: str, structure: brickgpt.Structure, out: Path, n: int, workers: int | None,
-             columns: bool = False) -> Path:
-    directory = out / set_number / f"{short(structure)}_{'columns' if columns else 'exact'}"
+             variant: str = "exact") -> Path:
+    directory = out / set_number / f"{short(structure)}_{variant}"
     args = [set_number, "--shape", BRICKGPT_PREFIX + structure.structure_id, "--n", str(n), "--k", "1",
-            "--out", str(directory)]
-    args += ["--shape-columns"] if columns else []
+            "--out", str(directory), *variant_args(variant)]
     args += ["--workers", str(workers)] if workers else []
     alt_main(args)
     return directory
 
 
-def ours(set_number: str, structure: brickgpt.Structure, directory: Path, columns: bool = False) -> dict:
+def ours(set_number: str, structure: brickgpt.Structure, directory: Path, variant: str = "exact") -> dict:
     candidates, stats = load_run(directory)
     source = load_source(set_number)
-    target = load_target(BRICKGPT_PREFIX + structure.structure_id, inventory_cells(source.inventory),
-                         source.colors, columns=columns)
+    target = target_for(set_number, structure, variant)
+    outer = surface(target.mask)
     built = [c for c in candidates if "generate" not in c.failed]
     valid = [c for c in candidates if c.valid]
     filled = [occupancy(c.placed, target.mask.shape) for c in valid]
     mean = lambda values: statistics.mean(values) if values else math.nan  # noqa: E731
     best = stats["selected"][0] if stats["selected"] else {}
+    best_filled = next((f for f, c in zip(filled, valid) if best and c.seed == best["seed"]), None)
     return {
         "set": set_number, "structure_id": structure.structure_id, "category": category(structure),
-        "columns": columns, "inventory_parts": source.recognized_parts, "candidates": len(candidates),
+        "variant": variant, "columns": variant == "columns", "inventory_parts": source.recognized_parts,
+        "candidates": len(candidates), "surface_cells": int(outer.sum()),
+        "surface_pct": 100 * mean([fill(f, outer) for f in filled]),
+        "best_surface_pct": math.nan if best_filled is None else 100 * fill(best_filled, outer),
         "grid_YZX": stats["grid_YZX"], "target_cells": int(target.mask.sum()),
         "valid_pct": 100 * len(valid) / len(candidates),
         "physics_pct": 100 * mean([float("physics" not in c.failed) for c in built]),
@@ -146,6 +173,7 @@ def stands(clutch: float) -> str:
 
 
 def tables(objects: list[dict], rows: list[dict], figure: list[dict]) -> str:
+    their_clutch = {o["structure_id"]: o["clutch"] for o in objects}
     lines = ["### Their structures (StableText2Brick test split, unlimited bricks)", "",
              "| object | id | bricks | size (studs x studs x bricks) | cells | stands (ours) | clutch | pieces "
              "| their score: min | their score: bricks > 0 % |", "|---|---|---|---|---|---|---|---|---|---|"]
@@ -156,15 +184,17 @@ def tables(objects: list[dict], rows: list[dict], figure: list[dict]) -> str:
                      f"{o['score_positive_pct']:.0f} |")
     lines += ["", "### Ours (D2 + learned style from one set's inventory; the structure's exact cells as target)", "",
               "| object | set | inventory parts | grid (WxDxH) | target cells | valid % | physics % | one piece % "
-              "| fill % | IoU | utilization % | best: parts | best: fill % | best: clutch | best: pieces | s/candidate |",
-              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+              "| fill % | IoU | utilization % | best: parts | best: fill % | best: clutch | their clutch | best: pieces "
+              "| s/candidate |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         y, z, x = r["grid_YZX"]
         lines.append(f"| {r['category']} | {r['set']} | {r['inventory_parts']} | {x}x{z}x{y} | {r['target_cells']} | "
                      f"{r['valid_pct']:.0f} | {r['physics_pct']:.0f} | {r['connected_pct']:.0f} | "
                      f"{f(r['fill_pct'], '{:.1f}')} | {f(r['iou'], '{:.2f}')} | {f(r['utilization_pct'], '{:.1f}')} | "
                      f"{r['best_parts']} | {f(r['best_fill_pct'], '{:.1f}')} | {f(r['best_clutch'], '{:.1f}')} | "
-                     f"{r['best_clusters']} | {r['seconds_per_candidate']:.2f} |")
+                     f"{f(their_clutch[r['structure_id']], '{:.1f}')} | {r['best_clusters']} | "
+                     f"{r['seconds_per_candidate']:.2f} |")
     lines += ["", "### Before / after on the demo sets (chair; before: solid columns, after: exact cells)", "",
               "| set | target | grid (WxDxH) | target cells | valid % | fill % | IoU | best: parts | best: fill % "
               "| best: clutch | s/candidate |", "|---|---|---|---|---|---|---|---|---|---|---|"]
@@ -177,10 +207,22 @@ def tables(objects: list[dict], rows: list[dict], figure: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def target_png(structure: brickgpt.Structure, set_number: str, columns: bool, path: Path) -> Path:
-    source = load_source(set_number)
-    target = load_target(BRICKGPT_PREFIX + structure.structure_id, inventory_cells(source.inventory),
-                         source.colors, columns=columns)
+def hollow_table(rows: list[dict]) -> str:
+    """Solid vs hollow runs of the same object and set, side by side."""
+    lines = ["| object | set | target | grid (WxDxH) | target cells | surface cells | valid % | physics % | one piece % "
+             "| fill % | surface covered % | best: parts | best: surface covered % | s/candidate |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for r in rows:
+        y, z, x = r["grid_YZX"]
+        lines.append(f"| {r['category']} | {r['set']} | {r['variant']} | {x}x{z}x{y} | {r['target_cells']} | "
+                     f"{r['surface_cells']} | {r['valid_pct']:.0f} | {r['physics_pct']:.0f} | {r['connected_pct']:.0f} | "
+                     f"{f(r['fill_pct'], '{:.1f}')} | {f(r['surface_pct'], '{:.1f}')} | {r['best_parts']} | "
+                     f"{f(r['best_surface_pct'], '{:.1f}')} | {r['seconds_per_candidate']:.2f} |")
+    return "\n".join(lines)
+
+
+def target_png(structure: brickgpt.Structure, set_number: str, variant: str, path: Path) -> Path:
+    target = target_for(set_number, structure, variant)
     save_voxels_png(target.mask, np.broadcast_to(np.array(TARGET_RGB, dtype=np.uint8), (*target.mask.shape, 3)), path)
     return path
 
@@ -195,29 +237,29 @@ def build_label(r: dict) -> str:
             f"stands: {stands(r['best_clutch'])}, pieces: {r['best_clusters']}")
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.brickgpt", description=__doc__.splitlines()[0])
-    parser.add_argument("--sets", nargs="+", default=list(SETS), help="sets for the head-to-head")
-    parser.add_argument("--figure-sets", nargs="+", default=list(DEMO_SETS), help="sets for the before/after figure")
-    parser.add_argument("--categories", type=int, default=6)
-    parser.add_argument("--n", type=int, default=50, help="candidates per run")
-    parser.add_argument("--workers", type=int, help="passed to the pipeline")
-    parser.add_argument("--data", type=Path, default=brickgpt.DATA_DIR)
-    parser.add_argument("--out", type=Path, default=Path("out/m12b_brickgpt"))
-    args = parser.parse_args(argv)
+def before_after(structure: brickgpt.Structure, runs: list[dict], variants: tuple[str, str], titles: tuple[str, str],
+                 target_set: str, out: Path, path: Path) -> None:
+    """A two-column figure: the two targets (at ``target_set``'s scale), then per set the best build of each
+    variant (``runs`` in set order, before then after). Empty cells keep the columns aligned."""
+    images = [target_png(structure, target_set, v, out / f"target_{short(structure)}_{v}.png") for v in variants]
+    labels = list(titles)
+    for r in runs:
+        if r["best_png"]:
+            images.append(Path(r["best_png"]))
+            labels.append(build_label(r))
+        else:
+            images.append(blank(out / "none.png"))
+            labels.append(f"{r['set']}: no valid build")
+    labeled_sheet(images, labels, path, columns=2)
 
-    args.out.mkdir(parents=True, exist_ok=True)
-    picked = pick_objects(brickgpt.load_split("test", args.data), args.categories)
+
+def step_1a(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
     objects = [theirs(s, args.out / "brickgpt") for s in picked]
     rows = [ours(set_number, s, run_ours(set_number, s, args.out, args.n, args.workers))
             for s in picked for set_number in args.sets]
-
     chair = next((s for s in picked if s.category_id == FIGURE_CATEGORY), picked[0])
-    figure = []
-    for set_number in args.figure_sets:
-        for columns in (True, False):
-            directory = run_ours(set_number, chair, args.out, args.n, args.workers, columns)
-            figure.append(ours(set_number, chair, directory, columns))
+    figure = [ours(set_number, chair, run_ours(set_number, chair, args.out, args.n, args.workers, variant), variant)
+              for set_number in args.figure_sets for variant in ("columns", "exact")]
 
     (args.out / "summary.json").write_text(json.dumps({"objects": objects, "ours": rows, "before_after": figure},
                                                       indent=2), encoding="utf-8")
@@ -234,19 +276,50 @@ def main(argv: Sequence[str] | None = None) -> int:
                 images.append(Path(r["best_png"]))
                 labels.append(build_label(r))
     labeled_sheet(images, labels, args.out / "objects.png", columns=1 + len(args.sets))
+    before_after(chair, figure, ("columns", "exact"),
+                 ("before: target as solid columns\n(heightfield, scaled to each set)",
+                  "after: target as exact 3D cells\n(scaled to each set)"),
+                 args.figure_sets[-1], args.out, args.out / "before_after.png")
 
-    images = [target_png(chair, args.figure_sets[-1], True, args.out / "target_columns.png"),
-              target_png(chair, args.figure_sets[-1], False, args.out / "target_exact.png")]
-    labels = ["before: target as solid columns\n(heightfield, scaled to each set)",
-              "after: target as exact 3D cells\n(scaled to each set)"]
-    for r in figure:  # keep the before | after columns aligned when a run selected nothing
-        if r["best_png"]:
-            images.append(Path(r["best_png"]))
-            labels.append(build_label(r))
-        else:
-            images.append(blank(args.out / "none.png"))
-            labels.append(f"{r['set']}: no valid build")
-    labeled_sheet(images, labels, args.out / "before_after.png", columns=2)
+
+def step_1c(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
+    hollow = f"hollow{args.hollow}"
+    rows = [ours(set_number, s, run_ours(set_number, s, args.out, args.n, args.workers, variant), variant)
+            for s in picked for set_number in args.sets for variant in ("exact", hollow)]
+    vessel = next((s for s in picked if s.category_id == HOLLOW_FIGURE_CATEGORY), picked[0])
+    figure = [ours(set_number, vessel, run_ours(set_number, vessel, args.out, args.n, args.workers, variant), variant)
+              for set_number in args.figure_sets for variant in ("exact", hollow)]
+    (args.out / "hollow_summary.json").write_text(json.dumps({"ours": rows, "before_after": figure}, indent=2),
+                                                  encoding="utf-8")
+    text = f"{hollow_table(rows)}\n\n### Figure runs ({category(vessel)})\n\n{hollow_table(figure)}\n"
+    (args.out / "hollow.md").write_text(text, encoding="utf-8")
+    print(text)
+    before_after(vessel, figure, ("exact", hollow),
+                 ("before: solid target\n(exact cells, scaled to each set)",
+                  f"after: hollow target ({args.hollow}-cell shell + pillars)\n(same volume: a larger object)"),
+                 args.figure_sets[-1], args.out, args.out / "hollow_before_after.png")
+
+
+STEPS = {"1a": step_1a, "1c": step_1c}
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.brickgpt", description=__doc__.splitlines()[0])
+    parser.add_argument("--steps", nargs="+", choices=sorted(STEPS), default=["1a"])
+    parser.add_argument("--sets", nargs="+", default=list(SETS), help="sets for the head-to-head")
+    parser.add_argument("--figure-sets", nargs="+", default=list(DEMO_SETS), help="sets for the before/after figure")
+    parser.add_argument("--categories", type=int, default=6)
+    parser.add_argument("--n", type=int, default=50, help="candidates per run")
+    parser.add_argument("--hollow", type=int, default=2, help="step 1c: shell thickness in cells")
+    parser.add_argument("--workers", type=int, help="passed to the pipeline")
+    parser.add_argument("--data", type=Path, default=brickgpt.DATA_DIR)
+    parser.add_argument("--out", type=Path, default=Path("out/m12b_brickgpt"))
+    args = parser.parse_args(argv)
+
+    args.out.mkdir(parents=True, exist_ok=True)
+    picked = pick_objects(brickgpt.load_split("test", args.data), args.categories)
+    for step in args.steps:
+        STEPS[step](picked, args)
     return 0
 
 
