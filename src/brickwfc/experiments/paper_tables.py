@@ -50,7 +50,7 @@ SOURCES: dict[str, Source] = {
                        "M12b: BrickGPT's own structures (test split), our physics", "brickgpt"),
     "proposal": Source(("results/m12b_proposal_runs.jsonl", "out/m12b_proposal/runs.jsonl"),
                        "M12b: learned proposal vs statistics, fold-0 sets", "jsonl"),
-    "diversity": Source(("results/m13_diversity.json",), "M13: diversity of each generator's candidates"),
+    "diversity": Source(("results/m13_diversity.json",), "M13: effective share of distinct designs among verified candidates, per alt run"),
 }
 
 
@@ -201,7 +201,7 @@ def show(value: Value) -> str:
 # The tables --------------------------------------------------------------------------------------------------
 
 COLUMNS = ("valid %", "stable % (support rule)", "stable % (physics, table)", "utilization %", "fill / IoU %",
-           "s per accepted design", "diversity (effective designs)", "timeout %")
+           "s per accepted design", "diversity (effective / verified designs, %)", "timeout %")
 
 
 def generator_row(cond: Mapping[str, Mapping[str, object]], stable: Cell | None = None, fill: Cell | None = None,
@@ -220,7 +220,7 @@ def generator_row(cond: Mapping[str, Mapping[str, object]], stable: Cell | None 
         "utilization %": first(*(c(s, UTILIZATION[s]) for s in ("m9b", "m9", "m12_demo", "m10", "proposal"))),
         "fill / IoU %": fill,
         "s per accepted design": first(*(c(s, TIME_PER_ACCEPTED[s], "{:.3g}") for s in ("m9b", "m9", "m12_demo", "m10", "proposal"))),
-        "diversity (effective designs)": c("diversity", mean_of("effective"), "{:.1f}"),
+        "diversity (effective / verified designs, %)": c("diversity", mean_of("effective_share", 100), "{:.0f}"),
         "timeout %": first(*(c(s, TIMEOUT_PCT[s], "{:.0f}") for s in ("m9b", "m10", "m12_demo"))),
     }
     row.update(extra or {})
