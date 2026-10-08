@@ -232,6 +232,44 @@ def preferred_colors(image: Image.Image, colors: Sequence[BrickColor]) -> np.nda
     return np.where(rgba[..., 3] >= 128, names, "")
 
 
+SUPPORT_REACH = 3  # supports: overhang cells farther than this from a held cell get a column under them
+
+
+def with_supports(mask: Mask, reach: int = SUPPORT_REACH, period: int = SUPPORT_PERIOD,
+                  width: int = SUPPORT_WIDTH) -> Mask:
+    """``mask`` plus support columns outside it (M12b step 1d). On each layer, an overhang cell (nothing of
+    the mask below it) more than ``reach`` studs (chessboard distance) from every held cell (mask below) is
+    out of reach of a part cantilevered from the held cells; under those cells on the pillar lattice
+    (``width`` x ``width`` every ``period`` studs, as in ``hollow``), a column goes down to the next mask
+    cell or the ground. The columns are extra cells, not part of the object: measure fill and IoU against
+    ``mask``."""
+    result = mask.copy()
+    _, nz, nx = mask.shape
+    lattice = (np.arange(nz)[:, None] % period < width) & (np.arange(nx)[None, :] % period < width)
+    for y in range(1, mask.shape[0]):
+        over = mask[y] & ~mask[y - 1]
+        if not over.any():
+            continue
+        held = mask[y] & mask[y - 1]
+        far = over if not held.any() else over & (ndimage.distance_transform_cdt(~held, metric="chessboard") > reach)
+        column = far & lattice
+        for below in range(y - 1, -1, -1):
+            column = column & ~mask[below]
+            if not column.any():
+                break
+            result[below] |= column
+    return result
+
+
+def unsupported_empty(filled: np.ndarray, mask: Mask) -> Mask:
+    """Cells of ``mask`` the build leaves empty with nothing built directly below them (above the ground):
+    the overhang loss, cells no part could rest on."""
+    below = np.zeros_like(filled)
+    below[1:] = filled[:-1]
+    below[0] = True
+    return mask & ~filled & ~below
+
+
 def surface(mask: Mask) -> Mask:
     """The cells of ``mask`` on its outer surface: next to the outside (or the grid's border) across a face.
     Enclosed voids (a hollowed shape's inside) do not count as outside."""

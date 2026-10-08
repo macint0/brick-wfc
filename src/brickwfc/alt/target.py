@@ -15,7 +15,8 @@
 
 3D targets (models, BrickGPT structures, meshes) can be hollowed (``hollow`` > 0: a shell that many cells
 thick plus internal pillars, ``shapes.hollow``); the hollowed shape is what is scaled to the volume, so the
-same parts make a larger object.
+same parts make a larger object. With ``supports``, columns are added under overhangs out of a part's reach
+(``shapes.with_supports``), after scaling: the object keeps its size and gets extra cells outside it.
 
 With a silhouette, an optional color image of the same size gives each column a preferred color: the
 inventory color nearest to its pixel (transparent pixels: no preference).
@@ -44,6 +45,7 @@ from brickwfc.bricks.shapes import (
     resample,
     scaled_to,
     sized_for,
+    with_supports,
 )
 from brickwfc.bricks.voxelize import voxelize
 from brickwfc.ldraw.fetch import fetch_set
@@ -63,10 +65,11 @@ class Target:
 def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_map: Path | None = None,
                 color_map: Path | None = None, height: int = 6, data_dir: Path = Path("data/omr"),
                 exact: bool = False, columns: bool = False, brickgpt_dir: Path = brickgpt.DATA_DIR,
-                voxels: int = 32, up: str = "y", hollow: int = 0) -> Target:
+                voxels: int = 32, up: str = "y", hollow: int = 0, supports: bool = False) -> Target:
     """The target ``spec`` with a volume of about ``cells`` grid cells. ``exact``: a model keeps its own
     cells instead of solid columns; ``columns``: a 3D target becomes solid columns instead of its own cells;
-    ``voxels``, ``up``: mesh resolution and up axis; ``hollow``: shell thickness of a 3D target (0: solid)."""
+    ``voxels``, ``up``: mesh resolution and up axis; ``hollow``: shell thickness of a 3D target (0: solid);
+    ``supports``: add support columns under far overhangs of a 3D target."""
     path = Path(spec)
     suffix = path.suffix.lower()
     is_image = suffix in IMAGE_SUFFIXES
@@ -78,9 +81,10 @@ def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_ma
         raise ValueError("--shape-exact goes with an LDraw model or set number as --shape")
     if columns and not is_3d:
         raise ValueError("--shape-columns goes with a 3D target (a BrickGPT structure or a mesh) as --shape")
-    if hollow and (is_image or spec in SHAPES):
-        raise ValueError("--hollow goes with a 3D target (a model, a BrickGPT structure or a mesh) as --shape")
-    hollowed = f", hollow {hollow}" if hollow else ""
+    if (hollow or supports) and (is_image or spec in SHAPES):
+        raise ValueError("--hollow and --supports go with a 3D target (a model, a BrickGPT structure or a mesh)")
+    hollowed = (f", hollow {hollow}" if hollow else "") + (", supports" if supports else "")
+    finish = with_supports if supports else (lambda mask: mask)
     if is_3d:
         if is_mesh:
             occupied, name, kind = mesh_mask(path, voxels, up), path.name, f"mesh, {voxels} voxels"
@@ -94,7 +98,7 @@ def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_ma
                 raise ValueError(f"{spec}: no bricks")
             occupied, kind = brickgpt.occupancy(bricks), "BrickGPT structure"
         kind += ", solid columns" if columns else ", exact cells"
-        return Target(scaled_to(occupied, cells, columns, hollow), None, f"{name} ({kind}{hollowed})")
+        return Target(finish(scaled_to(occupied, cells, columns, hollow)), None, f"{name} ({kind}{hollowed})")
     if spec in SHAPES:
         return Target(sized_for(spec, cells), None, f"{spec} (primitive)")
     if is_image:
@@ -119,5 +123,5 @@ def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_ma
     if not placed:
         raise ValueError(f"{spec}: no catalog parts on the stud grid to take a shape from")
     kind = "model, exact cells" if exact else "model, solid columns"
-    return Target(from_model(placed, cells, solid_columns=not exact, shell=hollow), None,
+    return Target(finish(from_model(placed, cells, solid_columns=not exact, shell=hollow)), None,
                   f"{path.stem if path.suffix else spec} ({kind}{hollowed})")

@@ -86,6 +86,7 @@ class AltConfig:
     voxels: int = 32  # mesh target: cells along its longest side before scaling
     mesh_up: str = "y"
     hollow: int = 0  # 3D target: shell thickness in cells, plus internal pillars (0: solid)
+    supports: bool = False  # 3D target: support columns under overhangs out of a part's reach
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = math.inf  # physics: keep builds needing at most this clutch per stud
     wfc_time_limit_s: float = 30.0
@@ -127,7 +128,7 @@ def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) ->
                        Path(config.height_map) if config.height_map else None,
                        Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
                        config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
-                       hollow=config.hollow)
+                       hollow=config.hollow, supports=config.supports)
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
@@ -300,6 +301,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--mesh-up", choices=("y", "z"), default=defaults.mesh_up, help="mesh target: up axis")
     parser.add_argument("--hollow", type=int, default=defaults.hollow,
                         help="3D target: a shell this many cells thick plus internal pillars (0: solid)")
+    parser.add_argument("--supports", action="store_true",
+                        help="3D target: add support columns under overhangs out of a part's reach (extra cells)")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -334,7 +337,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         connect=not args.no_connect, connect_rounds=args.connect_rounds,
         shape=args.shape, height_map=args.height_map, color_map=args.color_map, shape_height=args.shape_height,
         shape_exact=args.shape_exact, shape_columns=args.shape_columns, voxels=args.voxels, mesh_up=args.mesh_up,
-        hollow=args.hollow,
+        hollow=args.hollow, supports=args.supports,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
     )

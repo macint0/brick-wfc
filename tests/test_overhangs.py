@@ -1,0 +1,58 @@
+"""M12b step 1d: support columns under far overhangs, the overhang loss, clutch calibration."""
+
+import numpy as np
+import pytest
+
+from brickwfc.alt.target import load_target
+from brickwfc.bricks.shapes import mushroom, unsupported_empty, with_supports
+from brickwfc.experiments.brickgpt import REAL_CLUTCH, cantilever_clutch, variant_args
+from conftest import RED
+
+TABLE_TOP = """1x1 (0,0,0)
+2x6 (0,0,1)
+2x6 (2,0,1)
+2x6 (4,0,1)
+2x6 (6,0,1)
+"""
+
+
+def test_supports_only_under_far_overhangs() -> None:
+    mask = mushroom(6, 14, 14, stem=2, cap_layers=1)  # a 2x2 stem under a 14x14 cap
+    supported = with_supports(mask, reach=3)
+    extra = supported & ~mask
+    assert (supported >= mask).all() and extra.any()
+    assert not extra[-1].any()  # nothing added beside the cap, only under it
+    cap = mask.shape[0] - 1
+    columns = extra[:cap].any(axis=0)
+    assert columns[0, 0] and not columns[6, 6]  # under the far corner, not next to the stem
+    assert extra[:cap, 0, 0].all()  # each column runs down to the ground
+    assert np.array_equal(with_supports(mask, reach=20), mask)  # everything within reach: nothing added
+
+
+def test_unsupported_empty() -> None:
+    mask = np.ones((3, 1, 3), dtype=bool)
+    filled = np.zeros_like(mask)
+    filled[0, 0, 0] = filled[1, 0, 0] = True
+    loss = unsupported_empty(filled, mask)
+    assert not loss[0].any()  # the ground supports everything
+    assert loss[1, 0].tolist() == [False, True, True] and loss[2, 0].tolist() == [False, True, True]
+
+
+def test_cantilever_calibration() -> None:
+    lengths = (3, 4, 6, 8)
+    plates = [cantilever_clutch(n) for n in lengths]
+    bricks = [cantilever_clutch(n, "brick") for n in lengths]
+    assert all(a < b for a, b in zip(plates, plates[1:]))  # longer arms need more grip
+    assert all(b == pytest.approx(3 * p) for p, b in zip(plates, bricks))  # a brick weighs 3 plates
+    assert 1000 < REAL_CLUTCH < 1250 and max(bricks) < REAL_CLUTCH
+
+
+def test_supports_target(tmp_path) -> None:
+    (tmp_path / "table.txt").write_text(TABLE_TOP, encoding="utf-8")
+    plain = load_target(str(tmp_path / "table.txt"), 900, [RED])
+    supported = load_target(str(tmp_path / "table.txt"), 900, [RED], supports=True)
+    assert supported.mask.shape == plain.mask.shape and (supported.mask >= plain.mask).all()
+    assert supported.mask.sum() > plain.mask.sum() and "supports" in supported.description
+    assert variant_args("supports") == ["--supports"]
+    with pytest.raises(ValueError):
+        load_target("pyramid", 500, [RED], supports=True)

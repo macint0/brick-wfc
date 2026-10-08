@@ -19,9 +19,19 @@ internal pillars), against their solid runs; the same inventory then makes a lar
 we report its size and the share of its outer surface the build covers. Figure: the object hollowing
 enlarges most (the vessel) on the demo sets, solid | hollow.
 
+Step 1d (``--steps 1d``): overhangs. The overhang loss is the share of target cells a build leaves empty
+with nothing built under them (``shapes.unsupported_empty``). Two remedies, kept if they recover fill with
+every build still standing: (i) a clutch limit calibrated to real bricks (StableLego's per-knob friction
+capacity, 0.98 N, over the weight of a plate cell from its measured 2x4 brick mass, 2.16 g), turned into
+the cantilever length it allows with our physics model, and applied to the exact runs' builds (their
+clutch is cached); (ii) support columns under overhangs out of a part's reach (``--supports``), extra
+cells outside the object, so fill and IoU are measured against the object without them. Figure: the
+object with the most overhang loss (the table), exact | supports, on the demo sets.
+
 Runs reuse the pipeline's candidate cache, so a killed run resumes. Writes, under ``--out``: step 1a
 ``results.md``, ``summary.json``, ``objects.png`` (their structure, then our best build per set, per object)
-and ``before_after.png``; step 1c ``hollow.md``, ``hollow_summary.json`` and ``hollow_before_after.png``.
+and ``before_after.png``; step 1c ``hollow.md``, ``hollow_summary.json`` and ``hollow_before_after.png``;
+step 1d ``overhangs.md``, ``overhangs_summary.json`` and ``overhangs_before_after.png``.
 """
 
 from __future__ import annotations
@@ -47,7 +57,9 @@ from brickwfc.bricks.balance import clusters
 from brickwfc.bricks.colors import color_for_code
 from brickwfc.bricks.inventory import inventory_cells, utilization
 from brickwfc.bricks.physics import table_clutch
-from brickwfc.bricks.shapes import fill, iou, surface
+from brickwfc.bricks.parts import CATALOG, PlacedPart, Shape
+from brickwfc.bricks.physics import required_clutch
+from brickwfc.bricks.shapes import fill, iou, surface, unsupported_empty
 from brickwfc.experiments.demo import SETS as DEMO_SETS
 from brickwfc.experiments.demo import labeled_sheet, load_run
 from brickwfc.render3d import save_voxels_png
@@ -55,6 +67,13 @@ from brickwfc.render3d import save_voxels_png
 SETS = ("6378-1", "5891-1", "10182-1")
 FIGURE_CATEGORY = "03001627"  # chair
 HOLLOW_FIGURE_CATEGORY = "04530566"  # vessel: hollowing enlarges it most of the six
+OVERHANG_FIGURE_CATEGORY = "04379243"  # table: the most overhang loss of the six
+# Real clutch in our units (plate-cell weights per stud), from StableLego (arXiv 2402.10711), the analysis
+# BrickGPT uses: friction capacity T = 0.98 N per knob; a 2x4 brick (24 plate cells) weighs 2.16 g.
+FRICTION_CAPACITY_N = 0.98
+PLATE_CELL_WEIGHT_N = 2.16e-3 / 24 * 9.8
+REAL_CLUTCH = FRICTION_CAPACITY_N / PLATE_CELL_WEIGHT_N  # about 1111
+CLUTCH_LIMITS = (math.inf, REAL_CLUTCH, 100.0, 30.0, 10.0)
 GRAY = color_for_code(71)  # light bluish gray, for their structures
 TARGET_RGB = (160, 165, 169)
 CATEGORIES = {  # ShapeNetCore synset ids in the StableText2Brick test split
@@ -111,6 +130,8 @@ def variant_args(variant: str) -> list[str]:
         return ["--shape-columns"]
     if variant.startswith("hollow"):
         return ["--hollow", variant.removeprefix("hollow")]
+    if variant == "supports":
+        return ["--supports"]
     raise ValueError(f"unknown variant {variant!r}")
 
 
@@ -118,7 +139,7 @@ def target_for(set_number: str, structure: brickgpt.Structure, variant: str) -> 
     source = load_source(set_number)
     hollow = int(variant.removeprefix("hollow")) if variant.startswith("hollow") else 0
     return load_target(BRICKGPT_PREFIX + structure.structure_id, inventory_cells(source.inventory),
-                       source.colors, columns=variant == "columns", hollow=hollow)
+                       source.colors, columns=variant == "columns", hollow=hollow, supports=variant == "supports")
 
 
 def run_ours(set_number: str, structure: brickgpt.Structure, out: Path, n: int, workers: int | None,
@@ -142,7 +163,20 @@ def ours(set_number: str, structure: brickgpt.Structure, directory: Path, varian
     mean = lambda values: statistics.mean(values) if values else math.nan  # noqa: E731
     best = stats["selected"][0] if stats["selected"] else {}
     best_filled = next((f for f, c in zip(filled, valid) if best and c.seed == best["seed"]), None)
-    return {
+    # The object itself (without support columns), on the same grid, for the overhang measures.
+    obj = target_for(set_number, structure, "exact").mask if variant == "supports" else target.mask
+    extra = {}
+    if variant in ("exact", "supports"):
+        extra = {
+            "object_cells": int(obj.sum()),
+            "object_fill_pct": 100 * mean([fill(f, obj) for f in filled]),
+            "object_iou": mean([iou(f, obj) for f in filled]),
+            "overhang_loss_pct": 100 * mean([unsupported_empty(f, obj).sum() / obj.sum() for f in filled]),
+            "outside_cells": mean([float((f & ~obj).sum()) for f in filled]),
+            "valid_clutch": [c.clutch for c in valid],
+            "valid_object_fill": [fill(f, obj) for f in filled],
+        }
+    return {**extra,
         "set": set_number, "structure_id": structure.structure_id, "category": category(structure),
         "variant": variant, "columns": variant == "columns", "inventory_parts": source.recognized_parts,
         "candidates": len(candidates), "surface_cells": int(outer.sum()),
@@ -218,6 +252,55 @@ def hollow_table(rows: list[dict]) -> str:
                      f"{r['surface_cells']} | {r['valid_pct']:.0f} | {r['physics_pct']:.0f} | {r['connected_pct']:.0f} | "
                      f"{f(r['fill_pct'], '{:.1f}')} | {f(r['surface_pct'], '{:.1f}')} | {r['best_parts']} | "
                      f"{f(r['best_surface_pct'], '{:.1f}')} | {r['seconds_per_candidate']:.2f} |")
+    return "\n".join(lines)
+
+
+def cantilever_clutch(length: int, kind: str = "plate") -> float:
+    """Required clutch per stud of a 1 x ``length`` part held by one stud: its first stud on a 1 x 1 brick
+    standing on a baseplate, the rest sticking out (``length`` - 1 studs). Baseplate, so only the joints count."""
+    column = PlacedPart(Shape(CATALOG["brick1x1"], False), GRAY, 0, 0, 0)
+    arm = PlacedPart(Shape(CATALOG[f"{kind}1x{length}"], False), GRAY, 3, 0, 0)
+    return required_clutch([column, arm], (3 + arm.shape.size_y, 1, length), baseplate=True)
+
+
+def calibration_table() -> str:
+    lengths = (2, 3, 4, 6, 8)
+    lines = [f"Real clutch: {FRICTION_CAPACITY_N} N per knob / {PLATE_CELL_WEIGHT_N * 1e3:.3f} mN per plate cell "
+             f"= **{REAL_CLUTCH:.0f}** plate-cell weights per stud.", "",
+             "| part held by one stud | " + " | ".join(f"1x{n} ({n - 1} out)" for n in lengths) + " |",
+             "|---|" + "---|" * len(lengths)]
+    for kind in ("plate", "brick"):
+        values = [cantilever_clutch(n, kind) for n in lengths]
+        lines.append(f"| {kind} | " + " | ".join(f"{v:.1f}" for v in values) + " |")
+    return "\n".join(lines)
+
+
+def clutch_limit_table(rows: list[dict]) -> str:
+    """Remedy (i): the exact runs' valid builds under each clutch limit: share standing, their mean fill."""
+    head = " | ".join(f"≤ {c:.0f}: stand % / fill %" if math.isfinite(c) else "any clutch: stand % / fill %"
+                      for c in CLUTCH_LIMITS)
+    lines = [f"| object | set | {head} |", "|---|---|" + "---|" * len(CLUTCH_LIMITS)]
+    for r in rows:
+        cells = []
+        for limit in CLUTCH_LIMITS:
+            kept = [v for c, v in zip(r["valid_clutch"], r["valid_object_fill"]) if c <= limit]
+            share = 100 * len(kept) / len(r["valid_clutch"]) if r["valid_clutch"] else math.nan
+            cells.append(f"{f(share, '{:.0f}')} / {f(100 * statistics.mean(kept) if kept else math.nan, '{:.1f}')}")
+        lines.append(f"| {r['category']} | {r['set']} | " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
+
+def overhang_table(rows: list[dict]) -> str:
+    lines = ["| object | set | target | object cells | support cells (% of object) | valid % | physics % | one piece % "
+             "| object fill % | object IoU | overhang loss % | built outside object (cells) | best: parts "
+             "| s/candidate |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for r in rows:
+        support = r["target_cells"] - r["object_cells"]
+        lines.append(f"| {r['category']} | {r['set']} | {r['variant']} | {r['object_cells']} | "
+                     f"{support} ({100 * support / r['object_cells']:.0f}%) | {r['valid_pct']:.0f} | {r['physics_pct']:.0f} | "
+                     f"{r['connected_pct']:.0f} | {f(r['object_fill_pct'], '{:.1f}')} | {f(r['object_iou'], '{:.2f}')} | "
+                     f"{f(r['overhang_loss_pct'], '{:.1f}')} | {f(r['outside_cells'], '{:.0f}')} | {r['best_parts']} | "
+                     f"{r['seconds_per_candidate']:.2f} |")
     return "\n".join(lines)
 
 
@@ -300,7 +383,27 @@ def step_1c(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
                  args.figure_sets[-1], args.out, args.out / "hollow_before_after.png")
 
 
-STEPS = {"1a": step_1a, "1c": step_1c}
+def step_1d(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
+    rows = [ours(set_number, s, run_ours(set_number, s, args.out, args.n, args.workers, variant), variant)
+            for s in picked for set_number in args.sets for variant in ("exact", "supports")]
+    table = next((s for s in picked if s.category_id == OVERHANG_FIGURE_CATEGORY), picked[0])
+    figure = [ours(set_number, table, run_ours(set_number, table, args.out, args.n, args.workers, variant), variant)
+              for set_number in args.figure_sets for variant in ("exact", "supports")]
+    (args.out / "overhangs_summary.json").write_text(json.dumps({"ours": rows, "before_after": figure}, indent=2),
+                                                     encoding="utf-8")
+    exact = [r for r in rows if r["variant"] == "exact"]
+    text = (f"### Calibration\n\n{calibration_table()}\n\n### (i) Clutch limits on the exact runs\n\n"
+            f"{clutch_limit_table(exact)}\n\n### (ii) Support columns vs exact\n\n{overhang_table(rows)}\n\n"
+            f"### Figure runs ({category(table)})\n\n{overhang_table(figure)}\n")
+    (args.out / "overhangs.md").write_text(text, encoding="utf-8")
+    print(text)
+    before_after(table, figure, ("exact", "supports"),
+                 ("before: exact target\n(overhangs out of reach stay empty)",
+                  "after: + support columns under far overhangs\n(extra cells, outside the object)"),
+                 args.figure_sets[-1], args.out, args.out / "overhangs_before_after.png")
+
+
+STEPS = {"1a": step_1a, "1c": step_1c, "1d": step_1d}
 
 
 def main(argv: Sequence[str] | None = None) -> int:
