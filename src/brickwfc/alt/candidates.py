@@ -1,7 +1,8 @@
 """Generate and verify candidate builds (the funnel's first two stages), one seed per candidate.
 
 Generators: ``d2`` (default), the bottom-up builder with any-offset placement, the learned style bias and
-the tip-over check (``balance``; off with ``balanced=False``);
+the tip-over check (``balance``; off with ``balanced=False``), cells of a layer visited in random or raster
+order (``order``) and optionally a learned proposal model (``proposal``, see ``bricks.proposal``);
 ``wfc``, WFC with the support, inventory (and shape) constraints, backtracking, the same bias and a time
 cap (a compared method, see CLAUDE.md). Both use the same styled tileset, and both put parts of a
 column's preferred color (from a color image, ``target.py``) first.
@@ -20,9 +21,11 @@ the chunking. Candidates serialize to JSON lines, so a killed run resumes where 
 
 from __future__ import annotations
 
+import functools
 import math
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Sequence
 
 import numpy as np
@@ -33,6 +36,7 @@ from brickwfc.bricks.colors import BrickColor, color_for_code
 from brickwfc.bricks.inventory import Inventory, InventoryConstraint, overuse
 from brickwfc.bricks.parts import CATALOG, PartSet, PlacedPart, Shape, extract_parts
 from brickwfc.bricks.physics import table_clutch
+from brickwfc.bricks.proposal import Proposal
 from brickwfc.bricks.shapes import Mask, ShapeConstraint, outside
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.style import StyleBias, StyleStats, styled_tileset
@@ -65,6 +69,8 @@ class Context:
     connect: bool = True  # d2: repair pass that makes the build one piece (see bottomup)
     connect_rounds: int = 10
     open_tops: bool = False  # d2: studless top cells only under empty target cells (see bottomup)
+    order: str = "random"  # d2: cells of a layer visited in "random" or "raster" order
+    proposal: str = ""  # d2: a learned proposal model (.npz, vocab.json next to it); "" for none
 
 
 @dataclass(frozen=True)
@@ -95,12 +101,20 @@ class Candidate:
                    count)
 
 
+@functools.lru_cache(maxsize=2)
+def load_proposal(path: str) -> Proposal:
+    """The model at ``path``, loaded once per process."""
+    return Proposal.load(Path(path))
+
+
 def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.ndarray | None:
     """One grid of tile ids for ``seed``, or None if the generator gave up."""
     if context.generator == "d2":
         builder = BottomUpBuilder(parts, any_offset=True, style=bias, balanced=context.balanced,
                                   bridge=context.bridge, connect=context.connect,
-                                  connect_rounds=context.connect_rounds, open_tops=context.open_tops)
+                                  connect_rounds=context.connect_rounds, open_tops=context.open_tops,
+                                  order=context.order,
+                                  proposal=load_proposal(context.proposal) if context.proposal else None)
         return builder.build(context.grid, np.random.default_rng(seed), context.inventory, context.mask,
                              context.preferred)
     constraints = [SupportConstraint(parts), InventoryConstraint(parts, context.inventory)]
