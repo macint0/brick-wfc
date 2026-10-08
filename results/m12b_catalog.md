@@ -253,11 +253,12 @@ parts are off the stud grid.
 **The judge is not compared across the two runs** (−0.34 vs −0.36/−0.38), since each run judges with its
 own style statistics.
 
-**The figure does not show slopes as slopes.** The isometric preview (`render3d`) draws every part as boxes
-of cells, with a slope's face drawn studless. So the gain is in what the build is made of, not yet in how
-the preview looks.
-- Open `out/m12b_catalog_fig/after/5891-1/d2/build_01.ldr` in Studio to see the real slopes.
-- A slope-aware preview (drawing sloped cells as wedges) is the obvious follow-up.
+**The preview draws slopes as slopes** (`build.slope_profiles` + `render3d`):
+- A plain slope's top and an inverted slope's underside are cut by their sloped plane, using each part's
+  turn. The plane falls from full height at the studded rows to a 0.5-plate lip, as in the .dat files.
+- The figure's builds are re-drawn from the cached candidates, with no new builds.
+- Builds without slopes render pixel-identical to before.
+- Ridges, cheese slopes and corner slopes are still drawn as studless boxes.
 
 **Verdict:** this step does not, on its own, make the demo look clearly better side by side. It makes more
 of each set usable, and gives the M12b looks steps (mirror symmetry, clean skins) and the learned proposal
@@ -272,7 +273,7 @@ the parts they need.
   - What should hold: each marker sits flush, on a real stud, never cutting into a slope face.
   - Already checked automatically: `test_placement_matches_the_ldraw_part` checks the same facts against
     the .dat files.
-- A slope-aware 3D preview.
+- A slope-aware preview for ridges, cheese slopes and corner slopes (plain and inverted slopes are done).
 - The fit map could learn cell-set shapes (window sums over a footprint mask) to win back the slope speed.
 - Relaxing "nothing above a slope face" to allow overhangs would need per-cell heights.
 - 32028 (door rail) and the jumper plates (3794) remain the largest missing groups.

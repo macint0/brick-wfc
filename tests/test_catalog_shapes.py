@@ -420,3 +420,44 @@ def test_pipeline_reads_the_inventory_with_the_chosen_catalog(tmp_path: Path, ca
                 "--style-dir", str(style_dir[0]), "--sets-file", str(style_dir[1])]
         assert main(args) == 0
         assert f"{recognized} parts recognized" in capsys.readouterr().out
+
+
+def test_preview_draws_slopes_and_leaves_other_builds_alone() -> None:
+    from brickwfc.bricks.build import SLOPE_LIP, placed_colors, slope_profiles
+    from brickwfc.bricks.support import studded
+    from brickwfc.render3d import face_shade, render_voxels
+
+    def picture(placed: list[PlacedPart], shape: tuple[int, int, int], cuts: bool = True) -> np.ndarray:
+        filled = np.zeros(shape, dtype=bool)
+        for part in placed:
+            for cell in part.cells():
+                filled[cell] = True
+        profiles = slope_profiles(placed, shape) if cuts else None
+        tops, bottoms = (None, None) if profiles is None else profiles
+        return np.array(render_voxels(filled, placed_colors(placed, shape), studs=studded(placed, shape),
+                                      tops=tops, bottoms=bottoms))
+
+    # No slopes: no cuts, and full cuts draw exactly what no cuts draw.
+    bricks = [PlacedPart(Shape(CATALOG["brick2x2"]), RED, 0, 0, 0), PlacedPart(Shape(CATALOG["plate2x2_corner"]), BLUE, 3, 0, 0)]
+    assert slope_profiles(bricks, (4, 2, 2)) is None
+    filled = np.ones((1, 2, 2), dtype=bool)
+    colors = np.full((1, 2, 2, 3), 200, dtype=np.uint8)
+    full = render_voxels(filled, colors, tops=np.ones((1, 2, 2, 4)), bottoms=np.zeros((1, 2, 2, 4)))
+    assert (np.array(full) == np.array(render_voxels(filled, colors))).all()
+
+    # A 45-degree 2x2 slope falling toward -z (turn 0): full height over its stud row, down to the lip at
+    # its low edge; the plane crosses the three layers of the sloped row.
+    slope = PlacedPart(Shape(CATALOG["slope45_2x2"]), RED, 0, 0, 0)
+    tops, bottoms = slope_profiles([slope], (3, 2, 2))
+    low_row = next(z for _, z, _ in slope.bottom_cells() if not slope.shape.studded(z, 0))
+    assert tops[0, low_row, 0].min() == pytest.approx(SLOPE_LIP) and tops[0, low_row, 0].max() == pytest.approx(3)
+    assert (tops[:, 1 - low_row] >= 1).all() and (bottoms == 0).all()  # the stud row stays full
+    # Facing the viewer (falling toward +x or +z) the face is drawn; facing away it is hidden.
+    assert face_shade((2.5, 0.0, 0.0, 2.5)) is not None and face_shade((0.0, 2.5, 2.5, 0.0)) is None  # 45 degrees
+    # A slope that faces the viewer looks different from its box.
+    toward = PlacedPart(Shape(CATALOG["slope45_2x2"], 2), RED, 0, 0, 0)
+    assert not (picture([toward], (3, 2, 2)) == picture([toward], (3, 2, 2), cuts=False)).all()
+    # An inverted slope's bottom rises from its flat row toward its front.
+    inverted = PlacedPart(Shape(CATALOG["slope45inv_2x1"]), RED, 1, 0, 0)
+    _, bottoms = slope_profiles([inverted], (4, 2, 1))
+    assert bottoms[1].max() == pytest.approx(3 - SLOPE_LIP) and bottoms[1].min() == pytest.approx(0)

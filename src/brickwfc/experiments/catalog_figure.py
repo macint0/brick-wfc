@@ -8,6 +8,8 @@
 "Before" reads each set with the M8 catalog and builds in the v1 style; "after" with the M12b catalog
 (corners, slopes) and the v2 style; same seeds, same target. One row per set: the best D2 build of each
 (the pipeline's top selection), labeled with its parts, how many are slopes and corners, and its fill.
+Each build is drawn again from its cached candidate with the current preview (``build.save_preview``, which
+draws slopes with their sloped faces), so changing the preview needs no new builds.
 Prints a table of both runs' means (the judge is not compared: the two runs judge with different style
 statistics).
 """
@@ -21,6 +23,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Sequence
 
+from brickwfc.bricks.build import save_preview
 from brickwfc.experiments.demo import labeled_sheet, load_run
 
 RUNS = (("before", "M8 catalog, v1 style"), ("after", "+ corners and slopes, v2 style"))
@@ -31,6 +34,15 @@ def kinds(directory: Path, seed: int) -> Counter[str]:
     candidates, _ = load_run(directory)
     placed = next(c for c in candidates if c.seed == seed).placed
     return Counter("corner" if "corner" in p.shape.part.name else p.shape.part.kind for p in placed)
+
+
+def preview(directory: Path, seed: int) -> Path:
+    """The candidate with ``seed`` drawn with the current preview, as ``best_preview.png`` in ``directory``."""
+    candidates, stats = load_run(directory)
+    placed = next(c for c in candidates if c.seed == seed).placed
+    path = directory / "best_preview.png"
+    save_preview(list(placed), tuple(stats["grid_YZX"]), path)
+    return path
 
 
 def plural(count: int, noun: str) -> str:
@@ -54,7 +66,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             row = summaries[run][set_number]
             best = json.loads((args.dir / run / set_number / "d2" / "stats.json").read_text(encoding="utf-8"))["selected"][0]
             used = kinds(args.dir / run / set_number / "d2", best["seed"])
-            images.append(Path(row["best_png"]))
+            images.append(preview(args.dir / run / set_number / "d2", best["seed"]))
             labels.append(f"{set_number}: {title}\n{best['parts']} of {row['parts']} parts "
                           f"({plural(used['slope'], 'slope')}, {plural(used['corner'], 'corner')})\n"
                           f"fill {best['fill_pct']:.0f}%, stands: "

@@ -51,6 +51,9 @@ class Part:
     file), the cells with a stud on top (``stud_cells``) and the cells with a flat bottom
     (``seated_cells``). ``origin_top``: the origin is on the top face (most parts), else on the bottom.
     ``aliases``: older LDraw file names of the same part ("~Moved to" files) that models still use.
+    ``sloped_rows``: for a slope falling toward its local -Z, how many rows (from the low end) its sloped face
+    covers: its top for a plain slope, its bottom for an inverted one (the parts with ``seated_cells``). Only
+    the preview draws it (``build.slope_profiles``); the model treats the part as its box.
     """
 
     name: str
@@ -65,6 +68,7 @@ class Part:
     seated_cells: Cells | None = None
     origin_top: bool = True
     aliases: tuple[str, ...] = ()
+    sloped_rows: int = 0
 
     @property
     def footprint_cells(self) -> Cells:
@@ -133,7 +137,7 @@ def _slope(name: str, file: str, width: int, depth: int, stud_rows: int = 1, hei
     back = tuple(c for c in cells if c[1] > -stud_rows)
     return Part(name, f"{file}.dat", width, depth, height, True, "slope", cells,
                 stud_cells=cells if inverted else back, seated_cells=back if inverted else None,
-                aliases=tuple(f"{a}.dat" for a in aliases))
+                aliases=tuple(f"{a}.dat" for a in aliases), sloped_rows=depth - (1 if inverted else stud_rows))
 
 
 def _roof(name: str, file: str, width: int, depth: int, height: int = 3, origin_top: bool = True,
