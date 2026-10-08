@@ -16,6 +16,10 @@ by a part reaching into it from the left or front: a stronger baseline when pack
 With a ``style`` (M10, ``style.StyleBias``), the order in which parts are tried at a cell is drawn
 from the base weights times the learned likelihood ratio of each part next to the part below the
 cell and the parts beside it. Without one, builds are exactly as before.
+
+With ``balanced=True`` (M12), a part is also refused if it would tip its cluster of stud-connected parts
+over on a table (``balance.Balance``), so every build needs only finite clutch
+(``physics.required_clutch``). Off by default, which reproduces the M9b-M11 tables.
 """
 
 from __future__ import annotations
@@ -24,6 +28,7 @@ from typing import TYPE_CHECKING, Mapping
 
 import numpy as np
 
+from brickwfc.bricks.balance import Balance
 from brickwfc.bricks.colors import BrickColor
 from brickwfc.bricks.parts import PartSet, PlacedPart, Shape, TileInfo
 
@@ -32,10 +37,12 @@ if TYPE_CHECKING:
 
 
 class BottomUpBuilder:
-    def __init__(self, parts: PartSet, any_offset: bool = False, style: StyleBias | None = None) -> None:
+    def __init__(self, parts: PartSet, any_offset: bool = False, style: StyleBias | None = None,
+                 balanced: bool = False) -> None:
         self.parts = parts
         self.any_offset = any_offset
         self.style = style
+        self.balanced = balanced
         self.index = {info: t for t, info in enumerate(parts.infos)}
         # Same priors as WFC: a cell's chance of holding (shape, color) is the summed weight of
         # that pair's tiles; the solid share is the solid tiles' share of all weight.
@@ -70,6 +77,7 @@ class BottomUpBuilder:
         studs = np.zeros(shape, dtype=bool)  # cells on a part's top layer that carry a stud
         owner = np.full(shape, -1, dtype=np.int64)  # index into ``placed``
         placed: list[PlacedPart] = []
+        balance = Balance() if self.balanced else None
         grid = np.full(shape, self.index[TileInfo(None)], dtype=np.int64)
         for y in range(ny):
             for flat in rng.permutation(nz * nx):
@@ -90,7 +98,7 @@ class BottomUpBuilder:
                         if self.any_offset:  # draw what _place would have drawn: same seed, same build
                             rng.permutation(part_shape.size_z * part_shape.size_x)
                         continue
-                    part = self._place(part_shape, color, y, z, x, filled, studs, allowed, rng)
+                    part = self._place(part_shape, color, y, z, x, filled, studs, allowed, rng, owner, balance)
                     if part is None:
                         failed.add(box)
                     else:
@@ -103,6 +111,8 @@ class BottomUpBuilder:
                         if part_shape.part.studs:
                             for cell in part.top_cells():
                                 studs[cell] = True
+                        if balance is not None:
+                            balance.add(part, self._below(part, owner))
                         placed.append(part)
                         break
         return grid
@@ -125,17 +135,30 @@ class BottomUpBuilder:
     def _place(
         self, part_shape: Shape, color: BrickColor, y: int, z: int, x: int,
         filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray, rng: np.random.Generator,
+        owner: np.ndarray | None = None, balance: Balance | None = None,
     ) -> PlacedPart | None:
         """A fitting placement of the part with its bottom layer covering cell (y, z, x), or None."""
+        def ok(part: PlacedPart) -> bool:
+            return self._fits(part, filled, studs, allowed) and (
+                balance is None or balance.can_add(part, self._below(part, owner)))
+
         if not self.any_offset:
             part = PlacedPart(part_shape, color, y, x, z)
-            return part if self._fits(part, filled, studs, allowed) else None
+            return part if ok(part) else None
         for flat in rng.permutation(part_shape.size_z * part_shape.size_x):
             dz, dx = divmod(int(flat), part_shape.size_x)
             part = PlacedPart(part_shape, color, y, x - dx, z - dz)
-            if self._fits(part, filled, studs, allowed):
+            if ok(part):
                 return part
         return None
+
+    @staticmethod
+    def _below(part: PlacedPart, owner: np.ndarray) -> set[int]:
+        """Indices of the parts directly under the part's bottom layer."""
+        if part.layer == 0:
+            return set()
+        y, z, x = part.layer, part.z, part.x
+        return set(np.unique(owner[y - 1, z : z + part.shape.size_z, x : x + part.shape.size_x]).tolist()) - {-1}
 
     @staticmethod
     def _fits(part: PlacedPart, filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray) -> bool:

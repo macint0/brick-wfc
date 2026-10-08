@@ -116,3 +116,12 @@ def required_clutch(placed: list[PlacedPart], shape: tuple[int, int, int], basep
 
 def is_physically_stable(placed: list[PlacedPart], shape: tuple[int, int, int], clutch: float, baseplate: bool = False) -> bool:
     return required_clutch(placed, shape, baseplate) <= clutch
+
+
+def tipping_clusters(placed: list[PlacedPart]) -> list[tuple[list[int], float]]:
+    """Why a build needs infinite clutch: its clusters of stud-connected parts whose centre of mass lies
+    outside their ground contacts' convex hull, as (indices into ``placed``, distance outside in studs).
+    Empty iff ``required_clutch`` is finite (see ``balance``)."""
+    from brickwfc.bricks.balance import clusters
+
+    return [(members, c.tip_distance()) for members, c in clusters(placed) if not c.stands()]

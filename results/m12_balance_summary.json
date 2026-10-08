@@ -1,0 +1,146 @@
+[
+  {
+    "set": "6372-1",
+    "condition": "slab_nobalance",
+    "grid_YZX": [
+      12,
+      12,
+      12
+    ],
+    "candidates": 200,
+    "physics_pct": 76.0,
+    "valid_pct": 76.0,
+    "utilization_pct": 100.0,
+    "clusters_per_build": 9.0,
+    "median_clutch": 9.0,
+    "judge": -0.27917790769408757,
+    "judge_size": 1001,
+    "seconds_per_build": 0.3898573140000008
+  },
+  {
+    "set": "6372-1",
+    "condition": "slab_balance",
+    "grid_YZX": [
+      12,
+      12,
+      12
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 100.0,
+    "utilization_pct": 100.0,
+    "clusters_per_build": 9.0,
+    "median_clutch": 9.0,
+    "judge": -0.27838806562927754,
+    "judge_size": 1001,
+    "seconds_per_build": 0.4195929114998944
+  },
+  {
+    "set": "6372-1",
+    "condition": "cube_nobalance",
+    "grid_YZX": [
+      12,
+      12,
+      12
+    ],
+    "candidates": 200,
+    "physics_pct": 76.0,
+    "valid_pct": 76.0,
+    "utilization_pct": 100.0,
+    "clusters_per_build": 9.0,
+    "median_clutch": 9.0,
+    "judge": -0.27917790769408757,
+    "judge_size": 1001,
+    "seconds_per_build": 0.43005593099995165
+  },
+  {
+    "set": "6372-1",
+    "condition": "cube_balance",
+    "grid_YZX": [
+      12,
+      12,
+      12
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 100.0,
+    "utilization_pct": 100.0,
+    "clusters_per_build": 9.0,
+    "median_clutch": 9.0,
+    "judge": -0.27838806562927754,
+    "judge_size": 1001,
+    "seconds_per_build": 0.4166991799999778
+  },
+  {
+    "set": "10182-1",
+    "condition": "slab_nobalance",
+    "grid_YZX": [
+      12,
+      35,
+      35
+    ],
+    "candidates": 200,
+    "physics_pct": 7.0,
+    "valid_pct": 7.0,
+    "utilization_pct": 100.0,
+    "clusters_per_build": 82.0,
+    "median_clutch": 144.00000000000014,
+    "judge": -0.26564916310629944,
+    "judge_size": 12192,
+    "seconds_per_build": 13.478312455499854
+  },
+  {
+    "set": "10182-1",
+    "condition": "slab_balance",
+    "grid_YZX": [
+      12,
+      35,
+      35
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 100.0,
+    "utilization_pct": 100.0,
+    "clusters_per_build": 82.0,
+    "median_clutch": 144.00000000000014,
+    "judge": -0.26793730615525685,
+    "judge_size": 12192,
+    "seconds_per_build": 13.372572859500014
+  },
+  {
+    "set": "10182-1",
+    "condition": "cube_nobalance",
+    "grid_YZX": [
+      25,
+      25,
+      25
+    ],
+    "candidates": 200,
+    "physics_pct": 64.5,
+    "valid_pct": 64.5,
+    "utilization_pct": 100.0,
+    "clusters_per_build": 31.0,
+    "median_clutch": 160.44444444444446,
+    "judge": -0.2533333637705339,
+    "judge_size": 12192,
+    "seconds_per_build": 13.904499144999864
+  },
+  {
+    "set": "10182-1",
+    "condition": "cube_balance",
+    "grid_YZX": [
+      25,
+      25,
+      25
+    ],
+    "candidates": 200,
+    "physics_pct": 100.0,
+    "valid_pct": 100.0,
+    "utilization_pct": 100.0,
+    "clusters_per_build": 31.5,
+    "median_clutch": 192.00000000000017,
+    "judge": -0.2539672339380006,
+    "judge_size": 12192,
+    "seconds_per_build": 14.295722760500011
+  }
+]

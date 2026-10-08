@@ -1,6 +1,7 @@
 """Generate and verify candidate builds (the funnel's first two stages), one seed per candidate.
 
-Generators: ``d2`` (default), the bottom-up builder with any-offset placement and the learned style bias;
+Generators: ``d2`` (default), the bottom-up builder with any-offset placement, the learned style bias and
+the tip-over check (``balance``; off with ``balanced=False``);
 ``wfc``, WFC with the support, inventory (and shape) constraints, backtracking, the same bias and a time
 cap (a compared method, see CLAUDE.md). Both use the same styled tileset.
 
@@ -53,6 +54,7 @@ class Context:
     generator: str = "d2"
     max_clutch: float = math.inf
     wfc_time_limit_s: float = 30.0
+    balanced: bool = True  # d2: refuse parts that would tip their cluster over
 
 
 @dataclass(frozen=True)
@@ -83,7 +85,7 @@ class Candidate:
 def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.ndarray | None:
     """One grid of tile ids for ``seed``, or None if the generator gave up."""
     if context.generator == "d2":
-        builder = BottomUpBuilder(parts, any_offset=True, style=bias)
+        builder = BottomUpBuilder(parts, any_offset=True, style=bias, balanced=context.balanced)
         return builder.build(context.grid, np.random.default_rng(seed), context.inventory, allowed=context.mask)
     constraints = [SupportConstraint(parts), InventoryConstraint(parts, context.inventory)]
     if context.mask is not None:

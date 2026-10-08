@@ -18,8 +18,8 @@ statistics, from the fold that held the set out if it is one of the M10 sets, el
             (``funnel.select``); judge scores are standardized and feature distances divided by their
             median, so the two terms are on comparable scales
 
-Without a target shape, the grid is ``--height`` plates tall with volume ``--room`` x the inventory's
-(as in M10); with ``--shape`` (a primitive of ``bricks.shapes``), the shape is scaled to the
+Without a target shape, the grid is a cube in cells (as many plates tall as studs wide) with volume
+``--room`` x the inventory's; ``--height`` fixes the height instead (M10's grid: ``--height 12``); with ``--shape`` (a primitive of ``bricks.shapes``), the shape is scaled to the
 inventory's volume and the generators are told to fill it. Writes, under ``--out``: build_NN.ldr (one
 ``0 STEP`` per layer, bottom to top), build_NN.png, sheet.png, stats.json, and candidates.jsonl (every
 candidate as it is generated, so a killed run resumes: rerun the same command).
@@ -65,8 +65,9 @@ class AltConfig:
     k: int = 8
     seed: int = 0
     generator: str = "d2"
-    height: int = 12  # plates (no target shape)
+    height: int | None = None  # plates (no target shape); None: a cube, see cube_grid
     room: float = 1.5  # grid volume / inventory volume (no target shape)
+    balanced: bool = True
     shape: str | None = None
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = math.inf  # physics: keep builds needing at most this clutch per stud
@@ -94,14 +95,22 @@ class FunnelReport:
     candidates: list[Candidate]
 
 
+def cube_grid(cells: float, room: float) -> tuple[int, int, int]:
+    """(Y, Z, X) as many plates tall as studs wide and deep, with volume about ``room`` x ``cells``."""
+    side = max(2, math.ceil((room * cells) ** (1 / 3)))
+    return (side, side, side)
+
+
 def make_context(source: Source, stats: StyleStats, config: AltConfig) -> Context:
     if config.shape is None:
-        grid, mask, empty = grid_for(source.inventory, config.height, config.room), None, config.room - 1
+        grid = (cube_grid(inventory_cells(source.inventory), config.room) if config.height is None
+                else grid_for(source.inventory, config.height, config.room))
+        mask, empty = None, config.room - 1
     else:
         mask = sized_for(config.shape, inventory_cells(source.inventory))
         grid, empty = mask.shape, SHAPE_EMPTY_WEIGHT
     return Context(source.inventory, source.colors, stats, grid, mask, empty, config.strength, config.generator,
-                   config.max_clutch, config.wfc_time_limit_s)
+                   config.max_clutch, config.wfc_time_limit_s, config.balanced)
 
 
 # Generation, resumable ---------------------------------------------------------------------------
@@ -113,7 +122,7 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
         "source": source.name, "inventory": sorted([*k, v] for k, v in source.inventory.items()), "style": style_label,
         "grid": list(context.grid), "mask": None if context.mask is None else np.argwhere(context.mask).tolist(),
         "empty_weight_per_part": context.empty_weight_per_part, "strength": context.strength,
-        "generator": context.generator, "max_clutch": context.max_clutch, "wfc_time_limit_s": context.wfc_time_limit_s,
+        "generator": context.generator, "balanced": context.balanced, "max_clutch": context.max_clutch, "wfc_time_limit_s": context.wfc_time_limit_s,
     }
     return json.loads(json.dumps(key))
 
@@ -244,7 +253,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
     parser.add_argument("--generator", choices=GENERATORS, default=defaults.generator)
-    parser.add_argument("--height", type=int, default=defaults.height, help="grid height in plates (no --shape)")
+    parser.add_argument("--height", type=int, default=defaults.height,
+                        help="grid height in plates (no --shape; default: a cube)")
+    parser.add_argument("--no-balance", action="store_true", help="d2 without the tip-over check (as in M9b-M11)")
     parser.add_argument("--room", type=float, default=defaults.room, help="grid volume / inventory volume (no --shape)")
     parser.add_argument("--strength", type=float, default=defaults.strength, help="exponent on the style weights")
     parser.add_argument("--max-clutch", type=float, default=defaults.max_clutch, help="physics limit per stud")
@@ -262,7 +273,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     start = time.perf_counter()
-    config = AltConfig(args.n, args.k, args.seed, args.generator, args.height, args.room, args.shape, args.strength,
+    config = AltConfig(args.n, args.k, args.seed, args.generator, args.height, args.room, not args.no_balance, args.shape, args.strength,
                        args.max_clutch, args.wfc_time_limit, args.min_size_quantile, defaults.judge_draws,
                        args.dedupe_threshold, args.diversity)
     source = load_source(args.input, args.data)
