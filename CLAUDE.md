@@ -167,14 +167,17 @@ brick-wfc/
 ### M12b — 3D targets, learned proposal, looks (Mac, 2026-10-08)
 Mac's framing: BrickGPT-style generation from a real inventory with a bigger catalog, constraints guaranteed at
 decode time. The bottom-up builder is the decoder; the *proposal* in it is pluggable (today: M10 statistics).
-**Status (2026-10-09):** steps 1 and 4 done, step 2 trained and being compared, step 3 not started.
+**Status (2026-10-09):** steps 1 and 4 done, step 2 trained and compared (inventory-only: narrow loss; shape arm
+running), step 3 not started. **Three decisions for Mac** at the end of this entry.
 1. **True 3D targets — done** (`results/m12b_brickgpt.md`, `m12b_overhangs_tables.md`, figures
    `m12b_before_after.png`, `m12b_opentops_before_after.png`, `m12b_hollow_before_after.png`).
    `--shape brickgpt:<id>` loads a StableText2Brick structure (`bricks/brickgpt.py`; their data, not their model;
    all 8 brick sizes map 1:1 onto the catalog), `--shape model.stl|.obj` voxelizes a mesh (`bricks/mesh.py`,
    `trimesh`), `--hollow N` keeps a shell. Head-to-head on 6 objects × 3 sets: every build 100% valid / physics /
    one piece; fill 69–85% on car, sofa, vessel, bench; table 54–78%; chair 15–74% (bimodal on the small sets,
-   undiagnosed). Their table is 3 pieces and their chair needs clutch 816. **Open tops** (a studless top only
+   diagnosed: the caster base is too small for the balance mask, arms never meet at the hub, repair keeps one arm;
+   `--supports --support-height 6` adds one 3-cell column under the hub: low builds 8/20 → 0/20, mean fill
+   0.40 → 0.63, builds within real clutch 14/20 → 19/20 on 6378-1, table builds unchanged). Their table is 3 pieces and their chair needs clutch 816. **Open tops** (a studless top only
    where the target is empty above; `AltConfig.open_tops`, default on, `--no-open-tops`) fixes tiles capping thin
    stems: fill up on all 18 pairs (table 6378-1: 15 → 54%), 1.3–7.6× faster. Support columns (`--supports`) help
    only where the object hangs over nothing (chair, bench). Clutch calibrated from StableLego: a real stud holds
@@ -190,8 +193,13 @@ decode time. The bottom-up builder is the decoder; the *proposal* in it is plugg
    model: `data/models/proposal_run2.npz` + `vocab.json` (gitignored). numpy inference with a KV cache
    (`bricks/proposal.py`, ~6 ms per cell query), decoded inside `BottomUpBuilder(proposal=)` with every mask.
    Parts outside the vocabulary (slopes, corners) get the uniform fallback. Comparison vs statistics under the
-   judge: `experiments/proposal.py` (fold 0, 5 seeds, stats_random / stats_raster / proposal_raster) →
-   `results/m12b_proposal.md`. Keep the statistics as the no-training baseline in every table.
+   judge: `experiments/proposal.py` (fold 0, 5 seeds, stats_random / stats_raster / proposal_raster, style v2,
+   `results/m12b_proposal.md`). **Inventory-only result: the proposal loses narrowly** (higher judge on 1/7 sets,
+   mean −0.0025, 7× the time; the gain over M10's random-order builder is the raster order's, not the model's; an
+   independent check against each set's own statistics agrees; 5–30% of each set's parts are outside the
+   model's vocabulary, which does not explain the result). Shape arm (car on 3 fold-0 sets, `--proposal`,
+   `--order` in the pipeline, `results/m12b_proposal_shape.md`) tests the mask conditioning. Keep the
+   statistics as the no-training baseline in every table.
 3. **Mirror symmetry** and **clean skins** (largest fitting part on exposed surfaces): only if step 2 does not
    already produce them; measure first.
 4. **Slopes and corner parts — done** (`results/m12b_catalog.md`): catalog 63 → 88 parts (corner plates/bricks,
@@ -202,6 +210,9 @@ Also landed: `rebrickable:<set>` / any set number as the inventory from Rebricka
 (`bricks/rebrickable.py`, `results/m12c_rebrickable.md`); diversity metric for M13 (Leinster–Cobbold, threshold
 kernel normalized per setup by the median D2 pair distance, `funnel/diversity.py`, `results/m13_diversity.md`);
 paper skeleton in `paper/`. Not now: style-bias tuning, color logic, WFC.
+**Decisions for Mac (2026-10-09):** (a) make `--supports --support-height 6` the default for 3D targets;
+(b) make `--max-clutch 1111` (real clutch) the pipeline default; (c) rerun 1a/1d on the 88-part catalog with
+whatever defaults you choose and redraw the figures (the cached runs predate the catalog). ee does (c) on a go.
 **Done when:** the six-set demo re-rendered with a 3D target looks clearly better side by side (yes:
 `m12b_before_after.png`), every build still valid/stable/one piece (yes), the learned proposal is compared to
 statistics under the judge (running), and the per-set coverage rises (yes).
