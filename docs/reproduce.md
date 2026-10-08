@@ -154,6 +154,44 @@ python -m brickwfc.alt 10182-1 --n 200 --k 8
 
 0.8 CPU-hours.
 
+### `results/m12b_catalog.md` (M12b step 4: corners and slopes), with `m12b_coverage_omr20.json`, `m12b_coverage_m10.json`, `m10_style_stats/style_fold*_v2.json`, `m12b_catalog_before_after.png`, `m12b_catalog_before_summary.json`, `m12b_catalog_after_summary.json`
+
+**Coverage** (`m12b_coverage_*.json`). Seconds per set:
+
+```
+python -m brickwfc.experiments.coverage --on-grid --out out/m12b_cov_omr20
+python -m brickwfc.experiments.coverage --on-grid --sets-file results/sets_selection.json --out out/m12b_cov_m10
+```
+
+**Style statistics v2** (`m10_style_stats/style_fold{i}_v2.json`). About a minute; learning only:
+
+```
+python -m brickwfc.experiments.style --learn-only v2
+```
+
+`--catalog m8 --learn-only v1check` reproduces the M10 (v1) files exactly.
+
+**Before/after figure** (`m12b_catalog_before_after.png` and the two summaries):
+
+```
+python -m brickwfc.experiments.demo --sets 6378-1 5891-1 --wfc-n 0 --n 100 --out out/m12b_catalog_fig/before
+python -m brickwfc.experiments.demo --sets 6378-1 5891-1 --wfc-n 0 --n 100 --catalog full --style-version v2 --out out/m12b_catalog_fig/after
+python -m brickwfc.experiments.catalog_figure
+```
+
+- The before run equals the M12 demo's D2 runs, so copying `out/m12_demo/<set>/{d2,d2_no_connect}/candidates.jsonl`
+  into its folders makes it instant.
+- The after run took about 2.4 CPU-hours (5891-1: 68 s per candidate).
+- Copy the two `summary.json` files to `results/m12b_catalog_{before,after}_summary.json`.
+
+**Catalog check for Studio** (not in `results/`):
+
+```
+python -m brickwfc.bricks.catalog_check
+```
+
+It writes `out/check/catalog_check.ldr`.
+
 ### `results/m13_diversity.md` (M13), with `m13_diversity.json`
 
 ```
