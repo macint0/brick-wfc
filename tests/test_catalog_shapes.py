@@ -385,3 +385,38 @@ def test_learn_only_writes_versioned_fold_statistics(tmp_path: Path) -> None:
         data = json.loads((tmp_path / f"style_fold{i}_vt.json").read_text(encoding="utf-8"))
         assert data["catalog"] == "m12b" and data["parts"]["slope45_2x2"] == len(sets) - len(held_out)
         assert StyleStats.load(tmp_path / f"style_fold{i}_vt.json").models == len(sets) - len(held_out)
+
+
+def test_catalog_figure_counts_slopes_and_corners(tmp_path: Path) -> None:
+    import json
+
+    from brickwfc.alt.candidates import Candidate
+    from brickwfc.experiments.catalog_figure import kinds
+
+    placed = (PlacedPart(Shape(CATALOG["brick2x2"]), RED, 0, 0, 0), PlacedPart(Shape(CATALOG["slope45_2x2"]), RED, 3, 0, 0),
+              PlacedPart(Shape(CATALOG["plate2x2_corner"], 2), BLUE, 0, 2, 0))
+    candidate = Candidate(7, placed, (), 0.0, 1.0, 0.1, 1)
+    lines = [json.dumps({"key": {}}), json.dumps(candidate.to_json())]
+    (tmp_path / "candidates.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (tmp_path / "stats.json").write_text("{}", encoding="utf-8")
+    assert kinds(tmp_path, 7) == {"brick": 1, "slope": 1, "corner": 1}
+    # Candidates round-trip their parts' turns (0-3), so corners and slopes keep their orientation.
+    assert Candidate.from_json(candidate.to_json()).placed == placed
+
+
+def test_pipeline_reads_the_inventory_with_the_chosen_catalog(tmp_path: Path, capsys: pytest.CaptureFixture[str],
+                                                             style_dir: tuple[Path, Path]) -> None:
+    from brickwfc.alt.inputs import load_source
+    from brickwfc.alt.pipeline import main
+
+    model = tmp_path / "model.ldr"
+    placed = [PlacedPart(Shape(CATALOG["brick2x2"]), RED, 0, 0, 0), PlacedPart(Shape(CATALOG["slope45_2x2"]), RED, 3, 0, 0),
+              PlacedPart(Shape(CATALOG["plate2x2_corner"]), BLUE, 0, 3, 0)]
+    write_ldr((p.placement() for p in placed), model, "model")
+    assert set(load_source(str(model)).inventory) == {(p.shape.part.name, p.color.name) for p in placed}
+    assert set(load_source(str(model), catalog="m8").inventory) == {("brick2x2", "red")}
+    for catalog, recognized in (("m8", 1), ("full", 3)):
+        args = [str(model), "--n", "2", "--k", "1", "--workers", "1", "--out", str(tmp_path / catalog), "--catalog", catalog,
+                "--style-dir", str(style_dir[0]), "--sets-file", str(style_dir[1])]
+        assert main(args) == 0
+        assert f"{recognized} parts recognized" in capsys.readouterr().out

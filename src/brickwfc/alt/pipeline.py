@@ -378,7 +378,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
     )
-    source = load_source(args.input, args.data)
+    source = load_source(args.input, args.data, args.catalog)
     stats, style_label = learned_style(source.name, args.style_dir, args.sets_file, args.style_version)
     out = args.out or Path("out/alt") / source.name
     ignored_top = sorted(source.ignored.items(), key=lambda kv: (-kv[1], kv[0]))[:10]

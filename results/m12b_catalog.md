@@ -209,3 +209,70 @@ Part-type mass, all 28 sets (the sum of the folds / 3, as `alt.inputs.all_from_f
 - The M8 parts' counts are identical in v1 and v2: adding parts does not change how the old ones voxelize.
 - Most frequent new parts in v2: 4216 221, cheese slope 192, brick corner 190, slope 45 2×4 152, plate
   corner 145, slope 45 2×2 112, 2×1 107, inverted 2×1 106.
+
+## Before/after: the spaceship demo with the new catalog
+
+Figure: `results/m12b_catalog_before_after.png`.
+
+**Setup:**
+- Target: the M12 spaceship (silhouette + heights + colors), scaled to each set's inventory volume.
+- Builder: D2 with balance, bridge and connect.
+- Seeds 0–99 on both sides.
+- The top-selected build per set is shown.
+- Before: M8 catalog + v1 style (the M12 demo's cached candidates, which rebuild part-for-part identical).
+- After: full catalog + v2 style.
+- Means: `m12b_catalog_before_summary.json`, `m12b_catalog_after_summary.json`.
+
+Reproduce (the before run reuses `out/m12_demo` caches when copied in, otherwise regenerates them):
+
+```
+python -m brickwfc.experiments.demo --sets 6378-1 5891-1 --wfc-n 0 --n 100 --out out/m12b_catalog_fig/before
+python -m brickwfc.experiments.demo --sets 6378-1 5891-1 --wfc-n 0 --n 100 --catalog full --style-version v2 --out out/m12b_catalog_fig/after
+python -m brickwfc.experiments.catalog_figure
+```
+
+| set | run | parts in inventory | valid % | fill % | IoU | utilization % | best build: parts, slopes, corners, fill % | s/candidate |
+|---|---|---|---|---|---|---|---|---|
+| 6378-1 | before | 203 | 100 | 69.9 | 0.70 | 91.6 | 193, 0, 0, 74 | 15.2 |
+| 6378-1 | after | 204 | 100 | 71.1 | 0.71 | 92.7 | 194, 0, 1, 71 | 11.8 |
+| 5891-1 | before | 323 | 100 | 65.1 | 0.65 | 81.2 | 279, 0, 0, 67 | 22.6 |
+| 5891-1 | after | 460 | 100 | 62.5 | 0.63 | 82.6 | 382, 68, 2, 61 | 67.9 |
+
+**5891-1 (Apple Tree House) gains 137 parts.**
+- The best build uses 382 parts, 68 of them slopes: inverted 45° 2×1 23, 45° 2×2 12, concave corner slopes
+  8, cheese slopes 5, …. It also uses 2 corners.
+- Every build is still valid, stands on a table, and is one piece.
+- Fill drops 2.6 points. The target is scaled to the bigger inventory (grid 54×34×10 instead of 43×28×8),
+  and slopes cost fill: nothing may go on a sloped face.
+- Time per candidate triples. The inventory and grid are larger, and slopes are checked cell by cell
+  instead of through the fit map.
+
+**6378-1 (Shell Service Station) barely changes.** It gains a single 2420 corner: its other new-catalog
+parts are off the stud grid.
+
+**The judge is not compared across the two runs** (−0.34 vs −0.36/−0.38), since each run judges with its
+own style statistics.
+
+**The figure does not show slopes as slopes.** The isometric preview (`render3d`) draws every part as boxes
+of cells, with a slope's face drawn studless. So the gain is in what the build is made of, not yet in how
+the preview looks.
+- Open `out/m12b_catalog_fig/after/5891-1/d2/build_01.ldr` in Studio to see the real slopes.
+- A slope-aware preview (drawing sloped cells as wedges) is the obvious follow-up.
+
+**Verdict:** this step does not, on its own, make the demo look clearly better side by side. It makes more
+of each set usable, and gives the M12b looks steps (mirror symmetry, clean skins) and the learned proposal
+the parts they need.
+
+## Open points
+
+- **Mac, in the morning:** open `out/check/catalog_check.ldr` (in the `brick-wfc-catalog` worktree, or
+  regenerate with `python -m brickwfc.bricks.catalog_check`) in Studio.
+  - What it shows: every corner and slope orientation, with yellow 1×1 markers in the notches, on the
+    model's stud cells, and under the flat bottoms of inverted slopes (which stand one plate up).
+  - What should hold: each marker sits flush, on a real stud, never cutting into a slope face.
+  - Already checked automatically: `test_placement_matches_the_ldraw_part` checks the same facts against
+    the .dat files.
+- A slope-aware 3D preview.
+- The fit map could learn cell-set shapes (window sums over a footprint mask) to win back the slope speed.
+- Relaxing "nothing above a slope face" to allow overhangs would need per-cell heights.
+- 32028 (door rail) and the jumper plates (3794) remain the largest missing groups.

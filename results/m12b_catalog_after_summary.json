@@ -1,0 +1,114 @@
+[
+  {
+    "set": "6378-1",
+    "generator": "d2",
+    "parts": 204,
+    "candidates": 100,
+    "grid_YZX": [
+      7,
+      25,
+      37
+    ],
+    "shape_cells": 1680,
+    "built_pct": 100.0,
+    "valid_pct": 100.0,
+    "physics_pct": 100.0,
+    "connected_pct": 100.0,
+    "fill_pct": 71.08333333333333,
+    "iou": 0.7108333333333333,
+    "utilization_pct": 92.72058823529412,
+    "best_judge": -0.36164403310304405,
+    "best_fill_pct": 71.36904761904762,
+    "best_parts": 194,
+    "best_clutch": 8.0,
+    "best_png": "out\\m12b_catalog_fig\\after\\6378-1\\d2\\build_01.png",
+    "seconds_per_candidate": 11.830944021000397,
+    "check_failures": {
+      "too_small": 9
+    }
+  },
+  {
+    "set": "6378-1",
+    "generator": "d2_no_connect",
+    "parts": 204,
+    "candidates": 100,
+    "grid_YZX": [
+      7,
+      25,
+      37
+    ],
+    "shape_cells": 1680,
+    "built_pct": 100.0,
+    "valid_pct": 0.0,
+    "physics_pct": 100.0,
+    "connected_pct": 0.0,
+    "fill_pct": 72.05238095238096,
+    "iou": 0.7205238095238096,
+    "utilization_pct": 94.6470588235294,
+    "best_judge": NaN,
+    "best_fill_pct": NaN,
+    "best_parts": 0,
+    "best_clutch": NaN,
+    "best_png": null,
+    "seconds_per_candidate": 2.095272917999464,
+    "check_failures": {
+      "disconnected": 100
+    }
+  },
+  {
+    "set": "5891-1",
+    "generator": "d2",
+    "parts": 460,
+    "candidates": 100,
+    "grid_YZX": [
+      10,
+      34,
+      54
+    ],
+    "shape_cells": 4665,
+    "built_pct": 100.0,
+    "valid_pct": 100.0,
+    "physics_pct": 100.0,
+    "connected_pct": 100.0,
+    "fill_pct": 62.51211146838156,
+    "iou": 0.6251211146838156,
+    "utilization_pct": 82.61304347826088,
+    "best_judge": -0.3840870927223989,
+    "best_fill_pct": 61.371918542336545,
+    "best_parts": 382,
+    "best_clutch": 77.99999999999999,
+    "best_png": "out\\m12b_catalog_fig\\after\\5891-1\\d2\\build_01.png",
+    "seconds_per_candidate": 67.85042515400019,
+    "check_failures": {
+      "too_small": 9
+    }
+  },
+  {
+    "set": "5891-1",
+    "generator": "d2_no_connect",
+    "parts": 460,
+    "candidates": 100,
+    "grid_YZX": [
+      10,
+      34,
+      54
+    ],
+    "shape_cells": 4665,
+    "built_pct": 100.0,
+    "valid_pct": 0.0,
+    "physics_pct": 100.0,
+    "connected_pct": 0.0,
+    "fill_pct": 77.66216505894963,
+    "iou": 0.7766216505894963,
+    "utilization_pct": 91.70869565217392,
+    "best_judge": NaN,
+    "best_fill_pct": NaN,
+    "best_parts": 0,
+    "best_clutch": NaN,
+    "best_png": null,
+    "seconds_per_candidate": 5.02065323100047,
+    "check_failures": {
+      "disconnected": 100
+    }
+  }
+]
