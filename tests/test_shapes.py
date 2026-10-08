@@ -114,8 +114,9 @@ def test_bottom_up_any_offset_reaches_into_gaps(parts: PartSet) -> None:
     plate = next(s for s in shapes_of([PLATES["plate1x2"]]) if s.size_x == 2)
     red = colors_by_name(["red"])[0]
     rng = np.random.default_rng(0)
-    assert BottomUpBuilder(parts)._place(plate, red, 0, 0, 2, filled, allowed, rng) is None
-    part = BottomUpBuilder(parts, any_offset=True)._place(plate, red, 0, 0, 2, filled, allowed, rng)
+    studs = np.zeros_like(filled)
+    assert BottomUpBuilder(parts)._place(plate, red, 0, 0, 2, filled, studs, allowed, rng) is None
+    part = BottomUpBuilder(parts, any_offset=True)._place(plate, red, 0, 0, 2, filled, studs, allowed, rng)
     assert part is not None and part.cells() == [(0, 0, 1), (0, 0, 2)]
 
 

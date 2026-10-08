@@ -36,6 +36,7 @@ from brickwfc.bricks.inventory import (
     InventoryConstraint,
     inventory_cells,
     inventory_coverage,
+    PLATE_FILES,
     inventory_from_mpd,
     overuse,
     utilization,
@@ -215,7 +216,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     done = {(s["set"], s["shape"], s["condition"], s["seeds"]) for s in summaries}
     for set_number in args.sets:
         text = fetch_set(set_number, args.data).read_text(encoding="utf-8", errors="replace")
-        inventory, _, colors = inventory_from_mpd(text)
+        inventory, _, colors = inventory_from_mpd(text, PLATE_FILES)
         parts = part_tileset(list(PLATES.values()), colors, args.empty_weight, coverage=inventory_coverage(inventory))
         for shape_name in args.shapes:
             mask = sized_for(shape_name, args.volume * inventory_cells(inventory))

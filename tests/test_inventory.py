@@ -14,7 +14,7 @@ from brickwfc.bricks.inventory import (
     usage,
     utilization,
 )
-from brickwfc.bricks.parts import PLATES, PlacedPart, Shape, extract_parts, part_tileset
+from brickwfc.bricks.parts import PLATE_FILES, PLATES, PlacedPart, Shape, extract_parts, part_tileset
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.support import is_stable
 from brickwfc.experiments.inventory import grid_for, main as experiment_main
@@ -36,11 +36,14 @@ MPD = """0 FILE main.ldr
 
 
 def test_inventory_from_mpd_counts_parts_and_colors() -> None:
-    inventory, unsupported, colors = inventory_from_mpd(MPD)
+    inventory, unsupported, colors = inventory_from_mpd(MPD, PLATE_FILES)  # M9: the four plates only
     assert inventory == {("plate1x2", "red"): 1, ("plate1x2", "blue"): 1, ("plate2x4", "white"): 2}
     assert unsupported == {"3001.dat": 2}
     assert {c.name for c in colors} == {"red", "blue", "white"}
     assert inventory_cells(inventory) == 2 * 2 + 2 * 8
+    inventory, unsupported, _ = inventory_from_mpd(MPD)  # the whole catalog: 3001 is a 2x4 brick
+    assert inventory[("brick2x4", "white")] == 2 and not unsupported
+    assert inventory_cells(inventory) == 2 * 2 + 2 * 8 + 2 * 8 * 3
 
 
 def test_coverage_splits_orientations() -> None:

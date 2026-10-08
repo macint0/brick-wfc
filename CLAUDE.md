@@ -126,14 +126,12 @@ brick-wfc/
   faster than WFC. WFC keeps a small edge on overhangs (mushroom 53% vs 50%) at the cost of grip.
   **Use D2 as the bottom-up generator from here on**; D stays for reproducing earlier tables.
   Not done: shapes from an `.ldr` model or heightmap PNG (only primitives so far).
-
-### M8 — Part library: bricks, plates, tiles
-- Common sizes: bricks and plates 1×1, 1×2, 1×4, 2×2, 2×4 (+ 1×6, 2×6 if cheap); tiles 1×1, 1×2, 2×2.
-- Bricks span 3 plate layers → vertical integrity rules, like M5's horizontal ones.
-- Tiles have no studs → nothing may sit on top of a tile.
-- No slopes yet (non-box geometry); revisit later.
-**Done when:** integrity + stability tests pass on 100 random builds per part family; `.ldr` exports
-use the right part files and heights (brick = 24 LDU).
+- **M8 — Part library.** `parts.CATALOG`: 63 rectangular plates, bricks (3 layers) and tiles (no studs),
+  including lookalikes (2877, 6141, 2412b, …) kept as their own parts. Integrity in all 6 directions, nothing
+  on tiles, support needs a stud, physics knows bricks and tiles. Usable share of the 20 OMR sets: 8% → 51%
+  (`results/m8_parts.md`, `experiments/coverage.py`). Bottom-up builds full inventories (746 parts) in 2–5 s;
+  WFC does not scale to full inventories yet. `PLATE_FILES` keeps M7/M9/M11 reproducible.
+  To do (Mac): open `out/check/catalog_check.ldr` (`python -m brickwfc.bricks.catalog_check`) in Studio.
 
 ### M10 — Learn from real sets
 - Reuse the M7-in-progress code (fetch, flatten, voxelize, coverage weights).

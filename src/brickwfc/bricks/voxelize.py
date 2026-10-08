@@ -1,6 +1,6 @@
 """Voxelize real LDraw models into the M5 part/tile representation (M7).
 
-Only parts the generator knows (``parts.PLATES``) are kept, and only when they sit on the stud
+Only parts the generator knows (``parts.CATALOG`` by default) are kept, and only when they sit on the stud
 grid: rotated by a multiple of 90 degrees about the vertical axis, at stud/plate-aligned
 positions. Everything else is counted in the report and ignored, so a voxelized model is a
 partial view of the real one.
@@ -10,15 +10,15 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
+from typing import Mapping
 
 import numpy as np
 
 from brickwfc.bricks.colors import color_for_code
-from brickwfc.bricks.parts import PLATES, PartSet, PlacedPart, Shape, TileInfo
+from brickwfc.bricks.parts import BY_FILE, Part, PartSet, PlacedPart, Shape, TileInfo
 from brickwfc.ldraw.export import PLATE_LDU, STUD_LDU
 from brickwfc.ldraw.mpd import PartInstance
 
-KNOWN_FILES = {part.ldraw: part for part in PLATES.values()}
 TOLERANCE = 1e-3
 
 
@@ -52,13 +52,13 @@ def most_common_fraction(values: list[float]) -> float:
     return fractions.most_common(1)[0][0] if fractions else 0.0
 
 
-def voxelize(instances: list[PartInstance]) -> tuple[list[PlacedPart], VoxelizeReport]:
+def voxelize(instances: list[PartInstance], known: Mapping[str, Part] = BY_FILE) -> tuple[list[PlacedPart], VoxelizeReport]:
     report = VoxelizeReport(total_parts=len(instances))
     unrecognized: Counter[str] = Counter()
     # (shape, color, corner x, corner z, layer) in fractional cell units before snapping.
     candidates: list[tuple[Shape, int, float, float, float]] = []
     for inst in instances:
-        part = KNOWN_FILES.get(inst.part)
+        part = known.get(inst.part.lower())
         if part is None:
             report.unrecognized += 1
             unrecognized[inst.part] += 1
@@ -71,7 +71,7 @@ def voxelize(instances: list[PartInstance]) -> tuple[list[PlacedPart], VoxelizeR
         px, py, pz = inst.position
         corner_x = px / STUD_LDU - (shape.size_x - 1) / 2
         corner_z = pz / STUD_LDU - (shape.size_z - 1) / 2
-        layer = -py / PLATE_LDU - 1  # the part's origin is its top face; -Y is up
+        layer = -py / PLATE_LDU - part.height  # the part's origin is its top face; -Y is up
         candidates.append((shape, inst.color, corner_x, corner_z, layer))
     report.unrecognized_top = unrecognized.most_common(10)
 
@@ -117,5 +117,5 @@ def tile_grid(placed: list[PlacedPart], parts: PartSet) -> np.ndarray:
     grid = np.full(grid_shape(placed), index[TileInfo(None)], dtype=np.int64)
     for part in placed:
         for y, z, x in part.cells():
-            grid[y, z, x] = index[TileInfo(part.shape, x - part.x, z - part.z, part.color)]
+            grid[y, z, x] = index[TileInfo(part.shape, x - part.x, z - part.z, part.color, y - part.layer)]
     return grid

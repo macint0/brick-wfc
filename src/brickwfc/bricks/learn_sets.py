@@ -22,7 +22,7 @@ import numpy as np
 from brickwfc.bricks.__main__ import parse_size3
 from brickwfc.bricks.build import export_build
 from brickwfc.bricks.colors import BrickColor, color_for_code
-from brickwfc.bricks.parts import PLATES, PartSet, PlacedPart, extract_parts, part_tileset
+from brickwfc.bricks.parts import PLATE_FILES, PLATES, PartSet, PlacedPart, extract_parts, part_tileset
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.support import is_stable
 from brickwfc.bricks.voxelize import VoxelizeReport, tile_grid, voxelize
@@ -39,7 +39,8 @@ Coverage = dict[tuple[str, str], float]  # (shape name, color name) -> cells
 
 
 def load_set(path: Path) -> tuple[list[PlacedPart], VoxelizeReport]:
-    return voxelize(flatten(path.read_text(encoding="utf-8", errors="replace")))
+    # M7 learned from the four plates only; M10 will widen this to the catalog.
+    return voxelize(flatten(path.read_text(encoding="utf-8", errors="replace")), PLATE_FILES)
 
 
 def learn_coverage(models: Sequence[list[PlacedPart]]) -> tuple[Coverage, list[BrickColor]]:

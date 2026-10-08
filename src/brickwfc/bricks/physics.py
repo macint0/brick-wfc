@@ -2,11 +2,12 @@
 
 Model (vertical forces only; parts are rigid):
 
-- Each part weighs one unit per cell it covers, acting at the centre of its footprint.
-- Where a part rests on a part below (or on the ground) the faces touch over that cell:
+- Each part weighs one unit per cell it covers (a brick is 3 plate cells tall), acting at the centre of
+  its footprint.
+- Where a part's bottom layer rests on a part below (or on the ground) the faces touch over that cell:
   - **compression**: 4 push-only forces at the cell corners (contact pressure can act anywhere on the face);
   - **clutch**: 4 pull-only forces on the stud ring (radius ``STUD_RADIUS`` of a stud pitch) that hold
-    the upper part down onto the lower one. The ground has no studs, so it can only push.
+    the upper part down onto the lower one. The ground and tiles have no studs, so they can only push.
 - Every part must be in equilibrium: net vertical force and net torque about both horizontal axes are zero.
 
 ``required_clutch`` solves a linear program for the smallest clutch per stud that makes some force
@@ -73,14 +74,14 @@ def required_clutch(placed: list[PlacedPart], shape: tuple[int, int, int], basep
         n_vars += 1
 
     for i, part in enumerate(placed):
-        for y, z, x in part.cells():
+        for y, z, x in part.bottom_cells():
             lower = -1 if y == 0 else int(owner[y - 1, z, x])
             if y > 0 and lower < 0:
                 continue  # nothing below this stud
             cx, cz = x + 0.5, z + 0.5
             for dx, dz in CORNERS:
                 add_force(i, lower, cx + dx, cz + dz, sign=1.0)
-            if lower >= 0 or baseplate:
+            if (lower >= 0 and placed[lower].shape.part.studs) or (lower < 0 and baseplate):
                 for dx, dz in STUD_POINTS:
                     clutch_vars.append(n_vars)
                     add_force(i, lower, cx + dx, cz + dz, sign=-1.0)

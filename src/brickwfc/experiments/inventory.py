@@ -10,6 +10,10 @@ is 1/room (i.e. about the inventory's volume). Conditions (same seeds, same weig
   A_filter     WFC + support constraint; inventory checked only afterwards
   B_inventory  WFC + support + inventory constraints in propagation, with backtracking
   D_bottom_up  random bottom-up placement that skips used-up parts (no WFC)
+  D2_bottom_up_any_offset  the same, but a part may cover the visited cell with any of its cells (M11)
+
+``--catalog plates`` (default, M9) uses the set's four plate types only; ``--catalog full`` (M8) uses
+every part of the set that is in ``parts.CATALOG`` (plates, bricks, tiles and lookalikes).
 
 A build is **valid** if it is within the inventory and satisfies the support rule; physics (on a
 table) is reported separately. Results are saved after each (set, condition) and resumed.
@@ -34,18 +38,19 @@ from brickwfc.bricks.inventory import (
     InventoryConstraint,
     inventory_cells,
     inventory_coverage,
+    PLATE_FILES,
     inventory_from_mpd,
     overuse,
     utilization,
 )
-from brickwfc.bricks.parts import PLATES, PartSet, extract_parts, part_tileset
+from brickwfc.bricks.parts import CATALOG, PLATES, PartSet, extract_parts, part_tileset
 from brickwfc.bricks.physics import required_clutch
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.support import is_stable
 from brickwfc.ldraw.fetch import fetch_set
 from brickwfc.wfc import run
 
-CONDITIONS = ("A_filter", "B_inventory", "D_bottom_up")
+CONDITIONS = ("A_filter", "B_inventory", "D_bottom_up", "D2_bottom_up_any_offset")
 # Sets with >= 20 of the generator's plates, excluding the three largest (10018, 10129, 10143), where
 # one WFC build takes 20 s to minutes.
 DEFAULT_SETS = "10015-1 10019-1 10020-1 10037-1 10124-1 10128-1 10133-1 10134-1 10159-1 10170-1".split()
@@ -79,8 +84,8 @@ Build = Callable[[int], tuple[np.ndarray | None, int, int, float]]  # seed -> (g
 def make_generator(
     condition: str, parts: PartSet, inventory: Inventory, shape: tuple[int, int, int], max_attempts: int, max_backtracks: int
 ) -> Build:
-    if condition == "D_bottom_up":
-        builder = BottomUpBuilder(parts)
+    if condition.startswith("D"):
+        builder = BottomUpBuilder(parts, any_offset=condition == "D2_bottom_up_any_offset")
 
         def build(seed: int) -> tuple[np.ndarray | None, int, int, float]:
             start = time.perf_counter()
@@ -181,7 +186,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--seeds", type=int, default=30)
     parser.add_argument("--height", type=int, default=6, help="grid height in plates")
     parser.add_argument("--room", type=float, default=1.5, help="grid volume / inventory volume")
-    parser.add_argument("--conditions", nargs="+", default=list(CONDITIONS), choices=CONDITIONS)
+    parser.add_argument("--conditions", nargs="+", default=list(CONDITIONS[:3]), choices=CONDITIONS)
+    parser.add_argument("--catalog", choices=["plates", "full"], default="plates", help="which of the set's parts to use")
     parser.add_argument("--max-attempts", type=int, default=100)
     parser.add_argument("--max-backtracks", type=int, default=1000, help="per WFC attempt (B_inventory only)")
     parser.add_argument("--out", type=Path, default=Path("out/m9"))
@@ -192,11 +198,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     summaries: list[dict] = json.loads(summary_path.read_text(encoding="utf-8")) if summary_path.exists() else []
     done = {(s["set"], s["condition"], s["seeds"]) for s in summaries}
     for set_number in args.sets:
-        inventory, unsupported, colors = inventory_from_mpd(fetch_set(set_number, args.data).read_text(encoding="utf-8", errors="replace"))
+        text = fetch_set(set_number, args.data).read_text(encoding="utf-8", errors="replace")
+        if args.catalog == "plates":
+            inventory, unsupported, colors = inventory_from_mpd(text, PLATE_FILES)
+            part_list = list(PLATES.values())
+        else:
+            inventory, unsupported, colors = inventory_from_mpd(text)
+            part_list = [CATALOG[name] for name in sorted({name for name, _ in inventory})]
         shape = grid_for(inventory, args.height, args.room)
-        # Solid tiles' weights sum to len(PLATES); this empty weight makes the solid prior 1/room.
-        empty_weight = len(PLATES) * (args.room - 1)
-        parts = part_tileset(list(PLATES.values()), colors, empty_weight, coverage=inventory_coverage(inventory))
+        # Solid tiles' weights sum to len(part_list); this empty weight makes the solid prior 1/room.
+        empty_weight = len(part_list) * (args.room - 1)
+        parts = part_tileset(part_list, colors, empty_weight, coverage=inventory_coverage(inventory))
         for condition in args.conditions:
             if (set_number, condition, args.seeds) in done:
                 print(f"{set_number} {condition}: already done, skipping", flush=True)

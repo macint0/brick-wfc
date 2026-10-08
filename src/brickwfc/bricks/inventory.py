@@ -1,27 +1,28 @@
 """Parts inventories (M9): build only from the parts in a given set or collection.
 
 An inventory maps (part name, color name) -> count, e.g. ("plate2x4", "red") -> 3; part names are
-orientation-free (a turned 2x4 is still a 2x4). ``InventoryConstraint`` enforces the counts inside
+orientation-free (a turned 2x4 is still a 2x4) and come from ``parts.CATALOG``. ``InventoryConstraint`` enforces the counts inside
 WFC propagation: once a (part, color) is used up, its tiles are removed from every undecided cell.
 """
 
 from __future__ import annotations
 
 from collections import Counter
+from typing import Mapping
 
 import numpy as np
 
 from brickwfc.bricks.colors import BrickColor, color_for_code
-from brickwfc.bricks.parts import PLATES, PartSet, PlacedPart, shapes_of
-from brickwfc.bricks.voxelize import KNOWN_FILES
+from brickwfc.bricks.parts import BY_FILE, CATALOG, PLATE_FILES, Part, PartSet, PlacedPart, shapes_of
 from brickwfc.ldraw.mpd import flatten
 from brickwfc.wfc import Cell, Wave
 
 Inventory = dict[tuple[str, str], int]  # (part name, color name) -> count
 
 
-def inventory_from_mpd(text: str) -> tuple[Inventory, Counter[str], list[BrickColor]]:
-    """Count the generator's parts in an LDraw model (any position or orientation).
+def inventory_from_mpd(text: str, known: Mapping[str, Part] = BY_FILE) -> tuple[Inventory, Counter[str], list[BrickColor]]:
+    """Count the known parts (LDraw file -> part; default: the whole catalog) in an LDraw model,
+    in any position or orientation.
 
     Returns ``(inventory, unsupported part counts, colors used)``.
     """
@@ -29,7 +30,7 @@ def inventory_from_mpd(text: str) -> tuple[Inventory, Counter[str], list[BrickCo
     unsupported: Counter[str] = Counter()
     colors: dict[str, BrickColor] = {}
     for inst in flatten(text):
-        part = KNOWN_FILES.get(inst.part)
+        part = known.get(inst.part.lower())
         if part is None:
             unsupported[inst.part] += 1
             continue
@@ -39,19 +40,23 @@ def inventory_from_mpd(text: str) -> tuple[Inventory, Counter[str], list[BrickCo
     return dict(inventory), unsupported, sorted(colors.values(), key=lambda c: c.ldraw)
 
 
+def part_cells(part: Part) -> int:
+    return part.width * part.depth * part.height
+
+
 def inventory_cells(inventory: Inventory) -> int:
-    return sum(count * PLATES[part].width * PLATES[part].depth for (part, _), count in inventory.items())
+    """Volume of the inventory in grid cells (studs x studs x plate layers)."""
+    return sum(count * part_cells(CATALOG[part]) for (part, _), count in inventory.items())
 
 
 def inventory_coverage(inventory: Inventory) -> dict[tuple[str, str], float]:
-    """``part_tileset`` coverage weights: each (part, color) covers cells in proportion to its count,
-    split evenly over the part's orientations."""
+    """``part_tileset`` coverage weights: each (part, color) covers cells in proportion to its count
+    and volume, split evenly over the part's orientations."""
     coverage: dict[tuple[str, str], float] = {}
     for (part_name, color), count in inventory.items():
-        shapes = shapes_of([PLATES[part_name]])
-        area = PLATES[part_name].width * PLATES[part_name].depth
+        shapes = shapes_of([CATALOG[part_name]])
         for shape in shapes:
-            coverage[(shape.name, color)] = count * area / len(shapes)
+            coverage[(shape.name, color)] = count * part_cells(CATALOG[part_name]) / len(shapes)
     return coverage
 
 
@@ -74,7 +79,7 @@ def utilization(placed: list[PlacedPart], inventory: Inventory) -> float:
 class InventoryConstraint:
     """Never place more of a (part, color) than the inventory holds.
 
-    A placed part is counted by its anchor cell (offset 0, 0) once that cell is fixed. Adjacency
+    A placed part is counted by its anchor cell (offset 0, 0, 0) once that cell is fixed. Adjacency
     rules make a part's cells fix together, so a cell fixed to any tile of a part means the whole
     part, anchor included, is fixed. When a (part, color) reaches its limit, its tiles are removed
     from every undecided cell; exceeding the limit is a contradiction.
@@ -87,7 +92,7 @@ class InventoryConstraint:
                 continue
             anchors, tiles = groups.setdefault((info.shape.part.name, info.color.name), ([], []))
             tiles.append(tile)
-            if (info.offset_x, info.offset_z) == (0, 0):
+            if (info.offset_x, info.offset_y, info.offset_z) == (0, 0, 0):
                 anchors.append(tile)
         self.groups = [
             (key, np.array(anchors), np.array(tiles), inventory.get(key, 0)) for key, (anchors, tiles) in groups.items()

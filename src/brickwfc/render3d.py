@@ -18,11 +18,13 @@ def shade(rgb: RGB, factor: float) -> RGB:
     return tuple(int(round(c * factor)) for c in rgb)
 
 
-def render_voxels(filled: np.ndarray, colors: np.ndarray, stud: int = 14, background: RGB = (255, 255, 255)) -> Image.Image:
+def render_voxels(
+    filled: np.ndarray, colors: np.ndarray, stud: int = 14, background: RGB = (255, 255, 255), studs: np.ndarray | None = None
+) -> Image.Image:
     """Draw a (Y, Z, X) build seen from above its south-east corner.
 
     ``colors`` is (Y, Z, X, 3) uint8. Only exposed faces are drawn, back to front, and each
-    exposed top face gets a stud.
+    exposed top face gets a stud, except where ``studs`` (Y, Z, X bool, if given) is False (tiles).
     """
     ny, nz, nx = filled.shape
     half = stud / 2
@@ -60,14 +62,14 @@ def render_voxels(filled: np.ndarray, colors: np.ndarray, stud: int = 14, backgr
             faces.append((TOP_SHADE, [(x, z, y + 1), (x + 1, z, y + 1), (x + 1, z + 1, y + 1), (x, z + 1, y + 1)]))
         for factor, quad in faces:
             draw.polygon([screen(*p) for p in quad], fill=shade(base, factor), outline=line)
-        if exposed(y + 1, z, x):
+        if exposed(y + 1, z, x) and (studs is None or studs[y, z, x]):
             cx, cy = screen(x + 0.5, z + 0.5, y + 1)
             rx, ry, lift = stud * 0.38, half * 0.38, rise * 0.25
             draw.ellipse([cx - rx, cy - ry - lift, cx + rx, cy + ry - lift], fill=shade(base, 0.9), outline=line)
     return image
 
 
-def save_voxels_png(filled: np.ndarray, colors: np.ndarray, path: str | Path) -> None:
+def save_voxels_png(filled: np.ndarray, colors: np.ndarray, path: str | Path, studs: np.ndarray | None = None) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    render_voxels(filled, colors).save(path)
+    render_voxels(filled, colors, studs=studs).save(path)

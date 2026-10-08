@@ -5,7 +5,7 @@ import pytest
 
 from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.learn_sets import learn_coverage, main, shares, top_colors
-from brickwfc.bricks.parts import PLATES, PlacedPart, Shape, extract_parts, part_tileset
+from brickwfc.bricks.parts import PLATE_FILES, PLATES, PlacedPart, Shape, extract_parts, part_tileset
 from brickwfc.bricks.voxelize import axis_aligned_turn, tile_grid, voxelize
 from brickwfc.ldraw.export import write_ldr
 from brickwfc.ldraw.mpd import PartInstance, flatten
@@ -56,9 +56,9 @@ def test_voxelize_counts_what_it_skips() -> None:
         instance("3024.dat", 0, -16, 0),  # 1x1 on top, layer 1
         instance("3024.dat", 0, -16, 0),  # same spot again
         instance("3024.dat", 5, -16, 0),  # quarter-stud off
-        instance("3001.dat", 0, 0, 0),  # a brick: not a generator part
+        instance("3001.dat", 0, 0, 0),  # a brick: not one of the four M7 plates
         instance("3024.dat", 0, -8, 0, rotation=[[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # upside down
-    ])
+    ], PLATE_FILES)
     assert [(p.shape.name, p.layer, p.x, p.z) for p in placed] == [("plate2x4", 0, 0, 0), ("plate1x1", 1, 0, 0)]
     assert (report.overlapping, report.off_grid, report.unrecognized, report.tilted) == (1, 1, 1, 1)
 
