@@ -23,10 +23,22 @@ Python 3.11+.
 pip install -e ".[dev]"
 ```
 
-Dependencies: `numpy`, `Pillow`, `scipy`, and `pytest` for the tests. `trimesh` is approved for the mesh voxelizer
-(3D `.obj`/`.stl` targets) and is added to `pyproject.toml` with that step (check). PyTorch is used only in
-`training/`, on Colab, to train the learned proposal; it is not a dependency of the package (check:
-`training/` arrives with the m12b-proposal branch). Run the tests with `pytest`.
+Dependencies: `numpy`, `Pillow`, `scipy`, `trimesh` (the mesh voxelizer for `.obj`/`.stl` targets), and `pytest`
+for the tests. Run the tests with `pytest`.
+
+PyTorch is used only in `training/`, to train the learned proposal model; it is not a dependency of the package,
+which runs the trained model with numpy on the CPU. Training runs on a local GPU (an RTX 3060 Laptop, 6 GB, in about
+an hour), with CUDA PyTorch in a separate throwaway venv:
+
+```
+python -m venv <venv>
+<venv>/Scripts/pip install numpy torch --index-url https://download.pytorch.org/whl/cu124
+<venv>/Scripts/python training/train.py --data data/tokens --out out/proposal_run2 --batch 64 --steps 7000 \
+    --set-share 0.05 --val-sets 6378-1 31048-1
+```
+
+Use only the cu124 index: adding PyPI as an extra index makes pip pick a CPU-only wheel. On Colab instead (optional):
+`training/train.ipynb`.
 
 ## Make alternate builds
 
@@ -39,8 +51,12 @@ python -m brickwfc.alt 6372-1 --n 200 --k 8
 - an OMR set number such as `6372-1`, downloaded once to `data/omr/`;
 - an `.mpd`/`.ldr` model;
 - a `.csv` parts list, one `part file, LDraw color code, count` per line;
-- a set without an OMR model, which falls back to its Rebrickable inventory; `rebrickable:6372-1` forces this
-  (check: arrives with the m12c-rebrickable branch).
+- any other set number: a set without an OMR model falls back to its Rebrickable inventory (no model needed), and
+  `rebrickable:6372-1` forces this. On the 28 style sets, Rebrickable and OMR inventories agree to 0.95 on average
+  ([m12c_rebrickable.md](results/m12c_rebrickable.md)).
+
+Inventories are read with the full 88-part catalog (plates, bricks, tiles, lookalikes, 2 corners, 22 slopes);
+`--catalog m8` reads them with the 63 parts from before M12b.
 
 Main options:
 
@@ -52,17 +68,26 @@ Main options:
 | `--workers` | processes for generation (default: CPU count - 2); `--wfc-workers` caps WFC (memory) |
 | `--no-balance`, `--no-connect`, `--no-bridge` | switch off the tip-over check, the one-piece pass, the bridging preference |
 | `--max-clutch` | limit on the required clutch per stud in the physics check (default: unbounded) |
+| `--hollow N` | 3D target: a shell N cells thick plus internal pillars (default 0: solid) |
+| `--supports` | 3D target: add support columns under overhangs that are out of a part's reach |
+| `--no-open-tops` | with a target: let tiles cap cells that have target cells above them (as before M12b) |
+| `--style-version v1\|v2` | learned style statistics: v2 (default) includes slopes and corners; v1 is M10's |
 | `--seed`, `--out`, `--fresh` | first seed, output folder, discard cached candidates |
 
-`--shape` takes three kinds of input:
+`--shape` takes four kinds of input:
 
 1. **A primitive**: `block`, `pyramid`, `arch`, `mushroom`, `ring`.
 2. **A top-down silhouette image**: one pixel per stud, where opaque or dark pixels are inside. It is extruded
    `--shape-height` plates. `--height-map` (grey = height in plates) and `--color-map` (preferred colors) are
    optional and must be the same size as the silhouette.
 3. **A model**: an `.ldr`/`.mpd` file or an OMR set number, as solid columns by default (`--shape-exact` keeps the
-   exact cells), or a BrickGPT structure `brickgpt:<structure id>` from the StableText2Brick test split (a true 3D
-   target; `--shape-columns` turns it into solid columns).
+   exact cells).
+4. **A true 3D target**: a BrickGPT structure `brickgpt:<structure id>` from the StableText2Brick test split, or a
+   watertight `.obj`/`.stl` mesh, voxelized (`--voxels`, `--mesh-up`). `--shape-columns` turns either into solid
+   columns.
+
+With a target, open tops are on by default: a tile or a covered brick top may not sit where the target continues
+above it, so thin stems (table legs, chair posts) are not capped.
 
 Example with a silhouette and a color map:
 
@@ -124,8 +149,11 @@ regenerates each one.
 | M11 | target shapes, quick test (shape only) | [m11_shape_quick.md](results/m11_shape_quick.md) |
 | M11 | target shapes with inventories (10 sets x 5 shapes) | [m11_shape_inventory.md](results/m11_shape_inventory.md) |
 | M12 | the alternate-build pipeline: tip-over check, one piece, image/model targets, six-set demo | [m12_pipeline.md](results/m12_pipeline.md) |
-| M12b | 3D targets, learned proposal, slopes and corners (in progress) | [m12b_catalog.md](results/m12b_catalog.md) (corners, slopes); others as they merge |
-| M12c | inventories from Rebrickable, checked against 28 OMR models | (check: `results/m12c_rebrickable.md` after merge) |
+| M12b | 3D targets: BrickGPT structures, meshes, hollow targets, BrickGPT head-to-head | [m12b_brickgpt.md](results/m12b_brickgpt.md) |
+| M12b | overhangs: open tops (default), support columns, clutch limits | [m12b_overhangs_tables.md](results/m12b_overhangs_tables.md) |
+| M12b | 88-part catalog with 2 corners and 22 slopes: recognized share of the 28 style sets 61% → 69% (on the grid 49% → 57%), of the 20 OMR sets 51% → 57%; style statistics v2 | [m12b_catalog.md](results/m12b_catalog.md) |
+| M12b | learned proposal: token data, two training runs on a local GPU, run 2 chosen (comparison with the statistics still running) | [m12b_tokens.md](results/m12b_tokens.md), [m12b_proposal_training.md](results/m12b_proposal_training.md) |
+| M12c | inventories from Rebrickable for any set number, checked against 28 OMR models | [m12c_rebrickable.md](results/m12c_rebrickable.md) |
 | M13 | paper tables, diversity, budget curve, user-study helper | [m13_tables.md](results/m13_tables.md), [m13_diversity.md](results/m13_diversity.md) |
 
 ## Layout
@@ -134,6 +162,7 @@ regenerates each one.
 src/brickwfc/   wfc.py, tileset.py (WFC core); bricks/ (parts, decoder, physics, style, inventory, shapes);
                 alt/ (the pipeline); funnel/ (verify, dedupe, judge, select, diversity); ldraw/ (IO, OMR fetch);
                 experiments/ (drivers for the results)
+training/       the learned proposal model: train.py (PyTorch, separate venv), train.ipynb (Colab), parity.py
 tests/          pytest
 results/        write-ups and summary data of every experiment
 paper/          LaTeX sources (powershell -File paper/build.ps1)

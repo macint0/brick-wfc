@@ -21,6 +21,11 @@ after each unit of work, and units already done are skipped.
 
 **Parallel output.** Parallel drivers give the same output for any worker count, apart from wall times.
 
+**Tests in a git worktree.** `pyproject.toml` sets `[tool.pytest.ini_options] pythonpath = ["src"]`, so pytest
+puts the checkout's own `src/` ahead of `PYTHONPATH`. To test a worktree's tests against another branch's package,
+override it: `pytest -o pythonpath=<other checkout>/src`. Drivers run with `python -m` are not affected; set
+`PYTHONPATH=<worktree>/src` for those, because the editable install points at the main checkout.
+
 ## Per results file
 
 ### `results/m6_stability.md` (M6), with `m6_stability_summary.json`
@@ -89,8 +94,8 @@ python -m brickwfc.experiments.style --workers 10 --wfc-workers 2 --out out/m10
 
 - About 40 minutes on 10 worker processes, 2 of them for WFC (memory).
 - Resumable per (set, condition, style).
-- Writes `style_fold{0..3}.json` under `--out`; `results/m10_style_stats/` holds the copies used by the
-  pipeline (check).
+- Writes `style_fold{0..3}.json` under `--out`; `results/m10_style_stats/` holds the copies the pipeline reads
+  (`alt.inputs.STYLE_DIR`), next to the v2 files of M12b step 4.
 
 ### `results/m11_shape_quick.md` (M11 quick test), with `m11_shape_quick_summary.json`
 
@@ -214,10 +219,29 @@ python -m brickwfc.experiments.paper_tables
 - Then `python paper/tables.py` turns the tables into LaTeX for `paper/`, and `powershell -File paper/build.ps1`
   builds the PDF.
 
+### `results/m12b_tokens.md` (M12b step 2a)
+
+```
+python -m brickwfc.experiments.export_tokens --omr data/omr --out data/tokens --workers 3
+```
+
+- Minutes, after the BrickGPT train split is downloaded into `data/brickgpt/` (fetched if missing; resumable).
+- Writes `vocab.json`, `train.npz`, `val.npz` and `heldout.npz` under `data/tokens/` (gitignored), and the
+  statistics in the write-up.
+- The write-up and the trained models used the 63-part catalog (488 tokens; run at 922f0e6). On main the
+  vocabulary has the 88-part catalog's shapes (548 tokens before set colors), so a rerun exports different data,
+  which does not fit the trained runs' `vocab.json`.
+
 ### `results/m12b_proposal_training.md` (M12b step 2)
 
 Trained on a local GPU (RTX 3060 Laptop, 6 GB) with PyTorch 2.6.0+cu124 in a separate venv; PyTorch is not a project
-dependency. One data process; mixed precision.
+dependency. One data process; mixed precision. Make the venv once (use only the cu124 index; with PyPI as an extra
+index, pip picks a CPU-only wheel), then run the commands below with its `python`:
+
+```
+python -m venv <venv>
+<venv>/Scripts/pip install numpy torch --index-url https://download.pytorch.org/whl/cu124
+```
 
 ```
 python training/train.py --data data/tokens --out out/proposal_run1 --batch 64 --steps 7000 --minutes 62
@@ -232,7 +256,19 @@ PYTHONPATH=src python training/parity.py check --weights out/proposal_run2/propo
 - Resumable: a checkpoint is saved at every evaluation.
 - Copy `proposal.npz`, `vocab.json` and `log.jsonl` into `data/models/` (as `proposal_run{1,2}.npz` and
   `proposal_run{1,2}_log.jsonl`).
-- On Colab instead: `training/train.ipynb`.
+- Run 2 is the model chosen for the comparison with the statistics (reasons in the write-up's last section).
+- Optional alternative: `training/train.ipynb` on Colab (free T4).
+
+### `results/m12c_rebrickable.md` (M12c), with `m12c_rebrickable.json`
+
+```
+python -m brickwfc.experiments.rebrickable_check --omr data/omr --out out/m12c/rebrickable.md
+```
+
+- About 15 s once the Rebrickable CSVs are in `data/rebrickable/` (downloaded on first use).
+- The driver's default `--out` is `results/m12c_rebrickable.md` itself, which overwrites the write-up.
+- The write-up used the 63-part catalog (run before the 88-part catalog merged, at 056cff2). A rerun on main reads
+  both inventories with corners and slopes, so the part counts and agreements change.
 
 ### `results/m12b_brickgpt.md` (M12b steps 1a and 1c), with `m12b_brickgpt_summary.json`, `m12b_hollow_summary.json`, `m12b_before_after.png`, `m12b_hollow_before_after.png`
 
@@ -258,20 +294,13 @@ python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt --steps 1d --wor
 - Runs the six BrickGPT objects × 3 sets × {exact, open tops, supports} and the table on the six demo sets.
 - 31 CPU-hours over these runs (the exact runs are shared with step 1a). Resumable through the pipeline caches.
 
-## Not on main yet, or not run yet
+## Not run yet
 
-Commands for results that are on branches or still to be run:
+Commands for results that are still to be run (the drivers are on main):
 
-- **M12b step 2, token dataset (`results/m12b_tokens.md`, branch m12b-proposal)**:
-  `python -m brickwfc.experiments.export_tokens --omr data/omr --workers 3`.
-  Minutes, after the BrickGPT train split is downloaded (resumable). Training runs on Colab:
-  `training/train.ipynb`.
-- **M12b step 2, learned proposal vs statistics (branch m12b-proposal)**:
-  `python -m brickwfc.experiments.proposal --weights data/models/proposal.npz --out out/m12b_proposal`.
+- **M12b step 2, learned proposal vs statistics** (running now; no results file yet):
+  `python -m brickwfc.experiments.proposal --weights data/models/proposal_run2.npz --out out/m12b_proposal`.
   Resumable; 3 workers by default.
-- **M12c, Rebrickable check (`results/m12c_rebrickable.md`, branch m12c-rebrickable)**:
-  `python -m brickwfc.experiments.rebrickable_check --omr data/omr`.
-  About 15 s once the CSVs are downloaded.
 - **M13 budget curve**:
   `python -m brickwfc.experiments.budget_curve --out out/m13_budget`.
   - Defaults: 3 sets, 10 seeds, budgets up to 600 s.

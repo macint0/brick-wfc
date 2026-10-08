@@ -1,5 +1,9 @@
 # M12b step 4 — corner and slope parts
 
+**On main since 2ec12ce:** the 88-part catalog, the coverage files, style v2, the slope-aware preview and the
+before/after figure `results/m12b_catalog_before_after.png` with its two summaries. The usable (recognized) share
+rises 61% → 69% on the 28 style sets and 51% → 57% on the 20 OMR sets.
+
 ## What changed
 
 - **Part geometry per cell** (`bricks/parts.py`). A part can now have:
@@ -266,8 +270,8 @@ the parts they need.
 
 ## Open points
 
-- **Mac, in the morning:** open `out/check/catalog_check.ldr` (in the `brick-wfc-catalog` worktree, or
-  regenerate with `python -m brickwfc.bricks.catalog_check`) in Studio.
+- **Mac, in the morning:** open `out/check/catalog_check.ldr` (written by
+  `python -m brickwfc.bricks.catalog_check`) in Studio.
   - What it shows: every corner and slope orientation, with yellow 1×1 markers in the notches, on the
     model's stud cells, and under the flat bottoms of inverted slopes (which stand one plate up).
   - What should hold: each marker sits flush, on a real stud, never cutting into a slope face.
