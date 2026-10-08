@@ -259,6 +259,28 @@ PYTHONPATH=src python training/parity.py check --weights out/proposal_run2/propo
 - Run 2 is the model chosen for the comparison with the statistics (reasons in the write-up's last section).
 - Optional alternative: `training/train.ipynb` on Colab (free T4).
 
+### `results/m12b_proposal.md` (M12b step 2: learned proposal vs statistics), with `m12b_proposal_summary.json`, `m12b_proposal_runs.jsonl`, `m12b_proposal_before_after.png`
+
+Needs `data/models/proposal_run2.npz` and `vocab.json` (see the previous section). One invocation per set, smallest
+first, then one for the summary over all sets:
+
+```
+for s in 7796-1 6370-1 7743-1 5891-1 10264-1 10243-1 10197-1; do
+  python -m brickwfc.experiments.proposal --weights data/models/proposal_run2.npz --seeds 5 --workers 10       --sets $s --out out/m12b_proposal
+done
+python -m brickwfc.experiments.proposal --weights data/models/proposal_run2.npz --seeds 5 --out out/m12b_proposal
+python -m brickwfc.experiments.proposal_report --dir out/m12b_proposal --weights data/models/proposal_run2.npz     --figure-set 6370-1 --figure results/m12b_proposal_before_after.png --json results/m12b_proposal_summary.json     --spot-check 6
+```
+
+- Style statistics v2 (`--style-version`, the default). The driver refuses to resume into a folder holding builds
+  made with another version.
+- About 7 minutes on 10 workers (35 minutes of build time); the largest set takes up to 104 s per proposal build.
+- Resumable per (set, condition, seed). `runs.jsonl` logs each build's placed parts, so the report and the figure
+  need no rebuilds; `--spot-check` rebuilds a few builds from their seeds and checks that they match.
+- The report prints the write-up's tables.
+- `results/m12b_proposal_runs.jsonl` is `runs.jsonl` without the placed parts (the copying step is manual); the
+  paper tables read it.
+
 ### `results/m12c_rebrickable.md` (M12c), with `m12c_rebrickable.json`
 
 ```
@@ -298,9 +320,6 @@ python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt --steps 1d --wor
 
 Commands for results that are still to be run (the drivers are on main):
 
-- **M12b step 2, learned proposal vs statistics** (running now; no results file yet):
-  `python -m brickwfc.experiments.proposal --weights data/models/proposal_run2.npz --out out/m12b_proposal`.
-  Resumable; 3 workers by default.
 - **M13 budget curve**:
   `python -m brickwfc.experiments.budget_curve --out out/m13_budget`.
   - Defaults: 3 sets, 10 seeds, budgets up to 600 s.
