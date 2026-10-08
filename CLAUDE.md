@@ -132,6 +132,12 @@ brick-wfc/
   (`results/m8_parts.md`, `experiments/coverage.py`). Bottom-up builds full inventories (746 parts) in 2–5 s;
   WFC does not scale to full inventories yet. `PLATE_FILES` keeps M7/M9/M11 reproducible.
   To do (Mac): open `out/check/catalog_check.ldr` (`python -m brickwfc.bricks.catalog_check`) in Studio.
+- **M9b — Inventory with the full catalog + set selection.** `experiments/inventory.py --catalog full`
+  (`results/m9b_inventory_catalog.md`): builds use 35–67% of each set's parts; bottom-up D/D2 100% valid,
+  99.5% used, up to 746 parts in ≤ 4.4 s; WFC + inventory (`wfc.run(time_limit_s=30)`) 2.5% valid, 0/20 on
+  7 of 8 sets (late inventory dead ends + raw cost; fixes listed there, not attempted). D2 stands 83.5%
+  (bricks tip over more). `experiments/sets.py`: 28 building sets for M10 (≥ 50% recognized, ≥ 50 parts,
+  ≥ 50% of recognized parts on the grid, no re-releases; `results/sets_selection.md`).
 
 ### M10 — Learn from real sets
 - Reuse the M7-in-progress code (fetch, flatten, voxelize, coverage weights).

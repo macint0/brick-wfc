@@ -111,3 +111,11 @@ def test_stats_are_populated(terrain: Tileset) -> None:
     assert stats.success
     assert 1 <= stats.cells_collapsed <= 64
     assert stats.wall_time_s > 0
+
+
+def test_time_limit(terrain: Tileset) -> None:
+    stopped = run(terrain, (12, 12), seed=0, time_limit_s=0.0)
+    assert stopped.grid is None and stopped.stats.timed_out and not stopped.stats.success
+    generous = run(terrain, (12, 12), seed=0, time_limit_s=60.0)
+    unlimited = run(terrain, (12, 12), seed=0)
+    assert not generous.stats.timed_out and np.array_equal(generous.grid, unlimited.grid)
