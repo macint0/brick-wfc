@@ -34,7 +34,9 @@ and 100% one piece.
    (5891-1), 30 → 62 (4956-1) and 44 → 78 (10182-1). On 374-1 it barely moves (49 → 50).
 2. **Supports only pay off where the object hangs over nothing.**
    - Chair: fill goes from 16/9/74 with open tops to 53/28/72 with supports (no gain on 10182-1). The seat is held up by columns
-     that cost 19–24% of the object's cells.
+     that cost 19–24% of the object's cells. The columns also keep the chair within real clutch (≤ 1111): 84/88/100% of builds
+     with supports, against 80/88/2% with open tops alone. Full chairs without columns are long cantilevers (see
+     `m12b_brickgpt.md`).
    - Bench, 5891-1: 75 → 81.
    - Table: the table top needs columns worth 86–103% of the object, and they use up the inventory. Fill drops
      to 20/23/68, against 54/64/78 with open tops alone.

@@ -196,13 +196,26 @@ PYTHONPATH=src python training/parity.py check --weights out/proposal_run2/propo
   `proposal_run{1,2}_log.jsonl`).
 - On Colab instead: `training/train.ipynb`.
 
+### `results/m12b_brickgpt.md` (M12b steps 1a and 1c), with `m12b_brickgpt_summary.json`, `m12b_hollow_summary.json`, `m12b_before_after.png`, `m12b_hollow_before_after.png`
+
+```
+python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt --steps 1d 1c 1a --workers 6
+```
+
+- Step 1a's head-to-head uses step 1d's open-tops runs, so run 1d first (or in the same command, as above).
+- Writes `results.md`, `summary.json`, `objects.png`, `before_after.png` (1a) and `hollow.md`,
+  `hollow_summary.json`, `hollow_before_after.png` (1c) under `--out`.
+- Downloads the StableText2Brick test split into `data/brickgpt/` on first use (resumable).
+- Resumable through the pipeline caches. The 21 hollow runs (1c) take 6.3 CPU-hours.
+
 ### `results/m12b_overhangs_tables.md` (M12b step 1d), with `m12b_opentops_before_after.png`
 
 ```
 python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt --steps 1d --workers 6
 ```
 
-- Writes `overhangs.md`, `overhangs_summary.json` and `overhangs_before_after.png` under `--out`. The write-up's
+- Writes `overhangs.md`, `overhangs_summary.json` (copied to `results/m12b_overhangs_summary.json`) and
+  `overhangs_before_after.png` under `--out`. The write-up's
   tables are `overhangs.md`; the figure is `overhangs_before_after.png`.
 - Runs the six BrickGPT objects × 3 sets × {exact, open tops, supports} and the table on the six demo sets.
 - 31 CPU-hours over these runs (the exact runs are shared with step 1a). Resumable through the pipeline caches.
@@ -211,10 +224,6 @@ python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt --steps 1d --wor
 
 Commands for results that are on branches or still to be run:
 
-- **M12b step 1a, BrickGPT head-to-head**:
-  `python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt`.
-  Resumable through the pipeline caches; 17.1 CPU-hours over the 25 runs so far. Its results file is not in
-  `results/` yet (check).
 - **M12b step 2, token dataset (`results/m12b_tokens.md`, branch m12b-proposal)**:
   `python -m brickwfc.experiments.export_tokens --omr data/omr --workers 3`.
   Minutes, after the BrickGPT train split is downloaded (resumable). Training runs on Colab:

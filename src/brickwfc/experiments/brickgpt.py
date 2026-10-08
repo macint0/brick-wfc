@@ -7,7 +7,7 @@ count, ties by id) of each of the ``--categories`` most common categories. This 
 BrickGPT's *data*, not its model (which needs a GPU, a gated Llama checkpoint and Gurobi): their
 structure for an object is built from unlimited bricks of 8 sizes; ours is the alternate-build pipeline
 (``alt``: D2, ``--n`` candidates, top-judged build) from one real set's inventory, with the structure's
-exact cells as the target, scaled to that inventory's volume. Every brick size they use is a catalog
+exact cells as the target (open tops: the 1d runs), scaled to that inventory's volume. Every brick size they use is a catalog
 brick, so their structures convert exactly into our parts and the stability (``physics.table_clutch``)
 and piece counts (``balance.clusters``) are the same measurements on both sides.
 
@@ -225,7 +225,7 @@ def tables(objects: list[dict], rows: list[dict], figure: list[dict]) -> str:
                      f"{o['size_studs'][0]}x{o['size_studs'][1]}x{o['height_bricks']} | {o['cells']} | "
                      f"{stands(o['clutch'])} | {f(o['clutch'], '{:.1f}')} | {o['clusters']} | {o['score_min']:.3f} | "
                      f"{o['score_positive_pct']:.0f} |")
-    lines += ["", "### Ours (D2 + learned style from one set's inventory; the structure's exact cells as target)", "",
+    lines += ["", "### Ours (D2 + learned style from one set's inventory; the structure's exact cells as target, open tops)", "",
               "| object | set | inventory parts | grid (WxDxH) | target cells | valid % | physics % | one piece % "
               "| fill % | IoU | utilization % | best: parts | best: fill % | best: clutch | their clutch | best: pieces "
               "| s/candidate |",
@@ -243,7 +243,7 @@ def tables(objects: list[dict], rows: list[dict], figure: list[dict]) -> str:
               "| best: clutch | s/candidate |", "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in figure:
         y, z, x = r["grid_YZX"]
-        lines.append(f"| {r['set']} | {'columns' if r['columns'] else 'exact'} | {x}x{z}x{y} | {r['target_cells']} | "
+        lines.append(f"| {r['set']} | {'columns' if r['columns'] else 'exact, open tops'} | {x}x{z}x{y} | {r['target_cells']} | "
                      f"{r['valid_pct']:.0f} | {f(r['fill_pct'], '{:.1f}')} | {f(r['iou'], '{:.2f}')} | "
                      f"{r['best_parts']} | {f(r['best_fill_pct'], '{:.1f}')} | {f(r['best_clutch'], '{:.1f}')} | "
                      f"{r['seconds_per_candidate']:.2f} |")
@@ -347,8 +347,8 @@ def before_after(structure: brickgpt.Structure, runs: list[dict], variants: tupl
 
 def step_1a(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
     objects = [theirs(s, args.out / "brickgpt") for s in picked]
-    rows = [ours(set_number, s, run_ours(set_number, s, args.out, args.n, args.workers))
-            for s in picked for set_number in args.sets]
+    rows = [ours(set_number, s, run_ours(set_number, s, args.out, args.n, args.workers, "opentops"), "opentops")
+            for s in picked for set_number in args.sets]  # the pipeline default; exact runs: step 1d
     chair = next((s for s in picked if s.category_id == FIGURE_CATEGORY), picked[0])
     figure = [ours(set_number, chair, run_ours(set_number, chair, args.out, args.n, args.workers, variant), variant)
               for set_number in args.figure_sets for variant in ("columns", "opentops")]
