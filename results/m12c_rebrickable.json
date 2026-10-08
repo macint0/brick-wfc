@@ -1,0 +1,2722 @@
+{
+  "sets": [
+    {
+      "set": "349-1",
+      "name": "Swiss Chalet",
+      "year": 1971,
+      "inventory_version": 1,
+      "omr_parts": 46,
+      "rb_parts": 46,
+      "agreement": 1.0,
+      "agreement_parts": 1.0,
+      "agreement_colors": 1.0,
+      "largest_differences": [],
+      "rebrickable": {
+        "set": "349-1",
+        "name": "Swiss Chalet",
+        "year": 1971,
+        "inventory_version": 1,
+        "parts": 81,
+        "recognized": 46,
+        "via_parent": {
+          "3002a -> 3002": 1,
+          "3003a -> 3003": 2
+        },
+        "ignored_top": [
+          [
+            "3297",
+            10
+          ],
+          [
+            "3069a",
+            6
+          ],
+          [
+            "3185",
+            3
+          ],
+          [
+            "3298",
+            3
+          ],
+          [
+            "646bc01",
+            3
+          ],
+          [
+            "3081bc01",
+            2
+          ],
+          [
+            "3300",
+            2
+          ],
+          [
+            "3068a",
+            1
+          ],
+          [
+            "3144",
+            1
+          ],
+          [
+            "3299",
+            1
+          ]
+        ],
+        "ignored": 35,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "374-1",
+      "name": "Fire Station",
+      "year": 1978,
+      "inventory_version": 1,
+      "omr_parts": 219,
+      "rb_parts": 221,
+      "agreement": 0.9383259911894273,
+      "agreement_parts": 0.9383259911894273,
+      "agreement_colors": 0.9909502262443439,
+      "largest_differences": [
+        [
+          "brick1x1_3062a",
+          "black",
+          2
+        ],
+        [
+          "brick1x1_3062a",
+          "ldraw33",
+          2
+        ],
+        [
+          "brick1x1_3062a",
+          "red",
+          2
+        ],
+        [
+          "brick1x1_3062b",
+          "black",
+          -2
+        ],
+        [
+          "brick1x1_3062b",
+          "ldraw33",
+          -2
+        ]
+      ],
+      "rebrickable": {
+        "set": "374-1",
+        "name": "Fire Station",
+        "year": 1978,
+        "inventory_version": 1,
+        "parts": 321,
+        "recognized": 221,
+        "via_parent": {
+          "3001a -> 3001": 3,
+          "3002a -> 3002": 1,
+          "3003a -> 3003": 1
+        },
+        "ignored_top": [
+          [
+            "3641",
+            12
+          ],
+          [
+            "122c01",
+            6
+          ],
+          [
+            "3581",
+            6
+          ],
+          [
+            "3665",
+            6
+          ],
+          [
+            "3788",
+            6
+          ],
+          [
+            "3633",
+            4
+          ],
+          [
+            "3644",
+            4
+          ],
+          [
+            "3659",
+            4
+          ],
+          [
+            "3660",
+            4
+          ],
+          [
+            "3854",
+            4
+          ]
+        ],
+        "ignored": 100,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "377-1",
+      "name": "Shell Service Station",
+      "year": 1978,
+      "inventory_version": 1,
+      "omr_parts": 139,
+      "rb_parts": 140,
+      "agreement": 0.9241379310344827,
+      "agreement_parts": 0.9241379310344827,
+      "agreement_colors": 0.9928571428571429,
+      "largest_differences": [
+        [
+          "brick1x1_3062a",
+          "ldraw47",
+          2
+        ],
+        [
+          "brick1x1_3062a",
+          "old_light_gray",
+          2
+        ],
+        [
+          "brick1x1_3062b",
+          "ldraw47",
+          -2
+        ],
+        [
+          "brick1x1_3062b",
+          "old_light_gray",
+          -2
+        ],
+        [
+          "brick1x1_3062a",
+          "blue",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "377-1",
+        "name": "Shell Service Station",
+        "year": 1978,
+        "inventory_version": 1,
+        "parts": 183,
+        "recognized": 140,
+        "via_parent": {
+          "3001a -> 3001": 1,
+          "3002a -> 3002": 8,
+          "3003a -> 3003": 5
+        },
+        "ignored_top": [
+          [
+            "3641",
+            6
+          ],
+          [
+            "3317",
+            4
+          ],
+          [
+            "3831",
+            4
+          ],
+          [
+            "75775",
+            4
+          ],
+          [
+            "3040a",
+            3
+          ],
+          [
+            "122c01",
+            2
+          ],
+          [
+            "3633",
+            2
+          ],
+          [
+            "3660b",
+            2
+          ],
+          [
+            "3665",
+            2
+          ],
+          [
+            "3788",
+            2
+          ]
+        ],
+        "ignored": 43,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "361-2",
+      "name": "Garage",
+      "year": 1979,
+      "inventory_version": 1,
+      "omr_parts": 52,
+      "rb_parts": 50,
+      "agreement": 0.9245283018867925,
+      "agreement_parts": 0.9245283018867925,
+      "agreement_colors": 0.9615384615384616,
+      "largest_differences": [
+        [
+          "brick1x4",
+          "red",
+          -3
+        ],
+        [
+          "brick1x8",
+          "red",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "361-2",
+        "name": "Garage",
+        "year": 1979,
+        "inventory_version": 1,
+        "parts": 75,
+        "recognized": 50,
+        "via_parent": {
+          "3008b -> 3008": 6,
+          "3008bpr0007 -> 3008": 1,
+          "3009b -> 3009": 6
+        },
+        "ignored_top": [
+          [
+            "3854",
+            8
+          ],
+          [
+            "3853",
+            4
+          ],
+          [
+            "3010a",
+            3
+          ],
+          [
+            "3581",
+            2
+          ],
+          [
+            "3644",
+            2
+          ],
+          [
+            "3865",
+            2
+          ],
+          [
+            "3185",
+            1
+          ],
+          [
+            "3836",
+            1
+          ],
+          [
+            "3837",
+            1
+          ],
+          [
+            "3861b",
+            1
+          ]
+        ],
+        "ignored": 25,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "6363-1",
+      "name": "Auto Service Station",
+      "year": 1980,
+      "inventory_version": 1,
+      "omr_parts": 95,
+      "rb_parts": 93,
+      "agreement": 0.9789473684210527,
+      "agreement_parts": 0.9789473684210527,
+      "agreement_colors": 0.9789473684210527,
+      "largest_differences": [
+        [
+          "brick1x4",
+          "black",
+          -2
+        ]
+      ],
+      "rebrickable": {
+        "set": "6363-1",
+        "name": "Auto Service Station",
+        "year": 1980,
+        "inventory_version": 1,
+        "parts": 138,
+        "recognized": 93,
+        "via_parent": {
+          "3008b -> 3008": 1,
+          "3009b -> 3009": 8
+        },
+        "ignored_top": [
+          [
+            "3665",
+            5
+          ],
+          [
+            "4084",
+            4
+          ],
+          [
+            "4085a",
+            4
+          ],
+          [
+            "122c01",
+            2
+          ],
+          [
+            "3010a",
+            2
+          ],
+          [
+            "3854",
+            2
+          ],
+          [
+            "3865",
+            2
+          ],
+          [
+            "4006",
+            2
+          ],
+          [
+            "4079",
+            2
+          ],
+          [
+            "4081a",
+            2
+          ]
+        ],
+        "ignored": 45,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "6382-1",
+      "name": "Fire Station",
+      "year": 1981,
+      "inventory_version": 1,
+      "omr_parts": 212,
+      "rb_parts": 214,
+      "agreement": 0.9906542056074766,
+      "agreement_parts": 0.9906542056074766,
+      "agreement_colors": 0.9906542056074766,
+      "largest_differences": [
+        [
+          "plate1x2",
+          "red",
+          2
+        ]
+      ],
+      "rebrickable": {
+        "set": "6382-1",
+        "name": "Fire Station",
+        "year": 1981,
+        "inventory_version": 1,
+        "parts": 380,
+        "recognized": 214,
+        "via_parent": {},
+        "ignored_top": [
+          [
+            "4216",
+            28
+          ],
+          [
+            "4218",
+            18
+          ],
+          [
+            "3853",
+            12
+          ],
+          [
+            "3855a",
+            11
+          ],
+          [
+            "3939",
+            8
+          ],
+          [
+            "3742",
+            6
+          ],
+          [
+            "122c01",
+            4
+          ],
+          [
+            "3641",
+            4
+          ],
+          [
+            "4084",
+            4
+          ],
+          [
+            "4217",
+            4
+          ]
+        ],
+        "ignored": 166,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "6362-1",
+      "name": "Post Office",
+      "year": 1982,
+      "inventory_version": 1,
+      "omr_parts": 82,
+      "rb_parts": 87,
+      "agreement": 0.9204545454545454,
+      "agreement_parts": 0.9204545454545454,
+      "agreement_colors": 0.9204545454545454,
+      "largest_differences": [
+        [
+          "tile1x2",
+          "white",
+          6
+        ],
+        [
+          "brick1x2",
+          "yellow",
+          -1
+        ]
+      ],
+      "rebrickable": {
+        "set": "6362-1",
+        "name": "Post Office",
+        "year": 1982,
+        "inventory_version": 1,
+        "parts": 132,
+        "recognized": 87,
+        "via_parent": {
+          "3003a -> 3003": 3,
+          "3069bpr0099 -> 3069b": 6
+        },
+        "ignored_top": [
+          [
+            "3297",
+            6
+          ],
+          [
+            "3298",
+            6
+          ],
+          [
+            "3641",
+            4
+          ],
+          [
+            "122c01",
+            2
+          ],
+          [
+            "3358",
+            2
+          ],
+          [
+            "3359",
+            2
+          ],
+          [
+            "3660",
+            2
+          ],
+          [
+            "4345apr0003",
+            2
+          ],
+          [
+            "4346pr0002",
+            2
+          ],
+          [
+            "4347",
+            2
+          ]
+        ],
+        "ignored": 45,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "6372-1",
+      "name": "Town House",
+      "year": 1982,
+      "inventory_version": 1,
+      "omr_parts": 134,
+      "rb_parts": 137,
+      "agreement": 0.9781021897810219,
+      "agreement_parts": 0.9781021897810219,
+      "agreement_colors": 0.9781021897810219,
+      "largest_differences": [
+        [
+          "tile1x2",
+          "white",
+          2
+        ],
+        [
+          "tile2x2",
+          "white",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "6372-1",
+        "name": "Town House",
+        "year": 1982,
+        "inventory_version": 1,
+        "parts": 227,
+        "recognized": 137,
+        "via_parent": {
+          "3003a -> 3003": 5,
+          "3069bpr0099 -> 3069b": 2
+        },
+        "ignored_top": [
+          [
+            "3742",
+            21
+          ],
+          [
+            "3297",
+            11
+          ],
+          [
+            "3741",
+            7
+          ],
+          [
+            "3298",
+            5
+          ],
+          [
+            "3038",
+            4
+          ],
+          [
+            "3039",
+            4
+          ],
+          [
+            "3899",
+            4
+          ],
+          [
+            "4079",
+            4
+          ],
+          [
+            "3081c01",
+            3
+          ],
+          [
+            "3299",
+            3
+          ]
+        ],
+        "ignored": 90,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "6370-1",
+      "name": "Weekend Home",
+      "year": 1985,
+      "inventory_version": 2,
+      "omr_parts": 94,
+      "rb_parts": 96,
+      "agreement": 0.9387755102040817,
+      "agreement_parts": 0.9387755102040817,
+      "agreement_colors": 0.9791666666666666,
+      "largest_differences": [
+        [
+          "brick1x1",
+          "blue",
+          2
+        ],
+        [
+          "brick1x2",
+          "blue",
+          2
+        ],
+        [
+          "brick1x3",
+          "blue",
+          -2
+        ]
+      ],
+      "rebrickable": {
+        "set": "6370-1",
+        "name": "Weekend Home",
+        "year": 1985,
+        "inventory_version": 2,
+        "parts": 179,
+        "recognized": 96,
+        "via_parent": {},
+        "ignored_top": [
+          [
+            "3742",
+            12
+          ],
+          [
+            "3038",
+            10
+          ],
+          [
+            "3040b",
+            7
+          ],
+          [
+            "3039",
+            4
+          ],
+          [
+            "3041",
+            4
+          ],
+          [
+            "3741",
+            4
+          ],
+          [
+            "4079",
+            4
+          ],
+          [
+            "4445",
+            4
+          ],
+          [
+            "4347",
+            3
+          ],
+          [
+            "3043",
+            2
+          ]
+        ],
+        "ignored": 83,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "6378-1",
+      "name": "Shell Service Station",
+      "year": 1986,
+      "inventory_version": 1,
+      "omr_parts": 203,
+      "rb_parts": 209,
+      "agreement": 0.9619047619047619,
+      "agreement_parts": 0.9619047619047619,
+      "agreement_colors": 0.9712918660287081,
+      "largest_differences": [
+        [
+          "brick2x2_3941",
+          "old_light_gray",
+          2
+        ],
+        [
+          "plate1x1_6141",
+          "black",
+          2
+        ],
+        [
+          "brick1x10",
+          "black",
+          -1
+        ],
+        [
+          "brick1x8",
+          "black",
+          1
+        ],
+        [
+          "plate1x1",
+          "white",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "6378-1",
+        "name": "Shell Service Station",
+        "year": 1986,
+        "inventory_version": 1,
+        "parts": 284,
+        "recognized": 209,
+        "via_parent": {
+          "3941pr0002 -> 3941": 2
+        },
+        "ignored_top": [
+          [
+            "3641",
+            7
+          ],
+          [
+            "4624",
+            7
+          ],
+          [
+            "194c04",
+            4
+          ],
+          [
+            "3937",
+            4
+          ],
+          [
+            "3938",
+            4
+          ],
+          [
+            "4081a",
+            4
+          ],
+          [
+            "4085b",
+            4
+          ],
+          [
+            "4083",
+            3
+          ],
+          [
+            "298c02",
+            2
+          ],
+          [
+            "3044bpr0001",
+            2
+          ]
+        ],
+        "ignored": 75,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "6380-1",
+      "name": "Emergency Treatment Center",
+      "year": 1987,
+      "inventory_version": 2,
+      "omr_parts": 181,
+      "rb_parts": 185,
+      "agreement": 0.9263157894736842,
+      "agreement_parts": 0.9263157894736842,
+      "agreement_colors": 0.9572192513368984,
+      "largest_differences": [
+        [
+          "tile1x2_2412a",
+          "black",
+          3
+        ],
+        [
+          "tile1x2_2412b",
+          "black",
+          -3
+        ],
+        [
+          "tile2x2",
+          "white",
+          3
+        ],
+        [
+          "plate1x6",
+          "blue",
+          -2
+        ],
+        [
+          "tile1x1",
+          "white",
+          2
+        ]
+      ],
+      "rebrickable": {
+        "set": "6380-1",
+        "name": "Emergency Treatment Center",
+        "year": 1987,
+        "inventory_version": 2,
+        "parts": 293,
+        "recognized": 185,
+        "via_parent": {
+          "3068bpr0061 -> 3068b": 3
+        },
+        "ignored_top": [
+          [
+            "3040b",
+            14
+          ],
+          [
+            "2493a",
+            10
+          ],
+          [
+            "2494",
+            10
+          ],
+          [
+            "3742",
+            6
+          ],
+          [
+            "3641",
+            4
+          ],
+          [
+            "4215apr0011",
+            4
+          ],
+          [
+            "4624",
+            4
+          ],
+          [
+            "4715",
+            4
+          ],
+          [
+            "4740",
+            4
+          ],
+          [
+            "3899",
+            3
+          ]
+        ],
+        "ignored": 108,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "10182-1",
+      "name": "Cafe Corner",
+      "year": 2007,
+      "inventory_version": 1,
+      "omr_parts": 1514,
+      "rb_parts": 1513,
+      "agreement": 0.981020942408377,
+      "agreement_parts": 0.9993394980184941,
+      "agreement_colors": 0.9823182711198428,
+      "largest_differences": [
+        [
+          "brick1x2",
+          "ldraw73",
+          9
+        ],
+        [
+          "brick1x2",
+          "ldraw9",
+          -9
+        ],
+        [
+          "tile1x2_2412b",
+          "ldraw80",
+          4
+        ],
+        [
+          "tile1x2_2412b",
+          "light_gray",
+          -4
+        ],
+        [
+          "brick1x2",
+          "dark_gray",
+          -1
+        ]
+      ],
+      "rebrickable": {
+        "set": "10182-1",
+        "name": "Cafe Corner",
+        "year": 2007,
+        "inventory_version": 1,
+        "parts": 2046,
+        "recognized": 1513,
+        "via_parent": {},
+        "ignored_top": [
+          [
+            "6091",
+            62
+          ],
+          [
+            "30136",
+            45
+          ],
+          [
+            "4460b",
+            36
+          ],
+          [
+            "2420",
+            35
+          ],
+          [
+            "54200",
+            32
+          ],
+          [
+            "2357",
+            22
+          ],
+          [
+            "2362b",
+            20
+          ],
+          [
+            "6182",
+            20
+          ],
+          [
+            "3665",
+            16
+          ],
+          [
+            "3794a",
+            15
+          ]
+        ],
+        "ignored": 533,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "10190-1",
+      "name": "Market Street",
+      "year": 2007,
+      "inventory_version": 1,
+      "omr_parts": 989,
+      "rb_parts": 988,
+      "agreement": 0.9909365558912386,
+      "agreement_parts": 0.9949545913218971,
+      "agreement_colors": 0.9949545913218971,
+      "largest_differences": [
+        [
+          "plate2x2_4032a",
+          "dark_gray",
+          2
+        ],
+        [
+          "plate2x2_4032b",
+          "dark_gray",
+          -2
+        ],
+        [
+          "tile1x2_2412b",
+          "ldraw80",
+          2
+        ],
+        [
+          "tile1x2_2412b",
+          "light_gray",
+          -2
+        ],
+        [
+          "tile1x1",
+          "tan",
+          -1
+        ]
+      ],
+      "rebrickable": {
+        "set": "10190-1",
+        "name": "Market Street",
+        "year": 2007,
+        "inventory_version": 1,
+        "parts": 1238,
+        "recognized": 988,
+        "via_parent": {},
+        "ignored_top": [
+          [
+            "3794a",
+            25
+          ],
+          [
+            "3854",
+            20
+          ],
+          [
+            "30377",
+            13
+          ],
+          [
+            "2921",
+            12
+          ],
+          [
+            "6556",
+            10
+          ],
+          [
+            "22667",
+            8
+          ],
+          [
+            "2357",
+            8
+          ],
+          [
+            "30363",
+            8
+          ],
+          [
+            "3700",
+            8
+          ],
+          [
+            "4085c",
+            8
+          ]
+        ],
+        "ignored": 250,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "4954-1",
+      "name": "Model Town House",
+      "year": 2007,
+      "inventory_version": 1,
+      "omr_parts": 774,
+      "rb_parts": 774,
+      "agreement": 0.9974193548387097,
+      "agreement_parts": 0.9974193548387097,
+      "agreement_colors": 1.0,
+      "largest_differences": [
+        [
+          "brick2x2_3941",
+          "dark_gray",
+          1
+        ],
+        [
+          "brick2x2_6143",
+          "dark_gray",
+          -1
+        ]
+      ],
+      "rebrickable": {
+        "set": "4954-1",
+        "name": "Model Town House",
+        "year": 2007,
+        "inventory_version": 1,
+        "parts": 1174,
+        "recognized": 774,
+        "via_parent": {},
+        "ignored_top": [
+          [
+            "3794a",
+            56
+          ],
+          [
+            "3045",
+            24
+          ],
+          [
+            "4445",
+            24
+          ],
+          [
+            "3297",
+            23
+          ],
+          [
+            "32028",
+            18
+          ],
+          [
+            "3665",
+            18
+          ],
+          [
+            "54200",
+            18
+          ],
+          [
+            "3039",
+            17
+          ],
+          [
+            "3037",
+            16
+          ],
+          [
+            "3854",
+            16
+          ]
+        ],
+        "ignored": 400,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "4956-1",
+      "name": "House",
+      "year": 2007,
+      "inventory_version": 2,
+      "omr_parts": 397,
+      "rb_parts": 478,
+      "agreement": 0.8305439330543933,
+      "agreement_parts": 0.8305439330543933,
+      "agreement_colors": 0.8305439330543933,
+      "largest_differences": [
+        [
+          "plate1x1_6141",
+          "black",
+          16
+        ],
+        [
+          "plate1x2",
+          "white",
+          12
+        ],
+        [
+          "plate1x8",
+          "white",
+          9
+        ],
+        [
+          "tile1x1",
+          "light_gray",
+          6
+        ],
+        [
+          "plate4x6",
+          "red",
+          5
+        ]
+      ],
+      "rebrickable": {
+        "set": "4956-1",
+        "name": "House",
+        "year": 2007,
+        "inventory_version": 2,
+        "parts": 731,
+        "recognized": 478,
+        "via_parent": {},
+        "ignored_top": [
+          [
+            "3037",
+            77
+          ],
+          [
+            "3039",
+            20
+          ],
+          [
+            "2357",
+            17
+          ],
+          [
+            "3038",
+            16
+          ],
+          [
+            "3046a",
+            16
+          ],
+          [
+            "3040b",
+            9
+          ],
+          [
+            "3041",
+            8
+          ],
+          [
+            "3854",
+            8
+          ],
+          [
+            "2420",
+            6
+          ],
+          [
+            "3185",
+            6
+          ]
+        ],
+        "ignored": 253,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "10185-1",
+      "name": "Green Grocer",
+      "year": 2008,
+      "inventory_version": 2,
+      "omr_parts": 1533,
+      "rb_parts": 1541,
+      "agreement": 0.9909326424870466,
+      "agreement_parts": 0.9909326424870466,
+      "agreement_colors": 0.9948085658663206,
+      "largest_differences": [
+        [
+          "tile1x2",
+          "white",
+          4
+        ],
+        [
+          "tile1x4",
+          "reddish_brown",
+          3
+        ],
+        [
+          "plate2x2_4032a",
+          "reddish_brown",
+          2
+        ],
+        [
+          "plate2x2_4032b",
+          "reddish_brown",
+          -2
+        ],
+        [
+          "plate1x1",
+          "light_gray",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "10185-1",
+        "name": "Green Grocer",
+        "year": 2008,
+        "inventory_version": 2,
+        "parts": 2341,
+        "recognized": 1541,
+        "via_parent": {
+          "2431pr0032 -> 2431": 3,
+          "3069bpr0055 -> 3069b": 4
+        },
+        "ignored_top": [
+          [
+            "4216",
+            81
+          ],
+          [
+            "54200",
+            64
+          ],
+          [
+            "2420",
+            42
+          ],
+          [
+            "6266",
+            37
+          ],
+          [
+            "73983",
+            34
+          ],
+          [
+            "32028",
+            30
+          ],
+          [
+            "3678b",
+            24
+          ],
+          [
+            "2357",
+            23
+          ],
+          [
+            "3665",
+            20
+          ],
+          [
+            "60481",
+            16
+          ]
+        ],
+        "ignored": 800,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "7743-1",
+      "name": "Police Command Center",
+      "year": 2008,
+      "inventory_version": 2,
+      "omr_parts": 279,
+      "rb_parts": 282,
+      "agreement": 0.9893617021276596,
+      "agreement_parts": 0.9893617021276596,
+      "agreement_colors": 0.9893617021276596,
+      "largest_differences": [
+        [
+          "tile1x2",
+          "white",
+          2
+        ],
+        [
+          "tile1x2",
+          "light_gray",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "7743-1",
+        "name": "Police Command Center",
+        "year": 2008,
+        "inventory_version": 2,
+        "parts": 507,
+        "recognized": 282,
+        "via_parent": {
+          "3069bpr0020 -> 3069b": 1,
+          "3069bpr0030 -> 3069b": 2
+        },
+        "ignored_top": [
+          [
+            "6014b",
+            14
+          ],
+          [
+            "6015",
+            14
+          ],
+          [
+            "3040b",
+            12
+          ],
+          [
+            "6541",
+            10
+          ],
+          [
+            "54200",
+            8
+          ],
+          [
+            "4215b",
+            6
+          ],
+          [
+            "44728",
+            6
+          ],
+          [
+            "4488",
+            6
+          ],
+          [
+            "32062",
+            5
+          ],
+          [
+            "48336",
+            5
+          ]
+        ],
+        "ignored": 225,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "7796-1",
+      "name": "House",
+      "year": 2008,
+      "inventory_version": 1,
+      "omr_parts": 49,
+      "rb_parts": 49,
+      "agreement": 1.0,
+      "agreement_parts": 1.0,
+      "agreement_colors": 1.0,
+      "largest_differences": [],
+      "rebrickable": {
+        "set": "7796-1",
+        "name": "House",
+        "year": 2008,
+        "inventory_version": 1,
+        "parts": 56,
+        "recognized": 49,
+        "via_parent": {},
+        "ignored_top": [
+          [
+            "3037",
+            4
+          ],
+          [
+            "3040b",
+            2
+          ],
+          [
+            "3041",
+            1
+          ]
+        ],
+        "ignored": 7,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "10197-1",
+      "name": "Fire Brigade",
+      "year": 2009,
+      "inventory_version": 1,
+      "omr_parts": 1418,
+      "rb_parts": 1420,
+      "agreement": 0.991578947368421,
+      "agreement_parts": 0.994378074490513,
+      "agreement_colors": 0.9957805907172996,
+      "largest_differences": [
+        [
+          "plate1x4",
+          "black",
+          -2
+        ],
+        [
+          "tile1x4",
+          "black",
+          2
+        ],
+        [
+          "brick1x2",
+          "dark_tan",
+          1
+        ],
+        [
+          "plate1x8",
+          "ldraw80",
+          -1
+        ],
+        [
+          "plate1x8",
+          "light_gray",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "10197-1",
+        "name": "Fire Brigade",
+        "year": 2009,
+        "inventory_version": 1,
+        "parts": 2220,
+        "recognized": 1420,
+        "via_parent": {
+          "12825 -> 2555": 9,
+          "2431pr0017 -> 2431": 1,
+          "3069bpr0101 -> 3069b": 1
+        },
+        "ignored_top": [
+          [
+            "32028",
+            53
+          ],
+          [
+            "3794b",
+            52
+          ],
+          [
+            "2357",
+            39
+          ],
+          [
+            "2420",
+            34
+          ],
+          [
+            "30414",
+            34
+          ],
+          [
+            "44728",
+            27
+          ],
+          [
+            "54200",
+            23
+          ],
+          [
+            "60593",
+            22
+          ],
+          [
+            "60602",
+            22
+          ],
+          [
+            "4216",
+            18
+          ]
+        ],
+        "ignored": 800,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "5891-1",
+      "name": "Apple Tree House",
+      "year": 2010,
+      "inventory_version": 2,
+      "omr_parts": 323,
+      "rb_parts": 325,
+      "agreement": 0.981651376146789,
+      "agreement_parts": 0.981651376146789,
+      "agreement_colors": 0.9938461538461538,
+      "largest_differences": [
+        [
+          "brick2x2_3941",
+          "reddish_brown",
+          2
+        ],
+        [
+          "brick2x2_6143",
+          "reddish_brown",
+          -2
+        ],
+        [
+          "tile1x2",
+          "white",
+          2
+        ]
+      ],
+      "rebrickable": {
+        "set": "5891-1",
+        "name": "Apple Tree House",
+        "year": 2010,
+        "inventory_version": 2,
+        "parts": 539,
+        "recognized": 325,
+        "via_parent": {
+          "12825 -> 2555": 1,
+          "3069bpr0099 -> 3069b": 2
+        },
+        "ignored_top": [
+          [
+            "3665",
+            26
+          ],
+          [
+            "3037",
+            22
+          ],
+          [
+            "3039",
+            20
+          ],
+          [
+            "3038",
+            17
+          ],
+          [
+            "3046a",
+            12
+          ],
+          [
+            "4445",
+            10
+          ],
+          [
+            "59900",
+            8
+          ],
+          [
+            "3041",
+            7
+          ],
+          [
+            "4865b",
+            7
+          ],
+          [
+            "4286",
+            6
+          ]
+        ],
+        "ignored": 214,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "10218-1",
+      "name": "Pet Shop",
+      "year": 2011,
+      "inventory_version": 2,
+      "omr_parts": 1258,
+      "rb_parts": 1267,
+      "agreement": 0.9913249211356467,
+      "agreement_parts": 0.9913249211356467,
+      "agreement_colors": 0.9928966061562746,
+      "largest_differences": [
+        [
+          "tile1x1_2555",
+          "black",
+          3
+        ],
+        [
+          "tile1x1_2555",
+          "light_gray",
+          3
+        ],
+        [
+          "tile1x2",
+          "white",
+          2
+        ],
+        [
+          "brick2x2_3941",
+          "white",
+          1
+        ],
+        [
+          "brick2x2_6143",
+          "white",
+          -1
+        ]
+      ],
+      "rebrickable": {
+        "set": "10218-1",
+        "name": "Pet Shop",
+        "year": 2011,
+        "inventory_version": 2,
+        "parts": 2018,
+        "recognized": 1267,
+        "via_parent": {
+          "12825 -> 2555": 6,
+          "3069bpr0099 -> 3069b": 2,
+          "3069bpr0100 -> 3069b": 1
+        },
+        "ignored_top": [
+          [
+            "3794b",
+            53
+          ],
+          [
+            "4216",
+            48
+          ],
+          [
+            "33291",
+            36
+          ],
+          [
+            "30136",
+            29
+          ],
+          [
+            "60481",
+            28
+          ],
+          [
+            "6091",
+            27
+          ],
+          [
+            "32028",
+            20
+          ],
+          [
+            "60593",
+            19
+          ],
+          [
+            "60602",
+            19
+          ],
+          [
+            "73983",
+            18
+          ]
+        ],
+        "ignored": 751,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "5766-1",
+      "name": "Log Cabin",
+      "year": 2011,
+      "inventory_version": 1,
+      "omr_parts": 203,
+      "rb_parts": 204,
+      "agreement": 0.9757281553398058,
+      "agreement_parts": 0.9757281553398058,
+      "agreement_colors": 0.9950980392156863,
+      "largest_differences": [
+        [
+          "brick2x2_3941",
+          "reddish_brown",
+          2
+        ],
+        [
+          "brick2x2_6143",
+          "reddish_brown",
+          -2
+        ],
+        [
+          "brick1x2",
+          "reddish_brown",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "5766-1",
+        "name": "Log Cabin",
+        "year": 2011,
+        "inventory_version": 1,
+        "parts": 350,
+        "recognized": 204,
+        "via_parent": {},
+        "ignored_top": [
+          [
+            "49668",
+            15
+          ],
+          [
+            "4445",
+            14
+          ],
+          [
+            "3037",
+            12
+          ],
+          [
+            "3039",
+            10
+          ],
+          [
+            "60608",
+            10
+          ],
+          [
+            "87087",
+            10
+          ],
+          [
+            "3040b",
+            9
+          ],
+          [
+            "54200",
+            9
+          ],
+          [
+            "2357",
+            7
+          ],
+          [
+            "60594",
+            5
+          ]
+        ],
+        "ignored": 146,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "5771-1",
+      "name": "Hillside House",
+      "year": 2011,
+      "inventory_version": 1,
+      "omr_parts": 422,
+      "rb_parts": 426,
+      "agreement": 0.9859484777517564,
+      "agreement_parts": 0.9906103286384976,
+      "agreement_colors": 0.9906103286384976,
+      "largest_differences": [
+        [
+          "tile1x2_2412b",
+          "dark_gray",
+          3
+        ],
+        [
+          "plate2x12",
+          "black",
+          1
+        ],
+        [
+          "plate2x12",
+          "dark_gray",
+          -1
+        ],
+        [
+          "tile1x1",
+          "light_gray",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "5771-1",
+        "name": "Hillside House",
+        "year": 2011,
+        "inventory_version": 1,
+        "parts": 710,
+        "recognized": 426,
+        "via_parent": {
+          "3070bpr0007 -> 3070b": 1
+        },
+        "ignored_top": [
+          [
+            "3038",
+            27
+          ],
+          [
+            "54200",
+            23
+          ],
+          [
+            "60592",
+            15
+          ],
+          [
+            "60601",
+            14
+          ],
+          [
+            "3039",
+            12
+          ],
+          [
+            "32028",
+            9
+          ],
+          [
+            "3040b",
+            8
+          ],
+          [
+            "60478",
+            8
+          ],
+          [
+            "2357",
+            7
+          ],
+          [
+            "4287b",
+            6
+          ]
+        ],
+        "ignored": 284,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "10224-1",
+      "name": "Town Hall",
+      "year": 2012,
+      "inventory_version": 1,
+      "omr_parts": 1792,
+      "rb_parts": 1799,
+      "agreement": 0.9961089494163424,
+      "agreement_parts": 0.9961089494163424,
+      "agreement_colors": 0.9961089494163424,
+      "largest_differences": [
+        [
+          "tile1x2",
+          "white",
+          4
+        ],
+        [
+          "tile1x2",
+          "green",
+          1
+        ],
+        [
+          "tile2x2",
+          "dark_tan",
+          1
+        ],
+        [
+          "tile2x2",
+          "white",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "10224-1",
+        "name": "Town Hall",
+        "year": 2012,
+        "inventory_version": 1,
+        "parts": 2739,
+        "recognized": 1799,
+        "via_parent": {
+          "3068bpr0197 -> 3068b": 1,
+          "3068bpr9407 -> 3068b": 1,
+          "3069bpr0030 -> 3069b": 1,
+          "3069bpr0055 -> 3069b": 1,
+          "3069bpr0100 -> 3069b": 1
+        },
+        "ignored_top": [
+          [
+            "3794a",
+            58
+          ],
+          [
+            "60592",
+            55
+          ],
+          [
+            "60601",
+            52
+          ],
+          [
+            "30136",
+            48
+          ],
+          [
+            "59900",
+            48
+          ],
+          [
+            "32028",
+            39
+          ],
+          [
+            "54200",
+            34
+          ],
+          [
+            "87087",
+            30
+          ],
+          [
+            "2357",
+            25
+          ],
+          [
+            "4510",
+            22
+          ]
+        ],
+        "ignored": 940,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "31009-1",
+      "name": "Small Cottage",
+      "year": 2013,
+      "inventory_version": 1,
+      "omr_parts": 160,
+      "rb_parts": 164,
+      "agreement": 0.975609756097561,
+      "agreement_parts": 0.975609756097561,
+      "agreement_colors": 0.975609756097561,
+      "largest_differences": [
+        [
+          "plate2x4",
+          "white",
+          2
+        ],
+        [
+          "tile1x2",
+          "white",
+          2
+        ]
+      ],
+      "rebrickable": {
+        "set": "31009-1",
+        "name": "Small Cottage",
+        "year": 2013,
+        "inventory_version": 1,
+        "parts": 267,
+        "recognized": 164,
+        "via_parent": {},
+        "ignored_top": [
+          [
+            "3037",
+            10
+          ],
+          [
+            "3039",
+            8
+          ],
+          [
+            "54200",
+            8
+          ],
+          [
+            "4445",
+            6
+          ],
+          [
+            "59900",
+            6
+          ],
+          [
+            "2357",
+            5
+          ],
+          [
+            "60592",
+            5
+          ],
+          [
+            "60601",
+            5
+          ],
+          [
+            "3038",
+            4
+          ],
+          [
+            "3046a",
+            4
+          ]
+        ],
+        "ignored": 103,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "10243-1",
+      "name": "Parisian Restaurant",
+      "year": 2014,
+      "inventory_version": 2,
+      "omr_parts": 1423,
+      "rb_parts": 1437,
+      "agreement": 0.9902574808629089,
+      "agreement_parts": 0.9902574808629089,
+      "agreement_colors": 0.9902574808629089,
+      "largest_differences": [
+        [
+          "tile1x1_2555",
+          "white",
+          7
+        ],
+        [
+          "tile1x1_2555",
+          "black",
+          3
+        ],
+        [
+          "brick1x1",
+          "ldraw73",
+          1
+        ],
+        [
+          "tile2x2",
+          "dark_tan",
+          1
+        ],
+        [
+          "tile2x2",
+          "white",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "10243-1",
+        "name": "Parisian Restaurant",
+        "year": 2014,
+        "inventory_version": 2,
+        "parts": 2450,
+        "recognized": 1437,
+        "via_parent": {
+          "12825 -> 2555": 7,
+          "15712 -> 2555": 3,
+          "3005pr0006 -> 3005": 1,
+          "3068bpr0197 -> 3068b": 1,
+          "3068bpr0225 -> 3068b": 1,
+          "87079pr0060 -> 87079": 1
+        },
+        "ignored_top": [
+          [
+            "15573",
+            55
+          ],
+          [
+            "33291",
+            55
+          ],
+          [
+            "32028",
+            43
+          ],
+          [
+            "50950",
+            35
+          ],
+          [
+            "54200",
+            30
+          ],
+          [
+            "11153",
+            27
+          ],
+          [
+            "6231",
+            25
+          ],
+          [
+            "4216",
+            24
+          ],
+          [
+            "92280",
+            23
+          ],
+          [
+            "30126",
+            18
+          ]
+        ],
+        "ignored": 1013,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "31048-1",
+      "name": "Lakeside Lodge",
+      "year": 2016,
+      "inventory_version": 1,
+      "omr_parts": 201,
+      "rb_parts": 202,
+      "agreement": 0.9852216748768473,
+      "agreement_parts": 0.9852216748768473,
+      "agreement_colors": 0.995049504950495,
+      "largest_differences": [
+        [
+          "brick2x2_3941",
+          "reddish_brown",
+          1
+        ],
+        [
+          "brick2x2_6143",
+          "reddish_brown",
+          -1
+        ],
+        [
+          "tile1x2",
+          "white",
+          1
+        ]
+      ],
+      "rebrickable": {
+        "set": "31048-1",
+        "name": "Lakeside Lodge",
+        "year": 2016,
+        "inventory_version": 1,
+        "parts": 366,
+        "recognized": 202,
+        "via_parent": {
+          "3069bpr0055 -> 3069b": 1
+        },
+        "ignored_top": [
+          [
+            "3298",
+            13
+          ],
+          [
+            "98138",
+            12
+          ],
+          [
+            "3297",
+            10
+          ],
+          [
+            "30137",
+            8
+          ],
+          [
+            "60608",
+            8
+          ],
+          [
+            "54200",
+            6
+          ],
+          [
+            "30503",
+            5
+          ],
+          [
+            "11090",
+            4
+          ],
+          [
+            "11610",
+            4
+          ],
+          [
+            "30136",
+            4
+          ]
+        ],
+        "ignored": 164,
+        "guessed_colors": {}
+      }
+    },
+    {
+      "set": "10264-1",
+      "name": "Corner Garage",
+      "year": 2019,
+      "inventory_version": 2,
+      "omr_parts": 1341,
+      "rb_parts": 1349,
+      "agreement": 0.5531177829099307,
+      "agreement_parts": 0.9793966151582045,
+      "agreement_colors": 0.5648632926119838,
+      "largest_differences": [
+        [
+          "brick1x4",
+          "ldraw484",
+          54
+        ],
+        [
+          "brick1x4",
+          "ldraw84",
+          -54
+        ],
+        [
+          "brick1x2",
+          "ldraw484",
+          48
+        ],
+        [
+          "brick1x2",
+          "ldraw84",
+          -48
+        ],
+        [
+          "brick1x6",
+          "ldraw484",
+          47
+        ]
+      ],
+      "rebrickable": {
+        "set": "10264-1",
+        "name": "Corner Garage",
+        "year": 2019,
+        "inventory_version": 2,
+        "parts": 2545,
+        "recognized": 1349,
+        "via_parent": {
+          "15712 -> 2555": 5,
+          "26603pr0014 -> 26603": 1,
+          "3068bpr0273 -> 3068b": 1,
+          "3068bpr0356 -> 3068b": 1,
+          "3068bpr0362 -> 3068b": 1,
+          "3068bpr0364 -> 3068b": 1,
+          "3069bpr0099 -> 3069b": 1,
+          "3069bpr0100 -> 3069b": 1,
+          "87079pr0185 -> 87079": 1
+        },
+        "ignored_top": [
+          [
+            "35464",
+            80
+          ],
+          [
+            "25269",
+            61
+          ],
+          [
+            "35480",
+            56
+          ],
+          [
+            "30357",
+            30
+          ],
+          [
+            "32607",
+            29
+          ],
+          [
+            "11477",
+            26
+          ],
+          [
+            "15573",
+            26
+          ],
+          [
+            "93274",
+            21
+          ],
+          [
+            "98138",
+            20
+          ],
+          [
+            "2420",
+            19
+          ]
+        ],
+        "ignored": 1196,
+        "guessed_colors": {}
+      }
+    }
+  ],
+  "part_differences": [
+    [
+      "tile1x2",
+      33,
+      13,
+      0
+    ],
+    [
+      "tile1x1_2555",
+      21,
+      3,
+      0
+    ],
+    [
+      "plate1x1_6141",
+      18,
+      2,
+      0
+    ],
+    [
+      "brick2x2_3941",
+      15,
+      7,
+      0
+    ],
+    [
+      "plate1x2",
+      15,
+      2,
+      0
+    ],
+    [
+      "brick2x2_6143",
+      -13,
+      0,
+      6
+    ],
+    [
+      "tile2x2",
+      12,
+      7,
+      0
+    ],
+    [
+      "brick1x1_3062a",
+      11,
+      2,
+      0
+    ],
+    [
+      "brick1x1_3062b",
+      -11,
+      0,
+      2
+    ],
+    [
+      "tile1x1",
+      10,
+      4,
+      3
+    ],
+    [
+      "plate1x8",
+      9,
+      1,
+      0
+    ],
+    [
+      "plate4x6",
+      7,
+      1,
+      0
+    ],
+    [
+      "tile1x4",
+      7,
+      3,
+      0
+    ],
+    [
+      "plate1x1",
+      6,
+      4,
+      1
+    ],
+    [
+      "brick1x2",
+      5,
+      4,
+      2
+    ],
+    [
+      "brick1x4",
+      -5,
+      0,
+      2
+    ],
+    [
+      "plate4x8",
+      5,
+      1,
+      0
+    ],
+    [
+      "plate1x6",
+      -4,
+      0,
+      2
+    ],
+    [
+      "plate2x2_4032a",
+      4,
+      2,
+      0
+    ],
+    [
+      "plate2x2_4032b",
+      -4,
+      0,
+      2
+    ],
+    [
+      "plate2x4",
+      4,
+      2,
+      0
+    ],
+    [
+      "brick1x1",
+      3,
+      2,
+      0
+    ],
+    [
+      "brick1x8",
+      3,
+      3,
+      0
+    ],
+    [
+      "tile1x2_2412b",
+      3,
+      3,
+      1
+    ],
+    [
+      "brick1x6",
+      2,
+      1,
+      0
+    ],
+    [
+      "brick2x2",
+      2,
+      2,
+      0
+    ],
+    [
+      "plate1x4",
+      -2,
+      0,
+      1
+    ],
+    [
+      "tile1x2_2412a",
+      2,
+      1,
+      1
+    ],
+    [
+      "brick1x10",
+      -1,
+      0,
+      1
+    ],
+    [
+      "brick2x3",
+      1,
+      1,
+      0
+    ],
+    [
+      "brick2x6",
+      1,
+      1,
+      0
+    ],
+    [
+      "plate1x12",
+      1,
+      1,
+      0
+    ],
+    [
+      "plate2x2",
+      1,
+      1,
+      0
+    ],
+    [
+      "plate4x4",
+      1,
+      1,
+      0
+    ],
+    [
+      "tile2x4",
+      1,
+      1,
+      0
+    ],
+    [
+      "brick1x3",
+      0,
+      1,
+      1
+    ]
+  ],
+  "color_differences": [
+    [
+      "ldraw484",
+      363,
+      1,
+      0
+    ],
+    [
+      "ldraw84",
+      -360,
+      0,
+      1
+    ],
+    [
+      "white",
+      79,
+      14,
+      0
+    ],
+    [
+      "light_gray",
+      24,
+      7,
+      2
+    ],
+    [
+      "black",
+      21,
+      7,
+      2
+    ],
+    [
+      "ldraw73",
+      11,
+      3,
+      0
+    ],
+    [
+      "red",
+      11,
+      3,
+      1
+    ],
+    [
+      "ldraw9",
+      -9,
+      0,
+      1
+    ],
+    [
+      "dark_gray",
+      7,
+      2,
+      1
+    ],
+    [
+      "reddish_brown",
+      5,
+      3,
+      0
+    ],
+    [
+      "ldraw80",
+      4,
+      2,
+      1
+    ],
+    [
+      "dark_tan",
+      3,
+      3,
+      0
+    ],
+    [
+      "green",
+      3,
+      3,
+      0
+    ],
+    [
+      "ldraw128",
+      -3,
+      0,
+      1
+    ],
+    [
+      "ldraw322",
+      -2,
+      0,
+      1
+    ],
+    [
+      "ldraw379",
+      2,
+      1,
+      0
+    ],
+    [
+      "old_light_gray",
+      2,
+      1,
+      0
+    ],
+    [
+      "yellow",
+      2,
+      3,
+      1
+    ],
+    [
+      "ldraw179",
+      1,
+      1,
+      0
+    ],
+    [
+      "ldraw3",
+      1,
+      1,
+      0
+    ],
+    [
+      "ldraw36",
+      -1,
+      0,
+      1
+    ],
+    [
+      "tan",
+      -1,
+      0,
+      1
+    ],
+    [
+      "blue",
+      0,
+      1,
+      1
+    ]
+  ]
+}
