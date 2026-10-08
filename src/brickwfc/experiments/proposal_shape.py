@@ -30,7 +30,7 @@ from brickwfc.alt.target import load_target
 from brickwfc.bricks.build import save_preview
 from brickwfc.bricks.inventory import inventory_cells, utilization
 from brickwfc.bricks.shapes import fill, iou
-from brickwfc.bricks.style import events, judge, size_matched
+from brickwfc.bricks.style import StyleStats, distance, events, judge, size_matched
 from brickwfc.bricks.tokens import Vocab
 from brickwfc.bricks.voxelize import voxelize
 from brickwfc.experiments.demo import labeled_sheet, load_run
@@ -51,7 +51,8 @@ def summarize(set_number: str, arm: str, directory: Path, vocab: Vocab, style_di
     target = load_target(stats["config"]["shape"], inventory_cells(source.inventory), source.colors)
     if int(target.mask.sum()) != stats["shape_cells"]:
         raise ValueError(f"{directory}: target has {int(target.mask.sum())} cells, the run had {stats['shape_cells']}")
-    real = events(voxelize(flatten(source.model))[0])
+    real_parts = voxelize(flatten(source.model))[0]
+    real, real_stats = events(real_parts), StyleStats().add(real_parts)
     built = [c for c in candidates if "generate" not in c.failed]
     valid = [c for c in candidates if c.valid]
     filled = [occupancy(c.placed, target.mask.shape) for c in valid]
@@ -64,11 +65,13 @@ def summarize(set_number: str, arm: str, directory: Path, vocab: Vocab, style_di
         "physics_pct": 100 * mean([float("physics" not in c.failed) for c in built]),
         "one_piece_pct": 100 * mean([float(c.clusters == 1) for c in built]),
         "fill_pct": 100 * mean([fill(f, target.mask) for f in filled]),
+        "fill_pct_sd": 100 * statistics.stdev([fill(f, target.mask) for f in filled]) if len(filled) > 1 else math.nan,
         "iou": mean([iou(f, target.mask) for f in filled]),
         "utilization_pct": 100 * mean([utilization(list(c.placed), source.inventory) for c in valid]),
         "matched_judge": mean([j for j, _, _ in judged]),
         "matched_judge_sd": statistics.stdev([j for j, _, _ in judged]) if len(judged) > 1 else math.nan,
         "matched_ceiling": mean([r for _, r, _ in judged]),
+        "distance": mean([distance(StyleStats().add(c.placed), real_stats)["mean"] for c in valid]),
         "parts": mean([len(c.placed) for c in valid]),
         "outside_vocab": mean([sum(vocab.shape(p.shape) is None for p in c.placed) for c in valid]),
         "seconds_per_candidate": mean([c.seconds + c.physics_seconds for c in candidates]),
@@ -78,13 +81,13 @@ def summarize(set_number: str, arm: str, directory: Path, vocab: Vocab, style_di
 
 
 def table(rows: list[dict]) -> str:
-    lines = ["| set | arm | candidates | valid % | physics % | one piece % | object fill % | IoU | utilization % | "
-             "size-matched judge (sd) | real ceiling | parts | outside vocab / build | s/candidate |",
-             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    lines = ["| set | arm | candidates | valid % | physics % | one piece % | object fill % (sd) | IoU | utilization % | "
+             "size-matched judge (sd) | real ceiling | distance to set | parts | outside vocab / build | s/candidate |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         lines.append(f"| {r['set']} | {r['arm']} | {r['candidates']} | {r['valid_pct']:.0f} | {r['physics_pct']:.0f} | "
-                     f"{r['one_piece_pct']:.0f} | {r['fill_pct']:.1f} | {r['iou']:.3f} | {r['utilization_pct']:.1f} | "
-                     f"{r['matched_judge']:.4f} ({r['matched_judge_sd']:.4f}) | {r['matched_ceiling']:.4f} | "
+                     f"{r['one_piece_pct']:.0f} | {r['fill_pct']:.1f} ({r['fill_pct_sd']:.1f}) | {r['iou']:.3f} | {r['utilization_pct']:.1f} | "
+                     f"{r['matched_judge']:.4f} ({r['matched_judge_sd']:.4f}) | {r['matched_ceiling']:.4f} | {r['distance']:.4f} | "
                      f"{r['parts']:.0f} | {r['outside_vocab']:.1f} | {r['seconds_per_candidate']:.1f} |")
     lines += [""]
     by = {(r["set"], r["arm"]): r for r in rows}
@@ -93,7 +96,8 @@ def table(rows: list[dict]) -> str:
         both = [s for s in sets if (s, a) in by and (s, b) in by]
         if not both:
             continue
-        for key, label in (("matched_judge", "size-matched judge"), ("fill_pct", "object fill")):
+        for key, label in (("matched_judge", "size-matched judge"), ("fill_pct", "object fill"),
+                           ("distance", "distance to the set's own statistics (lower is closer)")):
             diffs = [by[s, a][key] - by[s, b][key] for s in both]
             lines.append(f"- {a} vs {b}, {label}: higher on {sum(d > 0 for d in diffs)}/{len(both)} sets "
                          f"(mean difference {statistics.fmean(diffs):+.4f})")
