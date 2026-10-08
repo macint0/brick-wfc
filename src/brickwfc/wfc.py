@@ -13,7 +13,7 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass
-from typing import Iterable, Protocol, Sequence
+from typing import Callable, Iterable, Protocol, Sequence
 
 import numpy as np
 
@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 Cell = tuple[int, ...]
 Shape = tuple[int, ...]
+Bias = Callable[[np.ndarray, Cell], np.ndarray]  # (domain, cell) -> per-tile sampling weights
 
 # Scale of the seeded noise added to entropies so ties are broken randomly, not by scan order.
 TIE_BREAK_NOISE = 1e-6
@@ -92,9 +93,12 @@ class Wave:
         h[~uncollapsed] = np.inf
         return tuple(int(i) for i in np.unravel_index(np.argmin(h), h.shape))
 
-    def collapse(self, cell: Cell, rng: np.random.Generator) -> int:
-        """Fix ``cell`` to one remaining tile, sampled with probability proportional to its weight."""
+    def collapse(self, cell: Cell, rng: np.random.Generator, bias: Bias | None = None) -> int:
+        """Fix ``cell`` to one remaining tile, sampled with probability proportional to its weight
+        (times ``bias(domain, cell)``, per tile, if given)."""
         p = self._w * self.domain[cell]
+        if bias is not None:
+            p = p * bias(self.domain, cell)
         tile = int(rng.choice(len(p), p=p / p.sum()))
         self.assign(cell, tile)
         return tile
@@ -175,6 +179,7 @@ def solve_attempt(
     constraints: Sequence[Constraint] = (),
     max_backtracks: int = 0,
     deadline: float | None = None,
+    bias: Bias | None = None,
 ) -> AttemptResult:
     """Run a single WFC attempt.
 
@@ -194,7 +199,7 @@ def solve_attempt(
         if deadline is not None and time.perf_counter() > deadline:
             return AttemptResult(None, collapses, backtracks, timed_out=True)
         saved = wave.domain.copy() if max_backtracks else None
-        tile = wave.collapse(cell, rng)
+        tile = wave.collapse(cell, rng, bias)
         collapses += 1
         if saved is not None:
             history.append((saved, cell, tile))
@@ -248,11 +253,13 @@ def run(
     constraints: Sequence[Constraint] = (),
     max_backtracks: int = 0,
     time_limit_s: float | None = None,
+    bias: Bias | None = None,
 ) -> RunResult:
     """Generate one grid, restarting with the next attempt seed on contradiction.
 
     ``max_backtracks`` > 0 lets each attempt undo up to that many collapses before giving up.
     ``time_limit_s`` caps the whole run's wall time; a run that hits it fails with ``timed_out``.
+    ``bias`` (M10) reweights the tiles sampled at each collapse, e.g. ``style.StyleBias.for_tiles``.
     Without a limit, the result depends only on the seed.
     """
     if max_attempts < 1:
@@ -261,7 +268,7 @@ def run(
     deadline = None if time_limit_s is None else start + time_limit_s
     cells_collapsed = backtracks = 0
     for attempt in range(max_attempts):
-        result = solve_attempt(tileset, shape, attempt_rng(seed, attempt), constraints, max_backtracks, deadline)
+        result = solve_attempt(tileset, shape, attempt_rng(seed, attempt), constraints, max_backtracks, deadline, bias)
         cells_collapsed += result.collapses
         backtracks += result.backtracks
         if result.timed_out:

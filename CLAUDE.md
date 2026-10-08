@@ -138,17 +138,14 @@ brick-wfc/
   7 of 8 sets (late inventory dead ends + raw cost; fixes listed there, not attempted). D2 stands 83.5%
   (bricks tip over more). `experiments/sets.py`: 28 building sets for M10 (≥ 50% recognized, ≥ 50 parts,
   ≥ 50% of recognized parts on the grid, no re-releases; `results/sets_selection.md`).
-
-### M10 — Learn from real sets
-- Reuse the M7-in-progress code (fetch, flatten, voxelize, coverage weights).
-- Learn: part/color weights; directional co-occurrence (which part/color sits next to or on which) as
-  soft weights; a learned judge scoring "looks like a real set" (start simple: likelihood under the learned
-  co-occurrence statistics).
-- Pick plate/brick-heavy sets on purpose (Town / City buildings, Creator) and report how much of each
-  set is recognized.
-- Optional: use `0 STEP` data (present in some OMR files) — e.g. sub-assembly statistics.
-**Done when:** weights, rules and judge are learned from ≥20 sets, and generated builds score closer to
-real sets than uniform-weight builds under held-out statistics.
+- **M10 — Learned style.** `bricks/style.py`: contact statistics from 28 real sets (P(part on part),
+  P(part beside part), same-color rates, support counts, part/color frequencies), `StyleBias` (likelihood
+  ratios; `BottomUpBuilder(style=)`, `wfc.run(bias=)`), and the judge = -divergence of a build's contact
+  statistics from the learned ones (a per-contact likelihood is gamed by repetition; the divergence is
+  size-dependent, so compare size-matched: `style.size_matched`). `experiments/style.py` (4-fold CV, 21
+  training sets, parallel workers; `results/m10_style.md`): learned style moves builds closer to held-out
+  sets for D2 (23/28 sets with X's parts, 25/28 without counts) and WFC (12/13). Under the judge, D2 beats
+  WFC on 13/13 sets at ~1/100 of the time. Contacts help more than frequencies when counts are fixed.
 
 ### M12 — Alternate-build pipeline
 - One command: set number or parts list (+ optional shape) → 3D funnel (generate → verify stability,

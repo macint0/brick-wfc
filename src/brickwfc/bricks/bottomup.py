@@ -12,22 +12,30 @@ against it. With an inventory, a (part, color) is skipped once it is used up; wi
 By default a part is tried only with its min corner on the visited cell. ``any_offset=True`` (M11)
 tries every position of the part that covers the cell, in random order, so a gap can also be filled
 by a part reaching into it from the left or front: a stronger baseline when packing matters.
+
+With a ``style`` (M10, ``style.StyleBias``), the order in which parts are tried at a cell is drawn
+from the base weights times the learned likelihood ratio of each part next to the part below the
+cell and the parts beside it. Without one, builds are exactly as before.
 """
 
 from __future__ import annotations
 
-from typing import Mapping
+from typing import TYPE_CHECKING, Mapping
 
 import numpy as np
 
 from brickwfc.bricks.colors import BrickColor
 from brickwfc.bricks.parts import PartSet, PlacedPart, Shape, TileInfo
 
+if TYPE_CHECKING:
+    from brickwfc.bricks.style import StyleBias
+
 
 class BottomUpBuilder:
-    def __init__(self, parts: PartSet, any_offset: bool = False) -> None:
+    def __init__(self, parts: PartSet, any_offset: bool = False, style: StyleBias | None = None) -> None:
         self.parts = parts
         self.any_offset = any_offset
+        self.style = style
         self.index = {info: t for t, info in enumerate(parts.infos)}
         # Same priors as WFC: a cell's chance of holding (shape, color) is the summed weight of
         # that pair's tiles; the solid share is the solid tiles' share of all weight.
@@ -40,6 +48,11 @@ class BottomUpBuilder:
         weights = np.array([totals[k] for k in self.choices])
         self.choice_p = weights / weights.sum()
         self.solid_share = float(weights.sum() / parts.tileset.weights.sum())
+        if style is not None:
+            from brickwfc.bricks.style import TYPE_INDEX
+
+            self.choice_types = np.array([TYPE_INDEX[shape.part.name] for shape, _ in self.choices])
+            self.choice_colors = np.array([style.color_id(color.name) for _, color in self.choices])
 
     def build(
         self,
@@ -55,6 +68,8 @@ class BottomUpBuilder:
         allowed = np.ones(shape, dtype=bool) if allowed is None else allowed
         filled = np.zeros(shape, dtype=bool)
         studs = np.zeros(shape, dtype=bool)  # cells on a part's top layer that carry a stud
+        owner = np.full(shape, -1, dtype=np.int64)  # index into ``placed``
+        placed: list[PlacedPart] = []
         grid = np.full(shape, self.index[TileInfo(None)], dtype=np.int64)
         for y in range(ny):
             for flat in rng.permutation(nz * nx):
@@ -64,7 +79,8 @@ class BottomUpBuilder:
                 # Try parts in weighted-random order until one fits here. Whether a part fits depends
                 # only on its box, so once a box size fails here, other parts of that size are skipped.
                 failed: set[tuple[int, int, int]] = set()
-                for choice in rng.choice(len(self.choices), size=len(self.choices), replace=False, p=self.choice_p):
+                p = self.choice_p if self.style is None else self._styled_p(owner, placed, y, z, x)
+                for choice in rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p):
                     part_shape, color = self.choices[choice]
                     key = (part_shape.part.name, color.name)
                     if remaining is not None and remaining.get(key, 0) <= 0:
@@ -82,12 +98,29 @@ class BottomUpBuilder:
                             remaining[key] -= 1
                         for cy, cz, cx in part.cells():
                             filled[cy, cz, cx] = True
+                            owner[cy, cz, cx] = len(placed)
                             grid[cy, cz, cx] = self.index[TileInfo(part_shape, cx - part.x, cz - part.z, color, cy - y)]
                         if part_shape.part.studs:
                             for cell in part.top_cells():
                                 studs[cell] = True
+                        placed.append(part)
                         break
         return grid
+
+    def _styled_p(self, owner: np.ndarray, placed: list[PlacedPart], y: int, z: int, x: int) -> np.ndarray:
+        """Choice probabilities at cell (y, z, x): base weights times the style's likelihood ratios for
+        the part below the cell and the parts beside it."""
+        _, nz, nx = owner.shape
+        context: list[tuple[int, PlacedPart]] = []
+        if y > 0 and owner[y - 1, z, x] >= 0:
+            context.append((0, placed[owner[y - 1, z, x]]))
+        beside = {int(owner[y, z + dz, x + dx]) for dz, dx in ((0, -1), (0, 1), (-1, 0), (1, 0))
+                  if 0 <= z + dz < nz and 0 <= x + dx < nx} - {-1}
+        context += [(1, placed[i]) for i in sorted(beside)]
+        if not context:
+            return self.choice_p
+        weights = self.choice_p * self.style.for_choices(context, self.choice_types, self.choice_colors)
+        return weights / weights.sum()
 
     def _place(
         self, part_shape: Shape, color: BrickColor, y: int, z: int, x: int,
