@@ -1,6 +1,6 @@
 """M12b step 2: learned proposal vs statistics under the M10 judge, on the sets held out of training.
 
-    python -m brickwfc.experiments.proposal --weights out/proposal/proposal.npz --out out/m12b_proposal
+    python -m brickwfc.experiments.proposal --weights data/models/proposal.npz --out out/m12b_proposal
     python -m brickwfc.experiments.proposal --random-weights --seeds 1 --out out/m12b_proposal_smoke
 
 Sets: fold ``--fold`` of M10's cross-validation (by default fold 0, the fold ``export_tokens`` holds out of the
