@@ -7,7 +7,9 @@ written to ``examples/`` and scaled to each set's inventory volume. Each set run
 pipeline (``alt``) with the bottom-up builder D2 (``--n`` candidates; also without the connect pass, to
 show what the one-piece rule costs) and, as the compared method, WFC
 with the support, inventory and shape constraints (``--wfc-n`` candidates, ``--wfc-time-limit`` seconds
-each; skipped on sets with more than ``--wfc-max-parts`` parts). Runs reuse the pipeline's candidate cache, so a killed run resumes. Writes ``results.md``,
+each; skipped on sets with more than ``--wfc-max-parts`` parts). Runs reuse the pipeline's candidate cache, so a killed run resumes.
+Inventories are read with the M8 catalog and built in the v1 (M10) style by default, as in the M12 table;
+``--catalog full --style-version v2`` uses the M12b catalog (corners, slopes) and style. Writes ``results.md``,
 ``summary.json``, ``target.png`` and ``sheet.png`` (the target, then the best D2 build per set, labeled)
 under ``--out``.
 """
@@ -74,9 +76,10 @@ def load_run(directory: Path) -> tuple[list[Candidate], dict]:
     return [Candidate.from_json(json.loads(line)) for line in lines if line.strip()], stats
 
 
-def summarize(set_number: str, generator: str, directory: Path, shape: tuple[Path, Path, Path]) -> dict:
+def summarize(set_number: str, generator: str, directory: Path, shape: tuple[Path, Path, Path],
+              catalog: str = "m8") -> dict:
     candidates, stats = load_run(directory)
-    source = load_source(set_number)
+    source = load_source(set_number, catalog=catalog)
     target = load_target(str(shape[0]), inventory_cells(source.inventory), source.colors, shape[1], shape[2])
     built = [c for c in candidates if "generate" not in c.failed]
     valid = [c for c in candidates if c.valid]
@@ -161,10 +164,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="skip WFC on larger sets (its backtracking history needs GBs of memory)")
     parser.add_argument("--workers", type=int, help="passed to the pipeline")
     parser.add_argument("--out", type=Path, default=Path("out/m12_demo"))
+    parser.add_argument("--catalog", choices=("m8", "full"), default="m8", help="parts inventories are read with")
+    parser.add_argument("--style-version", choices=("v1", "v2"), default="v1", help="M10 style statistics")
     args = parser.parse_args(argv)
 
     shape = write_spaceship()
     common = ["--shape", str(shape[0]), "--height-map", str(shape[1]), "--color-map", str(shape[2])]
+    common += ["--catalog", args.catalog, "--style-version", args.style_version]
     common += ["--workers", str(args.workers)] if args.workers else []
     runs = [("d2", ["--n", str(args.n), "--k", "4"]),
             ("d2_no_connect", ["--n", str(args.n), "--k", "1", "--no-connect"])]
@@ -174,21 +180,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     rows = []
     for set_number in args.sets:
         for generator, extra in runs:
-            parts = load_source(set_number).recognized_parts
+            parts = load_source(set_number, catalog=args.catalog).recognized_parts
             if generator == "wfc" and parts > args.wfc_max_parts:
                 rows.append({"set": set_number, "generator": generator, "parts": parts, "status": "not run (memory)"})
                 continue
             directory = args.out / set_number / generator
             alt_main([set_number, "--out", str(directory), *common, *extra])
-            rows.append(summarize(set_number, generator, directory, shape))
+            rows.append(summarize(set_number, generator, directory, shape, args.catalog))
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "summary.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")
     best = [r for r in rows if r["generator"] == "d2" and r.get("best_png")]
     if best:
         years = {c["set"]: c["year"] for c in json.loads(SETS_FILE.read_text(encoding="utf-8"))["candidates"]}
-        source = load_source(best[0]["set"])
+        source = load_source(best[0]["set"], catalog=args.catalog)
         target = load_target(str(shape[0]), inventory_cells(source.inventory), source.colors, shape[1], shape[2])
-        colors = [c for r in best for c in load_source(r["set"]).colors]
+        colors = [c for r in best for c in load_source(r["set"], catalog=args.catalog).colors]
         target_preview(target, colors, args.out / "target.png")
         labels = ["target: spaceship\nsilhouette + heights + colors\n(scaled to each set)"]
         labels += [f"{r['set']} ({years.get(r['set'], '?')})\n{r['best_parts']} of {r['parts']} parts, "

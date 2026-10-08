@@ -170,3 +170,42 @@ curved parts, windows/doors and minifigure parts (3818–3820).
 | 10124-1 | 677 | 6 | 37 | 39 | 28 | 30 | 3711 (91), 6628 (24), 32293 (14) |
 | 10037-1 | 221 | 9 | 35 | 37 | 32 | 34 | 3742 (18), 2453a (11), 3820 (10) |
 | **all** | 14426 | 8 | 51 | 57 | 22 | 25 |  |
+
+## Style statistics v2 (relearned with corners and slopes)
+
+The M10 statistics were learned with the M8 catalog. New parts had only smoothing mass in them, so the
+styled proposal tried slopes and corners rarely and late.
+
+**Relearned:**
+- Command: `python -m brickwfc.experiments.style --learn-only v2` (learning only, no CV rerun).
+- Same 28 sets, same 4 folds, voxelized with the full catalog.
+- Written to `results/m10_style_stats/style_fold{i}_v2.json`, each with `"catalog": "m12b"`.
+- The v1 files are untouched.
+- Check: the same command with `--catalog m8` reproduces the v1 files exactly (all four folds: part counts,
+  contacts, colors, support counts).
+
+**Which version is used:**
+- The pipeline uses v2 by default (`alt.inputs.STYLE_VERSION`); `--style-version v1` restores M10/M12
+  behaviour.
+- The candidate cache key names the version, so v1 and v2 caches never mix.
+- `--catalog m8` reads inventories with the M8 catalog.
+- The M12 drivers (`experiments/demo.py`, `experiments/balance.py`) default to `--catalog m8
+  --style-version v1`, so their tables reproduce.
+
+Part-type mass, all 28 sets (the sum of the folds / 3, as `alt.inputs.all_from_folds`):
+
+| statistics | parts | M8 parts | corners | 4216 | slopes | vertical contacts | horizontal contacts |
+|---|---|---|---|---|---|---|---|
+| v1 (M8 catalog) | 12,595 | 100% | 0 | 0 | 0 | 13,494 | 25,592 |
+| v2 (M12b catalog) | 14,401 | 87.5% | 2.3% | 1.5% | 8.7% | 17,447 | 32,626 |
+
+**Contacts:**
+- In v2, new parts take 14.7% of vertical-contact ends (corners 3.4%, slopes 10.1%) and 13.4% of
+  horizontal contacts.
+- Vertical contacts grow 29%, because a slope or corner now joins the stack above and below it instead of
+  breaking it.
+
+**Counts:**
+- The M8 parts' counts are identical in v1 and v2: adding parts does not change how the old ones voxelize.
+- Most frequent new parts in v2: 4216 221, cheese slope 192, brick corner 190, slope 45 2×4 152, plate
+  corner 145, slope 45 2×2 112, 2×1 107, inverted 2×1 106.

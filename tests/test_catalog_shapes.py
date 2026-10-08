@@ -369,3 +369,19 @@ def test_coverage_counts_m8_and_new_parts() -> None:
     row = set_coverage("fake-1", mpd, on_grid=True)
     assert (row.parts, row.catalog_m8, row.catalog) == (4, 1, 3)
     assert (row.on_grid_m8, row.on_grid) == (1, 3)
+
+
+def test_learn_only_writes_versioned_fold_statistics(tmp_path: Path) -> None:
+    import json
+
+    from brickwfc.bricks.style import StyleStats
+    from brickwfc.experiments.style import folds, learn_only
+
+    sets = [f"s{i}" for i in range(8)]
+    slope = PlacedPart(Shape(CATALOG["slope45_2x2"]), RED, 0, 0, 0)
+    per_model = {s: StyleStats().add([slope]) for s in sets}
+    assert learn_only(sets, per_model, 4, 0, "vt", "full", tmp_path) == 0
+    for i, held_out in enumerate(folds(sets, 4, 0)):
+        data = json.loads((tmp_path / f"style_fold{i}_vt.json").read_text(encoding="utf-8"))
+        assert data["catalog"] == "m12b" and data["parts"]["slope45_2x2"] == len(sets) - len(held_out)
+        assert StyleStats.load(tmp_path / f"style_fold{i}_vt.json").models == len(sets) - len(held_out)

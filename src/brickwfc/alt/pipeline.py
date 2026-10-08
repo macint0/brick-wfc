@@ -48,7 +48,8 @@ import numpy as np
 
 from brickwfc.alt.candidates import GENERATORS, VERIFY_VERSION, Candidate, Context, generate
 from brickwfc.alt.features import feature_vector, occupancy
-from brickwfc.alt.inputs import DATA_DIR, SETS_FILE, STYLE_DIR, Source, learned_style, load_source
+from brickwfc.alt.inputs import (CATALOGS, DATA_DIR, SETS_FILE, STYLE_DIR, STYLE_FILES, STYLE_VERSION, Source,
+                                 learned_style, load_source)
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
 from brickwfc.alt.target import Target, load_target
 from brickwfc.bricks.inventory import inventory_cells, utilization
@@ -356,6 +357,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--wfc-workers", type=int, default=2, help="worker cap for --generator wfc (memory-heavy)")
     parser.add_argument("--data", type=Path, default=DATA_DIR, help="OMR download cache")
     parser.add_argument("--style-dir", type=Path, default=STYLE_DIR)
+    parser.add_argument("--style-version", choices=sorted(STYLE_FILES), default=STYLE_VERSION,
+                        help="M10 style statistics: v1 (M8 catalog, M10-M12 tables) or v2 (relearned with slopes)")
+    parser.add_argument("--catalog", choices=sorted(CATALOGS), default="full",
+                        help="parts the inventory is read with: full (corners, slopes) or m8 (before M12b)")
     parser.add_argument("--sets-file", type=Path, default=SETS_FILE)
     parser.add_argument("--out", type=Path, help="output directory (default out/alt/<input name>)")
     parser.add_argument("--fresh", action="store_true", help="discard cached candidates")
@@ -374,7 +379,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
     )
     source = load_source(args.input, args.data)
-    stats, style_label = learned_style(source.name, args.style_dir, args.sets_file)
+    stats, style_label = learned_style(source.name, args.style_dir, args.sets_file, args.style_version)
     out = args.out or Path("out/alt") / source.name
     ignored_top = sorted(source.ignored.items(), key=lambda kv: (-kv[1], kv[0]))[:10]
     print(f"{source.name}: {source.recognized_parts} parts recognized, {source.ignored_parts} ignored"
