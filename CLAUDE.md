@@ -149,18 +149,19 @@ brick-wfc/
   training sets, parallel workers; `results/m10_style.md`): learned style moves builds closer to held-out
   sets for D2 (23/28 sets with X's parts, 25/28 without counts) and WFC (12/13). Under the judge, D2 beats
   WFC on 13/13 sets at ~1/100 of the time. Contacts help more than frequencies when counts are fixed.
-
-### M12 — Alternate-build pipeline (in progress)
-- Step 1 done (eaa8bde): `python -m brickwfc.alt SET|parts.csv|model.mpd [--shape] [--k] [--n]` runs the 3D funnel
-  and writes `build_XX.ldr` with `0 STEP` per layer, previews, `sheet.png`, `stats.json`. Mac stepped through
-  `out/alt/10182-1/build_01.ldr` in Studio (2026-10-08): instructions play back correctly.
-  Found: 186/200 candidates fail physics as tip-overs; no-shape builds are flat slabs. Step 1b (tip-over fix in
-  the builder, cube default grid) comes before step 2 (shapes from PNG/model) and step 3 (same shape, many sets).
-- One command: set number or parts list (+ optional shape) → 3D funnel (generate → verify stability,
-  inventory, integrity → dedupe → judge → select top-k).
-- Output: `.ldr` files with `0 STEP` building instructions (layer by layer), isometric previews, contact
-  sheet, stats JSON.
-**Done when:** the command produces k alternate builds for a given set with instructions that open in a viewer.
+- **M12 — Alternate-build pipeline.** `python -m brickwfc.alt SET|parts.csv|model.mpd [--shape ...] [--n] [--k]`
+  (`src/brickwfc/alt/`): generate with D2 + learned style → verify (integrity, inventory, support, shape, physics
+  on a table, size floor, one piece) → dedupe → judge (size-matched) → select top-k; writes `build_XX.ldr` with one
+  `0 STEP` per layer, previews, `sheet.png`, `stats.json`. Mac stepped through a build in Studio (2026-10-08).
+  Pipeline defaults, each by construction in `BottomUpBuilder`: `balanced=True` (no cluster's centre of mass
+  outside its ground hull; `bricks/balance.py`, exact vs the LP; physics pass 7% → 100%), `connect=True` with
+  `--connect-rounds 10` (keep the largest stud-connected cluster, return the rest, refill; one-piece 0.5% → 100%),
+  physical-cube default grid. `physics.table_clutch`: exact tip-over shortcut + IPM LP (146 s → 5 s worst case).
+  Shapes: primitive, silhouette PNG (+ height map, + color map → preferred colors), `.ldr`/set number (heightfield
+  unless `--shape-exact`). Demo (`experiments/demo.py`, `results/m12_demo_sheet.png`): one spaceship from six sets
+  (1978–2010, 203–1514 parts): 100% valid, fill 52–74%, utilization 66–92%; WFC 0/50 within 30 s. Write-up and open
+  points: `results/m12_pipeline.md` (connectivity costs 2–20 fill points, most on 1-wide-brick sets; up to 140 s per
+  candidate on the largest set; `--max-clutch` uncalibrated).
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
