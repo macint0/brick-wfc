@@ -29,6 +29,16 @@ def test_supports_only_under_far_overhangs() -> None:
     assert np.array_equal(with_supports(mask, reach=20), mask)  # everything within reach: nothing added
 
 
+def test_support_height_keeps_only_short_columns() -> None:
+    low = mushroom(4, 14, 14, stem=2, cap_layers=1)  # the cap 3 cells above the ground
+    high = mushroom(12, 14, 14, stem=2, cap_layers=1)  # 11 cells above
+    assert np.array_equal(with_supports(low, max_height=3), with_supports(low))  # every column is 3 tall
+    assert np.array_equal(with_supports(high, max_height=3), high)  # too tall: none
+    short = mushroom(4, 14, 14, stem=2, cap_layers=1)
+    short[0, :2, :2] = True  # a foot under one corner: that column now stops on it, 2 cells tall
+    assert (with_supports(short, max_height=2) & ~short).sum() == 2 * 2 * 2
+
+
 def test_unsupported_empty() -> None:
     mask = np.ones((3, 1, 3), dtype=bool)
     filled = np.zeros_like(mask)

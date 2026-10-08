@@ -91,6 +91,7 @@ class AltConfig:
     mesh_up: str = "y"
     hollow: int = 0  # 3D target: shell thickness in cells, plus internal pillars (0: solid)
     supports: bool = False  # 3D target: support columns under overhangs out of a part's reach
+    support_height: int = 0  # with supports: only columns at most this many cells tall (0: any)
     open_tops: bool = True  # with a target shape: studless top cells only under empty target cells
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = math.inf  # physics: keep builds needing at most this clutch per stud
@@ -135,7 +136,7 @@ def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) ->
                        Path(config.height_map) if config.height_map else None,
                        Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
                        config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
-                       hollow=config.hollow, supports=config.supports)
+                       hollow=config.hollow, supports=config.supports, support_height=config.support_height)
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
@@ -331,6 +332,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="with a target shape: let studless tops (tiles) sit under target cells (as before M12b 1d)")
     parser.add_argument("--supports", action="store_true",
                         help="3D target: add support columns under overhangs out of a part's reach (extra cells)")
+    parser.add_argument("--support-height", type=int, default=defaults.support_height,
+                        help="with --supports: only columns at most this many cells (plates) tall (0: any)")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -373,7 +376,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         connect=not args.no_connect, connect_rounds=args.connect_rounds,
         shape=args.shape, height_map=args.height_map, color_map=args.color_map, shape_height=args.shape_height,
         shape_exact=args.shape_exact, shape_columns=args.shape_columns, voxels=args.voxels, mesh_up=args.mesh_up,
-        hollow=args.hollow, supports=args.supports, open_tops=not args.no_open_tops,
+        hollow=args.hollow, supports=args.supports, support_height=args.support_height, open_tops=not args.no_open_tops,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
