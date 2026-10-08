@@ -17,6 +17,9 @@ of the fold's file in ``--style-dir``. They drive both the style bias and the ju
 Metrics as in M10 (``experiments.style.evaluate``): validity, utilization, the judge and the size-matched
 judge against the real model, the distance to the set's own statistics, time.
 ``--random-weights`` uses an untrained model (a smoke test of the plumbing; its numbers mean nothing).
+Each build's row also logs its placed parts (``placed``: [part, turn, LDraw color, layer, x, z], the format of
+``alt.candidates``) and how many of them the model's vocabulary cannot express (``outside_vocab``), so figures
+and counts come from the logged builds.
 Results are appended per build to ``runs.jsonl`` and resumed; ``--workers`` processes (default 3).
 """
 
@@ -24,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import statistics
 import time
@@ -36,7 +40,8 @@ import numpy as np
 
 from brickwfc.alt.inputs import STYLE_FILES, STYLE_VERSION
 from brickwfc.bricks.bottomup import BottomUpBuilder
-from brickwfc.bricks.parts import PlacedPart
+from brickwfc.bricks.colors import color_for_code
+from brickwfc.bricks.parts import CATALOG, PlacedPart, Shape, extract_parts
 from brickwfc.bricks.proposal import Proposal, random_weights
 from brickwfc.bricks.style import StyleBias, StyleStats, events
 from brickwfc.bricks.tokens import Vocab, build_vocab
@@ -68,6 +73,18 @@ def style_file(style_dir: Path, fold: int, version: str) -> Path:
     return style_dir / STYLE_FILES[version].format(i=fold)
 
 
+def placed_to_json(placed: Sequence[PlacedPart]) -> list[list]:
+    return [[p.shape.part.name, p.shape.turn, p.color.ldraw, p.layer, p.x, p.z] for p in placed]
+
+
+def placed_from_json(rows: Sequence[Sequence]) -> list[PlacedPart]:
+    return [PlacedPart(Shape(CATALOG[name], turn), color_for_code(code), layer, x, z) for name, turn, code, layer, x, z in rows]
+
+
+def job_vocab(weights: str) -> Vocab:
+    return Vocab.load(Path(weights).with_name("vocab.json")) if weights else build_vocab()
+
+
 def load_proposal(weights: str) -> Proposal:
     if weights:
         return Proposal.load(Path(weights))
@@ -88,12 +105,15 @@ def run_job(job: Job) -> dict:
     seconds = time.perf_counter() - start
     record = evaluate(job.set_number, job.fold, job.condition, "contacts", job.seed, grid, False, seconds, parts,
                       inventory, job.stats, StyleStats().add(real), events(real))
-    return asdict(record)
+    placed = [] if grid is None else extract_parts(grid, parts)[0]
+    vocab = job_vocab(job.weights)
+    return {**asdict(record), "outside_vocab": sum(vocab.shape(p.shape) is None for p in placed),
+            "placed": placed_to_json(placed)}
 
 
 def summary_table(rows: list[dict], sets: Sequence[str]) -> str:
     lines = ["| condition | builds | valid % | utilization % | judge | size-matched judge | real ceiling | "
-             "distance to set | s/build |", "|---|---|---|---|---|---|---|---|---|"]
+             "distance to set | outside vocab / build | s/build |", "|---|---|---|---|---|---|---|---|---|---|"]
     for condition in CONDITIONS:
         mine = [r for r in rows if r["condition"] == condition and r["set_number"] in sets]
         if not mine:
@@ -101,7 +121,8 @@ def summary_table(rows: list[dict], sets: Sequence[str]) -> str:
         mean = lambda key: statistics.fmean(r[key] for r in mine)  # noqa: E731
         lines.append(f"| {condition} | {len(mine)} | {100 * mean('valid'):.0f} | {100 * mean('utilization'):.1f} | "
                      f"{mean('judge'):.4f} | {mean('matched_judge'):.4f} | {mean('matched_ceiling'):.4f} | "
-                     f"{mean('distance'):.4f} | {mean('wall_time_s'):.2f} |")
+                     f"{mean('distance'):.4f} | {statistics.fmean(r.get('outside_vocab', math.nan) for r in mine):.1f} | "
+                     f"{mean('wall_time_s'):.2f} |")
     wins = []
     for a, b in (("proposal_raster", "stats_raster"), ("proposal_raster", "stats_random"), ("stats_raster", "stats_random")):
         per_set = []
