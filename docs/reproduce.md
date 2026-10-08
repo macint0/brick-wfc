@@ -281,6 +281,29 @@ python -m brickwfc.experiments.proposal_report --dir out/m12b_proposal --weights
 - `results/m12b_proposal_runs.jsonl` is `runs.jsonl` without the placed parts (the copying step is manual); the
   paper tables read it.
 
+### `results/m12b_proposal_shape.md` (M12b step 2, phase 2: with a target shape), with `m12b_proposal_shape.json`, `m12b_proposal_shape.png`
+
+Needs `data/models/proposal_run2.npz` and `vocab.json`. Three pipeline runs per set (one per arm), then the report:
+
+```
+CAR=brickgpt:4b15b71c-f400-4e54-a118-f0c2afba6e17
+for s in 7796-1 6370-1 7743-1; do
+  python -m brickwfc.alt $s --shape $CAR --n 20 --workers 10 --out out/m12b_proposal_shape/$s/stats_random
+  python -m brickwfc.alt $s --shape $CAR --n 20 --workers 10 --order raster \
+      --out out/m12b_proposal_shape/$s/stats_raster
+  python -m brickwfc.alt $s --shape $CAR --n 20 --workers 10 --order raster \
+      --proposal data/models/proposal_run2.npz --out out/m12b_proposal_shape/$s/proposal_raster
+done
+python -m brickwfc.experiments.proposal_shape --dir out/m12b_proposal_shape \
+    --weights data/models/proposal_run2.npz --figure-set 6370-1 --figure results/m12b_proposal_shape.png \
+    --json results/m12b_proposal_shape.json
+```
+
+- About 1.2 CPU-hours of generation, most of it the proposal arm (38-66 s per candidate against 2-14 s).
+- Resumable through the pipeline caches. `--order` and `--proposal` enter the cache key (the model by a hash of
+  its weights), so a statistics cache is never reused for the model.
+- The report reads the run folders and builds nothing; it prints the write-up's table.
+
 ### `results/m12c_rebrickable.md` (M12c), with `m12c_rebrickable.json`
 
 ```
