@@ -27,16 +27,16 @@ constraints (its propagation sees dead ends early), that is the paper's main res
 
 **Checkpoint status (2026-10-07, after M6, M7, M9 and the M11 quick test):** the bottom-up builder matches or
 beats WFC on stability, physics, inventory validity/utilization and speed (10–100×). WFC's only measured
-win is filling shapes with large overhangs (at the cost of grip). Decision pending with Mac.
+win is filling shapes with large overhangs (at the cost of grip).
 
-**Open items (handoff, 2026-10-08):**
-- **Decision pending:** pivot (bottom-up builder as main generator, WFC as a compared method) or keep pushing
-  WFC (e.g. M10 learned style). Claude recommended the pivot; Mac has not decided.
-- **3D check pending:** Mac is to open these in BrickLink Studio (File → Import → Import LDraw) or LeoCAD:
-  `out/check/orientation_check.ldr` (6 parts; turned 1×2/2×4 must not overlap — tests the assumption that
-  3023/3020 are long along LDraw X), `out/m5/build_seed1.ldr`, `out/m6_example/build_seed3.ldr`.
-  `out/` is gitignored, so these exist only on Mac's PC (regenerate with `python -m brickwfc.bricks`).
-- **Offered, not started:** a browser 3D viewer for builds (no LDraw parts library needed).
+**Decision (Mac, 2026-10-08): pivot.** The bottom-up builder is the main generator; WFC (with its
+constraints) is a compared method. The paper is about alternate builds from an inventory + the funnel,
+comparing generators. Keep reporting WFC next to the bottom-up builder in every experiment. The full M11
+run (shape + inventory) confirmed it: the any-offset bottom-up builder (D2) beats WFC there too.
+
+**Notes (2026-10-08):**
+- **3D check done:** Mac opened `out/check/orientation_check.ldr` and the M5/M6 builds in a viewer; the
+  part orientation (3023/3020 long along LDraw X) and the builds look right.
 - Package is installed editable (`pip install -e ".[dev]"`); no `PYTHONPATH=src` needed.
 - Mac's PC runs low on memory during long experiments; experiments are resumable — rerun the same command.
 
@@ -105,7 +105,6 @@ brick-wfc/
 - **M2 — Learn rules + weights from an example.** Learning from an M1 output recovers the exact rule set.
 - **M3 — Funnel v0 (2D).** One command runs generate → verify → dedupe → judge → select with stage counts.
 - **M4 — 3D grid, 1×1 plates.** Support as a vertical adjacency rule; `.ldr` export; isometric preview.
-  *Still to do: open the generated `.ldr` files in LeoCAD / Stud.io to confirm they look right.*
 - **M5 — Multi-cell parts.** 1×1, 1×2, 2×2, 2×4 plates; integrity via adjacency + border masks; 100-build integrity test.
 - **M6 — Stability-aware propagation.** `SupportConstraint` in propagation; A–D comparison over 1000 seeds
   (`results/m6_stability.md`). Post-filtering fails at scale; B is 100% stable but the bottom-up
@@ -118,6 +117,15 @@ brick-wfc/
   `wfc.solve_attempt`, 10 real sets (`results/m9_inventory.md`). Post-filter 1.5% valid; WFC + inventory
   100% valid, 93% of parts used, 1.4 s/build; bottom-up 100% valid, 99.9% used, 99% physically stable,
   0.014 s/build.
+- **M11 — Target shape.** `bricks/shapes.py` (`ShapeConstraint`, primitives, `sized_for` scales a shape to an
+  inventory's volume, IoU), bottom-up `allowed` mask. Quick test, shape only (`results/m11_shape_quick.md`),
+  and shape + inventory on 10 sets × 5 shapes (`experiments/shape_inventory.py`,
+  `results/m11_shape_inventory.md`): every build valid for every generator. WFC beats the original
+  bottom-up builder D on fill (73% vs 68%), but `BottomUpBuilder(any_offset=True)` (**D2**: a part may
+  cover the visited cell with any of its cells) beats both: 78% fill, best utilization and physics, 20×
+  faster than WFC. WFC keeps a small edge on overhangs (mushroom 53% vs 50%) at the cost of grip.
+  **Use D2 as the bottom-up generator from here on**; D stays for reproducing earlier tables.
+  Not done: shapes from an `.ldr` model or heightmap PNG (only primitives so far).
 
 ### M8 — Part library: bricks, plates, tiles
 - Common sizes: bricks and plates 1×1, 1×2, 1×4, 2×2, 2×4 (+ 1×6, 2×6 if cheap); tiles 1×1, 1×2, 2×2.
@@ -137,17 +145,6 @@ use the right part files and heights (brick = 24 LDU).
 - Optional: use `0 STEP` data (present in some OMR files) — e.g. sub-assembly statistics.
 **Done when:** weights, rules and judge are learned from ≥20 sets, and generated builds score closer to
 real sets than uniform-weight builds under held-out statistics.
-
-### M11 — Target shape (quick test done: `results/m11_shape_quick.md`)
-Quick test (shape only, 5 shapes, 100 seeds): `bricks/shapes.py`, `ShapeConstraint`, bottom-up `allowed` mask,
-`experiments/shape.py`. Bottom-up fills supported shapes better and 10–25× faster; WFC fills overhang shapes
-better (mushroom 55% vs 41%) but those builds need more grip. Still to do: shape + inventory together.
-- Input: a voxel shape on the stud/plate grid — from an `.ldr` model, a heightmap PNG, or simple
-  primitives.
-- Constraint: solid only inside the shape; encourage filling it (weights near the shape surface).
-- Metrics: shape IoU / fill %, plus everything above.
-**Done when:** "build shape S from set X's parts" produces stable, inventory-feasible builds with reported
-IoU.
 
 ### M12 — Alternate-build pipeline
 - One command: set number or parts list (+ optional shape) → 3D funnel (generate → verify stability,

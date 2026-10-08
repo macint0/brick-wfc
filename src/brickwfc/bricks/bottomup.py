@@ -7,6 +7,10 @@ probability as the WFC tileset's weights, try to anchor a part there. Parts are 
 construction. This is the obvious alternative a reviewer would propose, so experiments compare
 against it. With an inventory, a (part, color) is skipped once it is used up; with an ``allowed`` mask
 (a target shape), parts must lie entirely inside it.
+
+By default a part is tried only with its min corner on the visited cell. ``any_offset=True`` (M11)
+tries every position of the part that covers the cell, in random order, so a gap can also be filled
+by a part reaching into it from the left or front: a stronger baseline when packing matters.
 """
 
 from __future__ import annotations
@@ -15,12 +19,14 @@ from typing import Mapping
 
 import numpy as np
 
-from brickwfc.bricks.parts import PartSet, PlacedPart, TileInfo
+from brickwfc.bricks.colors import BrickColor
+from brickwfc.bricks.parts import PartSet, PlacedPart, Shape, TileInfo
 
 
 class BottomUpBuilder:
-    def __init__(self, parts: PartSet) -> None:
+    def __init__(self, parts: PartSet, any_offset: bool = False) -> None:
         self.parts = parts
+        self.any_offset = any_offset
         self.index = {info: t for t, info in enumerate(parts.infos)}
         # Same priors as WFC: a cell's chance of holding (shape, color) is the summed weight of
         # that pair's tiles; the solid share is the solid tiles' share of all weight.
@@ -59,15 +65,30 @@ class BottomUpBuilder:
                     key = (part_shape.part.name, color.name)
                     if remaining is not None and remaining.get(key, 0) <= 0:
                         continue
-                    part = PlacedPart(part_shape, color, y, x, z)
-                    if self._fits(part, filled, allowed):
+                    part = self._place(part_shape, color, y, z, x, filled, allowed, rng)
+                    if part is not None:
                         if remaining is not None:
                             remaining[key] -= 1
                         for cy, cz, cx in part.cells():
                             filled[cy, cz, cx] = True
-                            grid[cy, cz, cx] = self.index[TileInfo(part_shape, cx - x, cz - z, color)]
+                            grid[cy, cz, cx] = self.index[TileInfo(part_shape, cx - part.x, cz - part.z, color)]
                         break
         return grid
+
+    def _place(
+        self, part_shape: Shape, color: BrickColor, y: int, z: int, x: int,
+        filled: np.ndarray, allowed: np.ndarray, rng: np.random.Generator,
+    ) -> PlacedPart | None:
+        """A fitting placement of the part covering cell (y, z, x), or None."""
+        if not self.any_offset:
+            part = PlacedPart(part_shape, color, y, x, z)
+            return part if self._fits(part, filled, allowed) else None
+        for flat in rng.permutation(part_shape.size_z * part_shape.size_x):
+            dz, dx = divmod(int(flat), part_shape.size_x)
+            part = PlacedPart(part_shape, color, y, x - dx, z - dz)
+            if self._fits(part, filled, allowed):
+                return part
+        return None
 
     @staticmethod
     def _fits(part: PlacedPart, filled: np.ndarray, allowed: np.ndarray) -> bool:

@@ -56,9 +56,52 @@ def ring(ny: int, nz: int, nx: int, wall: int = 2) -> Mask:
 SHAPES = {f.__name__: f for f in (block, pyramid, arch, mushroom, ring)}
 
 
+def scaled(name: str, ny: int, side: int) -> Mask:
+    """Shape ``name`` on a ``side`` x ``side`` footprint; pillars and stems grow with the footprint
+    (a quarter of its side, at least 2 studs), so an 8-stud footprint matches the defaults."""
+    thick = max(2, side // 4)
+    if name == "arch":
+        return arch(ny, side, side, pillar=thick)
+    if name == "mushroom":
+        return mushroom(ny, side, side, stem=thick)
+    return SHAPES[name](ny, side, side)
+
+
+# Smallest footprint at which each scaled shape keeps its character (a gap under the arch, an
+# overhang around the stem, a hole in the ring, more than one pyramid step).
+MIN_SIDE = {"block": 2, "pyramid": 4, "arch": 6, "mushroom": 6, "ring": 6}
+
+
+def sized_for(
+    name: str, cells: float, heights: range = range(3, 9), preferred_height: int = 6, tolerance: float = 0.1
+) -> Mask:
+    """A ``scaled`` shape with volume close to ``cells``, over square footprints from ``MIN_SIDE`` up
+    and the given heights (in plates). Among shapes within ``tolerance`` of ``cells`` (relative), the
+    one closest to ``preferred_height`` wins, then the closest volume; if none is that close, the
+    closest volume wins. A tiny ``cells`` gets the smallest shape, larger than asked."""
+    best: tuple[bool, int, float, Mask] | None = None
+    for ny in heights:
+        side = MIN_SIDE[name]
+        while True:
+            mask = scaled(name, ny, side)
+            error = abs(int(mask.sum()) - cells) / cells
+            key = (error > tolerance, abs(ny - preferred_height) if error <= tolerance else 0, error)
+            if best is None or key < best[:3]:
+                best = (*key, mask)
+            if mask.sum() >= cells:
+                break
+            side += 1
+    return best[3]
+
+
 def fill(filled: np.ndarray, mask: Mask) -> float:
     """Share of the shape's cells that are solid (1.0 = shape completely filled)."""
     return float((filled & mask).sum() / mask.sum())
+
+
+def iou(filled: np.ndarray, mask: Mask) -> float:
+    """Intersection over union of the solid cells and the shape (equals ``fill`` when nothing is outside)."""
+    return float((filled & mask).sum() / (filled | mask).sum())
 
 
 def outside(filled: np.ndarray, mask: Mask) -> int:
