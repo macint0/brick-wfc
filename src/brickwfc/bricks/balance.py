@@ -61,15 +61,18 @@ def mass(part: PlacedPart) -> int:
 
 
 def centre(part: PlacedPart) -> Point:
-    return (part.x + part.shape.size_x / 2, part.z + part.shape.size_z / 2)
+    return part.centre()
 
 
 def ground_corners(part: PlacedPart) -> list[Point]:
-    """The corners of the part's footprint if it stands on the ground (its footprint is a rectangle)."""
+    """The corners of the part's contact with the ground if it stands on it: its footprint's bounding
+    box for rectangular parts, else the corners of each flat-bottomed cell."""
     if part.layer != 0:
         return []
-    x0, z0, x1, z1 = part.x, part.z, part.x + part.shape.size_x, part.z + part.shape.size_z
-    return [(x0, z0), (x1, z0), (x1, z1), (x0, z1)]
+    if part.shape.rectangular:
+        x0, z0, x1, z1 = part.x, part.z, part.x + part.shape.size_x, part.z + part.shape.size_z
+        return [(x0, z0), (x1, z0), (x1, z1), (x0, z1)]
+    return [(x + cx, z + cz) for _, z, x in part.seated_cells() for cx in (0, 1) for cz in (0, 1)]
 
 
 @dataclass
@@ -144,7 +147,7 @@ def clusters(placed: Sequence[PlacedPart]) -> list[tuple[list[int], Cluster]]:
     balance, position = Balance(), {}
     for i in order:
         part = placed[i]
-        below = {position[owner[(y - 1, z, x)]] for y, z, x in part.bottom_cells() if (y - 1, z, x) in owner}
+        below = {position[owner[(y - 1, z, x)]] for y, z, x in part.seated_cells() if (y - 1, z, x) in owner}
         position[i] = len(balance.parent)
         balance.add(part, below)
     members: dict[int, list[int]] = {}

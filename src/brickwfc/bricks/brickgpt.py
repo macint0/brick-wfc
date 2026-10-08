@@ -116,7 +116,7 @@ def to_placed(bricks: Sequence[Brick], color: BrickColor) -> list[PlacedPart]:
         if part is None:
             raise ValueError(f"no catalog brick of {b.h}x{b.w} studs")
         # A part is ``width`` long along x unless rotated.
-        shape = Shape(part, rotated=b.h != part.width)
+        shape = Shape(part, b.h != part.width)
         placed.append(PlacedPart(shape, color, b.z * UNIT_PLATES, b.x, b.y))
     return placed
 

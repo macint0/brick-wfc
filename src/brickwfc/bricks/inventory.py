@@ -13,7 +13,7 @@ from typing import Mapping
 import numpy as np
 
 from brickwfc.bricks.colors import BrickColor, color_for_code
-from brickwfc.bricks.parts import BY_FILE, CATALOG, PLATE_FILES, Part, PartSet, PlacedPart, shapes_of
+from brickwfc.bricks.parts import BY_FILE, CATALOG, PLATE_FILES, Part, PartSet, PlacedPart, Shape, shapes_of
 from brickwfc.ldraw.mpd import flatten, parse_color
 from brickwfc.wfc import Cell, Wave
 
@@ -72,7 +72,7 @@ def inventory_from_csv(text: str, known: Mapping[str, Part] = BY_FILE) -> tuple[
 
 
 def part_cells(part: Part) -> int:
-    return part.width * part.depth * part.height
+    return Shape(part).cells
 
 
 def inventory_cells(inventory: Inventory) -> int:

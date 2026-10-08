@@ -1,11 +1,18 @@
-"""Multi-cell parts as WFC tiles (M5, M8).
+"""Multi-cell parts as WFC tiles (M5, M8, M12b).
 
-A part occupies a box of cells: a rectangle of stud cells, ``height`` plate layers tall (plates and
-tiles 1, bricks 3). Each cell of a placed part holds the tile (shape, offset inside the part, color),
-where a *shape* is a part in one orientation. Adjacency rules make parts whole: if a tile's neighbor
-in direction d lies inside its part, that neighbor must be exactly the matching tile of the same part;
+A part occupies a set of stud cells (its *footprint*: a rectangle for most parts, an L for corner
+parts), ``height`` plate layers tall (plates and tiles 1, bricks and most slopes 3). Each cell of a
+placed part holds the tile (shape, offset inside the part's bounding box, color), where a *shape* is a
+part in one of its (up to 4) orientations. Adjacency rules make parts whole: if a tile's neighbor in
+direction d lies inside its part, that neighbor must be exactly the matching tile of the same part;
 otherwise the neighbor must also sit on a part face (or be empty). Border masks keep parts inside the
-grid. Tiles have no studs, so the cell above a tile must be empty.
+grid.
+
+Per cell, a part's top may carry a stud or not (a tile's top, a slope's sloped face), and its bottom
+may be flat ("seated": it can rest on a stud) or not (an inverted slope's sloped underside). Nothing
+may be directly above a studless top cell or directly below an unseated bottom cell, and a part is
+supported by studs under its seated cells only. A slope is modelled as its full bounding box, so the
+space above its sloped face is unusable (conservative: a real part could overhang it).
 
 Grids are indexed (y, z, x), as in ``tileset.GRID3D``.
 """
@@ -13,6 +20,7 @@ Grids are indexed (y, z, x), as in ``tileset.GRID3D``.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Literal, Mapping, Sequence
 
 import numpy as np
@@ -28,13 +36,22 @@ HORIZONTAL = tuple(d for d, offset in enumerate(GRID3D.offsets) if offset[0] == 
 ROTATE_Y_90 = (0, 0, 1, 0, 1, 0, -1, 0, 0)  # maps LDraw +X onto +Z
 
 Support = Literal["none", "cell"]
-Kind = Literal["plate", "brick", "tile"]
+Kind = Literal["plate", "brick", "tile", "slope"]
+Cells = tuple[tuple[float, float], ...]  # stud-cell centres (x, z) in studs along LDraw X, Z from the part origin
 
 
 @dataclass(frozen=True)
 class Part:
-    """A part type. ``width`` x ``depth`` studs along LDraw X x Z in its default orientation,
-    ``height`` plate layers tall; ``studs`` is False for tiles (smooth top)."""
+    """A part type. ``width`` x ``depth`` studs along LDraw X x Z in its default orientation (its
+    bounding box), ``height`` plate layers tall; ``studs`` is False for parts without any stud (tiles).
+
+    Rectangular parts leave the geometry fields at None: the footprint is the full ``width`` x ``depth``
+    rectangle centred on the LDraw origin, every top cell has a stud (if ``studs``) and every bottom cell
+    is flat. Other parts list their ``cells`` (stud-cell centres from the origin, as in the part's .dat
+    file), the cells with a stud on top (``stud_cells``) and the cells with a flat bottom
+    (``seated_cells``). ``origin_top``: the origin is on the top face (most parts), else on the bottom.
+    ``aliases``: older LDraw file names of the same part ("~Moved to" files) that models still use.
+    """
 
     name: str
     ldraw: str
@@ -43,9 +60,31 @@ class Part:
     height: int = 1
     studs: bool = True
     kind: Kind = "plate"
+    cells: Cells | None = None
+    stud_cells: Cells | None = None
+    seated_cells: Cells | None = None
+    origin_top: bool = True
+    aliases: tuple[str, ...] = ()
+
+    @property
+    def footprint_cells(self) -> Cells:
+        if self.cells is not None:
+            return self.cells
+        return tuple((x - (self.width - 1) / 2, z - (self.depth - 1) / 2)
+                     for z in range(self.depth) for x in range(self.width))
+
+    @property
+    def studded_cells(self) -> Cells:
+        if self.stud_cells is not None:
+            return self.stud_cells
+        return self.footprint_cells if self.studs else ()
+
+    @property
+    def flat_bottom_cells(self) -> Cells:
+        return self.footprint_cells if self.seated_cells is None else self.seated_cells
 
 
-HEIGHTS: dict[Kind, int] = {"plate": 1, "brick": 3, "tile": 1}
+HEIGHTS: dict[Kind, int] = {"plate": 1, "brick": 3, "tile": 1, "slope": 3}
 
 
 def _family(kind: Kind, spec: str, suffix: bool = False) -> list[Part]:
@@ -76,9 +115,19 @@ _LOOKALIKES = (
     _family("plate", "6141:1x1 4073:1x1 4032a:2x2 4032b:2x2", suffix=True)
     + _family("brick", "3062a:1x1 3062b:1x1 4070:1x1 3065:1x2 2877:1x2 3066:1x4 3941:2x2 6143:2x2", suffix=True)
     + _family("tile", "2555:1x1 2412a:1x2 2412b:1x2", suffix=True)
+    + _family("brick", "4216:1x2", suffix=True)  # M12b: brick with groove
 )
-CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES}
-BY_FILE: dict[str, Part] = {p.ldraw: p for p in CATALOG.values()}
+
+
+def _corner(kind: Kind, file: str) -> Part:
+    """A 2x2 corner part (an L of 3 cells). Its origin is on the corner stud; the arms run along +X and +Z."""
+    return Part(f"{kind}2x2_corner", f"{file}.dat", 2, 2, HEIGHTS[kind], True, kind, cells=((0, 0), (1, 0), (0, 1)))
+
+
+# Non-rectangular parts (M12b), after the M8 ones so that style statistics keep their part indices.
+_CORNERS = [_corner("plate", "2420"), _corner("brick", "2357")]
+CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES + _CORNERS}
+BY_FILE: dict[str, Part] = {file: p for p in CATALOG.values() for file in (p.ldraw, *p.aliases)}
 
 # M4-M11 used these four plates only; experiments that reproduce those tables still do.
 PLATES: dict[str, Part] = {name: CATALOG[name] for name in ("plate1x1", "plate1x2", "plate2x2", "plate2x4")}
@@ -90,42 +139,138 @@ def family(kind: Kind, lookalikes: bool = False) -> list[Part]:
     return [p for p in CATALOG.values() if p.kind == kind and (lookalikes or p in _PLAIN)]
 
 
+def turn_rotation(turn: int) -> tuple[int, ...]:
+    """LDraw rotation of ``turn`` quarter turns about the vertical axis (``ROTATE_Y_90`` applied ``turn`` times)."""
+    step = np.array(ROTATE_Y_90).reshape(3, 3)
+    return tuple(int(v) for v in np.linalg.matrix_power(step, turn % 4).ravel())
+
+
+Offsets = tuple[tuple[int, int], ...]  # (dz, dx) cells from a shape's bounding-box min corner
+
+
+@dataclass(frozen=True)
+class Geometry:
+    """A part's cells in one orientation."""
+
+    footprint: Offsets  # every cell of one layer, row-major (by dz, then dx)
+    studded: frozenset[tuple[int, int]]  # top cells with a stud
+    seated: frozenset[tuple[int, int]]  # bottom cells with a flat underside
+    origin: tuple[float, float]  # (x, z) of the LDraw origin from the min-corner cell's centre, in studs
+    size_x: int
+    size_z: int
+
+
+@lru_cache(maxsize=None)
+def geometry(part: Part, turn: int) -> Geometry:
+    """The part's cells turned by ``turn`` quarter turns (the rotation of its LDraw placement) and
+    shifted so that its bounding box starts at (0, 0)."""
+    r = np.array(turn_rotation(turn)).reshape(3, 3)
+
+    def turned(cells: Cells) -> list[tuple[float, float]]:
+        return [(r[0, 0] * x + r[0, 2] * z, r[2, 0] * x + r[2, 2] * z) for x, z in cells]
+
+    world = turned(part.footprint_cells)
+    min_x, min_z = min(x for x, _ in world), min(z for _, z in world)
+
+    def offsets(cells: Cells) -> list[tuple[int, int]]:
+        return [(int(round(z - min_z)), int(round(x - min_x))) for x, z in turned(cells)]
+
+    footprint = tuple(sorted(offsets(part.footprint_cells)))
+    return Geometry(
+        footprint, frozenset(offsets(part.studded_cells)), frozenset(offsets(part.flat_bottom_cells)),
+        (float(-min_x), float(-min_z)), 1 + max(dx for _, dx in footprint), 1 + max(dz for dz, _ in footprint),
+    )
+
+
+TURN_SUFFIX = ("", "_r90", "_r180", "_r270")
+
+
 @dataclass(frozen=True)
 class Shape:
-    """A part in one orientation, with its footprint along the grid's x and z axes."""
+    """A part in one orientation: ``turn`` quarter turns about the vertical axis (True/False mean 1/0).
+    Sizes are those of its bounding box along the grid's x and z axes."""
 
     part: Part
-    rotated: bool
+    turn: int = 0
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "turn", int(self.turn) % 4)
+
+    @property
+    def geometry(self) -> Geometry:
+        return geometry(self.part, self.turn)
+
+    @property
+    def rotated(self) -> bool:
+        """Turned by an odd number of quarter turns (a rectangle's long side along z)."""
+        return self.turn % 2 == 1
 
     @property
     def size_x(self) -> int:
-        return self.part.depth if self.rotated else self.part.width
+        return self.geometry.size_x
 
     @property
     def size_z(self) -> int:
-        return self.part.width if self.rotated else self.part.depth
+        return self.geometry.size_z
 
     @property
     def size_y(self) -> int:
         return self.part.height
 
     @property
+    def footprint(self) -> Offsets:
+        """(dz, dx) of every cell of one layer from the bounding box's min corner, row-major."""
+        return self.geometry.footprint
+
+    @property
+    def rectangular(self) -> bool:
+        """A full box whose top cells all have studs (or none do) and whose bottom is flat (the M8 parts)."""
+        g = self.geometry
+        return (len(g.footprint) == g.size_x * g.size_z and len(g.seated) == len(g.footprint)
+                and len(g.studded) in (0, len(g.footprint)))
+
+    @property
     def cells(self) -> int:
-        return self.size_x * self.size_y * self.size_z
+        return len(self.footprint) * self.size_y
 
     @property
     def name(self) -> str:
-        return f"{self.part.name}{'_r90' if self.rotated else ''}"
+        return f"{self.part.name}{TURN_SUFFIX[self.turn]}"
+
+    def covers(self, dz: int, dx: int) -> bool:
+        return (dz, dx) in self.geometry.footprint
+
+    def studded(self, dz: int, dx: int) -> bool:
+        """Whether the top of cell (dz, dx) carries a stud."""
+        return (dz, dx) in self.geometry.studded
+
+    def seated(self, dz: int, dx: int) -> bool:
+        """Whether the bottom of cell (dz, dx) is flat (it can rest on a stud)."""
+        return (dz, dx) in self.geometry.seated
+
+
+def _same_cells(a: Shape, b: Shape) -> bool:
+    ga, gb = a.geometry, b.geometry
+    return (ga.footprint, ga.studded, ga.seated) == (gb.footprint, gb.studded, gb.seated)
 
 
 def shapes_of(parts: Sequence[Part]) -> list[Shape]:
-    """Every distinct orientation of each part (square parts have one)."""
+    """Every distinct orientation of each part: 1 for a square, 2 for a rectangle, up to 4 otherwise.
+    Turns that give the same cells as an earlier one (a rectangle turned twice) are left out."""
     shapes = []
     for part in parts:
-        shapes.append(Shape(part, rotated=False))
-        if part.width != part.depth:
-            shapes.append(Shape(part, rotated=True))
+        mine: list[Shape] = []
+        for turn in range(4):
+            shape = Shape(part, turn)
+            if not any(_same_cells(shape, s) for s in mine):
+                mine.append(shape)
+        shapes += mine
     return shapes
+
+
+def canonical(part: Part, turn: int) -> Shape:
+    """The shape of ``part`` turned by ``turn`` quarter turns, as listed by ``shapes_of``."""
+    return next(s for s in shapes_of([part]) if _same_cells(s, Shape(part, turn)))
 
 
 @dataclass(frozen=True)
@@ -148,24 +293,43 @@ class TileInfo:
         return self.shape is not None and self.offset_y == 0
 
     @property
+    def top(self) -> bool:
+        """A cell on the part's top layer."""
+        return self.shape is not None and self.offset_y == self.shape.size_y - 1
+
+    @property
     def stud_top(self) -> bool:
         """A cell on the part's top layer that carries a stud (something may click onto it)."""
-        return self.shape is not None and self.offset_y == self.shape.size_y - 1 and self.shape.part.studs
+        return self.top and self.shape.studded(self.offset_z, self.offset_x)
+
+    @property
+    def studless_top(self) -> bool:
+        """A top cell without a stud (a tile, a slope's sloped face): nothing may be directly above it."""
+        return self.top and not self.shape.studded(self.offset_z, self.offset_x)
+
+    @property
+    def open_bottom(self) -> bool:
+        """A bottom cell that is not flat (an inverted slope's underside): nothing may be directly below it."""
+        return self.bottom and not self.shape.seated(self.offset_z, self.offset_x)
 
     def inside(self, dx: int, dz: int, dy: int = 0) -> bool:
         """Whether the cell at (dx, dz, dy) from this one belongs to the same part."""
         if self.shape is None:
             return False
-        x, z, y = self.offset_x + dx, self.offset_z + dz, self.offset_y + dy
-        return 0 <= x < self.shape.size_x and 0 <= z < self.shape.size_z and 0 <= y < self.shape.size_y
+        y = self.offset_y + dy
+        return 0 <= y < self.shape.size_y and self.shape.covers(self.offset_z + dz, self.offset_x + dx)
 
     def footprint(self) -> list[tuple[int, int]]:
         """(dz, dx) offsets from this cell to every cell of its part's layer, itself included."""
         if self.shape is None:
             return []
-        return [
-            (z - self.offset_z, x - self.offset_x) for z in range(self.shape.size_z) for x in range(self.shape.size_x)
-        ]
+        return [(z - self.offset_z, x - self.offset_x) for z, x in self.shape.footprint]
+
+    def seats(self) -> list[tuple[int, int]]:
+        """(dz, dx) offsets from this cell to every flat-bottomed cell of its part (those it can rest on studs with)."""
+        if self.shape is None:
+            return []
+        return [(z - self.offset_z, x - self.offset_x) for z, x in self.shape.footprint if self.shape.seated(z, x)]
 
 
 @dataclass(frozen=True, eq=False)
@@ -220,10 +384,9 @@ def part_tileset(
     weights: list[float] = [empty_weight]
     for shape, color, weight in tile_specs:
         for y in range(shape.size_y):
-            for z in range(shape.size_z):
-                for x in range(shape.size_x):
-                    infos.append(TileInfo(shape, x, z, color, y))
-                    weights.append(weight * len(parts) / total)
+            for z, x in shape.footprint:
+                infos.append(TileInfo(shape, x, z, color, y))
+                weights.append(weight * len(parts) / total)
 
     compat, border = adjacency(infos)
     solid = np.array([info.solid for info in infos])
@@ -247,7 +410,8 @@ def adjacency(infos: Sequence[TileInfo]) -> tuple[np.ndarray, np.ndarray]:
 
     In direction d: a tile whose part continues there needs exactly the next tile of the same part;
     otherwise the neighbor must not belong to a part that continues back (or it would be cut off).
-    On top of that, nothing may sit on a tile (the studless top of a part). Rules are symmetric.
+    On top of that, nothing may sit on a studless top cell (a tile, a slope's face) or be directly below
+    an unseated bottom cell (an inverted slope's underside). Rules are symmetric.
     """
     solid = np.array([i.solid for i in infos])
     shape_ids: dict[Shape, int] = {}
@@ -255,23 +419,24 @@ def adjacency(infos: Sequence[TileInfo]) -> tuple[np.ndarray, np.ndarray]:
     color_ids: dict[str, int] = {}
     color_id = np.array([color_ids.setdefault(i.color.name, len(color_ids)) if i.solid else -1 for i in infos])
     offset = np.array([(i.offset_y, i.offset_z, i.offset_x) for i in infos])
-    size = np.array([(i.shape.size_y, i.shape.size_z, i.shape.size_x) if i.solid else (1, 1, 1) for i in infos])
     same_part = solid[:, None] & (shape_id[:, None] == shape_id[None, :]) & (color_id[:, None] == color_id[None, :])
 
     count = len(infos)
     compat = np.ones((len(GRID3D.directions), count, count), dtype=bool)
     border = np.ones((len(GRID3D.directions), count), dtype=bool)
-    for d, step in enumerate(GRID3D.offsets):
-        step = np.array(step)
-        continues = solid & np.all((offset + step >= 0) & (offset + step < size), axis=1)
-        continues_back = solid & np.all((offset - step >= 0) & (offset - step < size), axis=1)
-        next_tile = same_part & np.all(offset[None, :, :] == offset[:, None, :] + step, axis=2)
+    for d, (dy, dz, dx) in enumerate(GRID3D.offsets):
+        continues = np.array([i.inside(dx, dz, dy) for i in infos], dtype=bool)
+        continues_back = np.array([i.inside(-dx, -dz, -dy) for i in infos], dtype=bool)
+        next_tile = same_part & np.all(offset[None, :, :] == offset[:, None, :] + np.array((dy, dz, dx)), axis=2)
         compat[d] = np.where(continues[:, None], next_tile, ~continues_back[None, :])
         border[d] = ~continues
 
-    studless_top = np.array([i.solid and i.offset_y == i.shape.size_y - 1 and not i.shape.part.studs for i in infos])
+    studless_top = np.array([i.studless_top for i in infos], dtype=bool)
     compat[UP] &= ~np.outer(studless_top, solid)
     compat[DOWN] &= ~np.outer(solid, studless_top)
+    open_bottom = np.array([i.open_bottom for i in infos], dtype=bool)
+    compat[DOWN] &= ~np.outer(open_bottom, solid)
+    compat[UP] &= ~np.outer(solid, open_bottom)
     return compat, border
 
 
@@ -293,42 +458,56 @@ class PlacedPart:
         return [
             (self.layer + dy, self.z + dz, self.x + dx)
             for dy in range(self.shape.size_y)
-            for dz in range(self.shape.size_z)
-            for dx in range(self.shape.size_x)
+            for dz, dx in self.shape.footprint
         ]
 
     def bottom_cells(self) -> list[tuple[int, int, int]]:
         """(y, z, x) of the cells on the part's bottom layer."""
-        return [cell for cell in self.cells() if cell[0] == self.layer]
+        return [(self.layer, self.z + dz, self.x + dx) for dz, dx in self.shape.footprint]
 
     def top_cells(self) -> list[tuple[int, int, int]]:
         """(y, z, x) of the cells on the part's top layer."""
-        return [cell for cell in self.cells() if cell[0] == self.top]
+        return [(self.top, self.z + dz, self.x + dx) for dz, dx in self.shape.footprint]
+
+    def seated_cells(self) -> list[tuple[int, int, int]]:
+        """(y, z, x) of the bottom cells with a flat underside: the ones that rest on studs below."""
+        return [(self.layer, self.z + dz, self.x + dx) for dz, dx in self.shape.footprint if self.shape.seated(dz, dx)]
+
+    def stud_cells(self) -> list[tuple[int, int, int]]:
+        """(y, z, x) of the top cells that carry a stud."""
+        return [(self.top, self.z + dz, self.x + dx) for dz, dx in self.shape.footprint if self.shape.studded(dz, dx)]
+
+    def centre(self) -> tuple[float, float]:
+        """(x, z) of the footprint's centroid, in studs from the grid's corner (cell (x, z) spans [x, x + 1])."""
+        footprint = self.shape.footprint
+        return (self.x + sum(dx for _, dx in footprint) / len(footprint) + 0.5,
+                self.z + sum(dz for dz, _ in footprint) / len(footprint) + 0.5)
 
     def placement(self) -> Placement:
-        """LDraw placement: origin at the center of the part's top face."""
-        center_x = self.x + (self.shape.size_x - 1) / 2
-        center_z = self.z + (self.shape.size_z - 1) / 2
-        rotation = ROTATE_Y_90 if self.shape.rotated else IDENTITY
-        top = self.layer + self.shape.size_y
-        return Placement(self.color.ldraw, stud_position(center_x, center_z, top), rotation, self.shape.part.ldraw)
+        """LDraw placement: the part's origin (on its top face for most parts) turned with the part."""
+        origin_x, origin_z = self.shape.geometry.origin
+        rotation = turn_rotation(self.shape.turn) if self.shape.turn else IDENTITY
+        height = self.layer + self.shape.size_y if self.shape.part.origin_top else self.layer
+        position = stud_position(self.x + origin_x, self.z + origin_z, height)
+        return Placement(self.color.ldraw, position, rotation, self.shape.part.ldraw)
 
 
 def extract_parts(grid: np.ndarray, parts: PartSet) -> tuple[list[PlacedPart], list[str]]:
     """Decode a solved (Y, Z, X) grid into placed parts.
 
     Returns ``(placed, errors)``; ``errors`` lists every incomplete part, cell not covered by
-    exactly one complete part, and part resting on a tile, so an empty list means every part is
-    whole and nothing sits on a studless top.
+    exactly one complete part, part resting on a studless top and part right under an unseated
+    bottom, so an empty list means every part is whole and those faces are clear.
     """
     placed: list[PlacedPart] = []
     errors: list[str] = []
     covered = np.zeros(grid.shape, dtype=np.int64)
     for y, z, x in zip(*np.nonzero(parts.solid[grid])):
         info = parts.infos[grid[y, z, x]]
-        if (info.offset_x, info.offset_y, info.offset_z) != (0, 0, 0):
+        anchor_z, anchor_x = info.shape.footprint[0]  # (0, 0) unless the part's min corner is a notch
+        if (info.offset_x, info.offset_y, info.offset_z) != (anchor_x, 0, anchor_z):
             continue
-        part = PlacedPart(info.shape, info.color, int(y), int(x), int(z))
+        part = PlacedPart(info.shape, info.color, int(y), int(x) - anchor_x, int(z) - anchor_z)
         missing = []
         for cell in part.cells():
             inside = all(0 <= c < n for c, n in zip(cell, grid.shape))
@@ -345,7 +524,11 @@ def extract_parts(grid: np.ndarray, parts: PartSet) -> tuple[list[PlacedPart], l
     for cell in zip(*np.nonzero(solid & (covered != 1))):
         errors.append(f"cell {tuple(int(c) for c in cell)} covered by {covered[cell]} complete parts")
     for part in placed:
-        if not part.shape.part.studs and part.top + 1 < grid.shape[0]:
-            if any(solid[y + 1, z, x] for y, z, x in part.top_cells()):
+        studs = set(part.stud_cells())
+        if part.top + 1 < grid.shape[0]:
+            if any(solid[y + 1, z, x] for y, z, x in part.top_cells() if (y, z, x) not in studs):
                 errors.append(f"something sits on the {part.shape.name} at {(part.layer, part.z, part.x)}")
+        seated = set(part.seated_cells())
+        if part.layer > 0 and any(solid[y - 1, z, x] for y, z, x in part.bottom_cells() if (y, z, x) not in seated):
+            errors.append(f"something is under the open bottom of the {part.shape.name} at {(part.layer, part.z, part.x)}")
     return placed, errors
