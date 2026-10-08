@@ -164,18 +164,26 @@ brick-wfc/
   points: `results/m12_pipeline.md` (connectivity costs 2–20 fill points, most on 1-wide-brick sets; up to 140 s per
   candidate on the largest set; `--max-clutch` uncalibrated).
 
-### M12b — 3D targets and looks (Mac, 2026-10-08: builds are recognizable but not good enough)
-Order matters; commit each step with a before/after figure on the same six demo sets.
+### M12b — 3D targets, learned proposal, looks (Mac, 2026-10-08)
+Mac's framing: BrickGPT-style generation from a real inventory with a bigger catalog, constraints guaranteed at
+decode time. The bottom-up builder is the decoder; the *proposal* in it is pluggable (today: M10 statistics).
+Order matters; commit each step with a before/after figure (spaceship + one BrickGPT object, same seeds).
 1. **True 3D targets.** Inputs are extruded heightfields today; the generator is already 3D. Add: a loader for
-   BrickGPT's published structures as target masks (fairest head-to-head: same object, their unlimited bricks vs
-   our real inventory); a mesh voxelizer (`trimesh`, approved by Mac) for `.obj`/`.stl` at a chosen resolution,
-   scaled to the inventory; `--hollow` (shell of 2 cells + internal supports); overhang handling measured (fill,
-   stability) with `--max-clutch` and/or builder-added support columns.
-2. **Mirror symmetry** in the bottom-up builder (mirrored pairs when the inventory has two; fallback to single).
-3. **Clean skins**: prefer the largest fitting part on exposed surfaces, align seams across rows.
+   BrickGPT's StableText2Brick structures (MIT; 47k objects, all brick sizes map 1:1 onto our catalog) as target
+   masks and as the head-to-head (their data, not their model); a mesh voxelizer (`trimesh`) for `.obj`/`.stl`;
+   `--hollow` (shell + internal supports); overhang handling measured with `--max-clutch` and/or builder support
+   columns. Commits 1a, 1b+1c, 1d.
+2. **Learned proposal model.** A small transformer (~10M params) trained from scratch on brick token sequences
+   (part, color, x, y, z, rotation) from BrickGPT structures + the 28 real sets, on Colab (free T4, ~1 h); CPU
+   inference. Decoded inside `BottomUpBuilder` with the same masks (inventory, support, balance, shape, one piece),
+   so every guarantee stays. Compare against the statistics proposal under the same judge, same seeds, same sets.
+   Keep the statistics as the no-training baseline in every table.
+3. **Mirror symmetry** and **clean skins** (largest fitting part on exposed surfaces): only if step 2 does not
+   already produce them; measure first.
 4. **Slopes and corner parts** in the catalog (sloped top face accepts nothing; L-shaped footprints).
 Not now: style-bias tuning, color logic, WFC. **Done when:** the six-set demo re-rendered with a 3D target
-looks clearly better side by side, every build still valid/stable/one piece, and the per-set coverage rises.
+looks clearly better side by side, every build still valid/stable/one piece, the learned proposal is compared
+to statistics under the judge, and the per-set coverage rises.
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
