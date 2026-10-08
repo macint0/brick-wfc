@@ -4,6 +4,7 @@
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "10182-1",
+    "setup": "ad3552db206f",
     "shape": false,
     "grid_YZX": [
       12,
@@ -17,7 +18,6 @@
     "effective": 13.0,
     "effective_share": 1.0,
     "mean_distance": 0.3363609330955744,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0,
       "0.1": 1.0,
@@ -25,16 +25,20 @@
       "0.3": 0.26764820134183287,
       "0.5": 0.07692307692307693
     },
+    "finished": true,
     "selected": 8,
-    "selected_effective": 7.999999999999998,
-    "selected_effective_share": 0.9999999999999998,
-    "selected_mean_distance": 0.3308646130441394
+    "unit": 0.3350369285334903,
+    "effective_share_norm": 1.0,
+    "mean_distance_norm": 1.003951816797866,
+    "selected_effective_share_norm": 0.9999999999999998,
+    "selected_mean_distance_norm": 0.9875466996799015
   },
   {
     "run": "out/m12_2b/10182-1/balance",
     "generator": "d2_noconnect",
     "alt_generator": "d2",
     "source": "10182-1",
+    "setup": "efd84478dad9",
     "shape": false,
     "grid_YZX": [
       44,
@@ -48,7 +52,6 @@
     "effective": 1.0,
     "effective_share": 1.0,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0,
       "0.1": 1.0,
@@ -56,16 +59,20 @@
       "0.3": 1.0,
       "0.5": 1.0
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 0.8073731325182978,
+    "effective_share_norm": 1.0,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_2b/10182-1/balance_bridge",
     "generator": "d2_noconnect",
     "alt_generator": "d2",
     "source": "10182-1",
+    "setup": "efd84478dad9",
     "shape": false,
     "grid_YZX": [
       44,
@@ -79,7 +86,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -87,16 +93,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.8073731325182978,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_2b/10182-1/balance_bridge_connect",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "10182-1",
+    "setup": "efd84478dad9",
     "shape": false,
     "grid_YZX": [
       44,
@@ -110,7 +120,6 @@
     "effective": 180.9999999999999,
     "effective_share": 0.9999999999999993,
     "mean_distance": 0.8202098637618433,
-    "finished": true,
     "effective_share_at": {
       "0.05": 0.9999999999999993,
       "0.1": 0.9999999999999993,
@@ -118,16 +127,20 @@
       "0.3": 0.9999999999999993,
       "0.5": 0.6358630907053706
     },
+    "finished": true,
     "selected": 8,
-    "selected_effective": 7.999999999999998,
-    "selected_effective_share": 0.9999999999999998,
-    "selected_mean_distance": 0.8213122195214372
+    "unit": 0.8073731325182978,
+    "effective_share_norm": 0.9772847122480707,
+    "mean_distance_norm": 1.0158993787711341,
+    "selected_effective_share_norm": 0.9999999999999998,
+    "selected_mean_distance_norm": 1.0172647397364607
   },
   {
     "run": "out/m12_2b/10182-1/balance_connect",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "10182-1",
+    "setup": "efd84478dad9",
     "shape": false,
     "grid_YZX": [
       44,
@@ -141,7 +154,6 @@
     "effective": 180.9999999999999,
     "effective_share": 0.9999999999999993,
     "mean_distance": 0.8279212926654971,
-    "finished": true,
     "effective_share_at": {
       "0.05": 0.9999999999999993,
       "0.1": 0.9999999999999993,
@@ -149,16 +161,20 @@
       "0.3": 0.9999999999999993,
       "0.5": 0.6480760753520103
     },
+    "finished": true,
     "selected": 8,
-    "selected_effective": 7.999999999999998,
-    "selected_effective_share": 0.9999999999999998,
-    "selected_mean_distance": 0.8667422883203181
+    "unit": 0.8073731325182978,
+    "effective_share_norm": 0.9847985566543082,
+    "mean_distance_norm": 1.0254506365391514,
+    "selected_effective_share_norm": 0.9999999999999998,
+    "selected_mean_distance_norm": 1.0735337273570653
   },
   {
     "run": "out/m12_2b/6372-1/balance",
     "generator": "d2_noconnect",
     "alt_generator": "d2",
     "source": "6372-1",
+    "setup": "8cb908e09aa9",
     "shape": false,
     "grid_YZX": [
       21,
@@ -172,7 +188,6 @@
     "effective": 10.000000000000002,
     "effective_share": 1.0000000000000002,
     "mean_distance": 0.5898919403654503,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000002,
       "0.1": 1.0000000000000002,
@@ -180,16 +195,20 @@
       "0.3": 1.0000000000000002,
       "0.5": 0.3899885709521515
     },
+    "finished": true,
     "selected": 8,
-    "selected_effective": 7.999999999999998,
-    "selected_effective_share": 0.9999999999999998,
-    "selected_mean_distance": 0.5841965827200132
+    "unit": 0.5358403767961818,
+    "effective_share_norm": 1.0000000000000002,
+    "mean_distance_norm": 1.100872509631405,
+    "selected_effective_share_norm": 0.9999999999999998,
+    "selected_mean_distance_norm": 1.0902436770684503
   },
   {
     "run": "out/m12_2b/6372-1/balance_bridge",
     "generator": "d2_noconnect",
     "alt_generator": "d2",
     "source": "6372-1",
+    "setup": "8cb908e09aa9",
     "shape": false,
     "grid_YZX": [
       21,
@@ -203,7 +222,6 @@
     "effective": 13.0,
     "effective_share": 1.0,
     "mean_distance": 0.47738292133958365,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0,
       "0.1": 1.0,
@@ -211,16 +229,20 @@
       "0.3": 0.8988509731955419,
       "0.5": 0.12138948195417512
     },
+    "finished": true,
     "selected": 8,
-    "selected_effective": 7.999999999999998,
-    "selected_effective_share": 0.9999999999999998,
-    "selected_mean_distance": 0.5063502182439245
+    "unit": 0.5358403767961818,
+    "effective_share_norm": 1.0,
+    "mean_distance_norm": 0.890905094151138,
+    "selected_effective_share_norm": 0.9999999999999998,
+    "selected_mean_distance_norm": 0.9449646577053775
   },
   {
     "run": "out/m12_2b/6372-1/balance_bridge_connect",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "6372-1",
+    "setup": "8cb908e09aa9",
     "shape": false,
     "grid_YZX": [
       21,
@@ -234,7 +256,6 @@
     "effective": 180.9999999999999,
     "effective_share": 0.9999999999999993,
     "mean_distance": 0.5565268324945626,
-    "finished": true,
     "effective_share_at": {
       "0.05": 0.9999999999999993,
       "0.1": 0.9999999999999993,
@@ -242,16 +263,20 @@
       "0.3": 0.39625824088496997,
       "0.5": 0.017091493838536524
     },
+    "finished": true,
     "selected": 8,
-    "selected_effective": 7.999999999999998,
-    "selected_effective_share": 0.9999999999999998,
-    "selected_mean_distance": 0.5101076064414315
+    "unit": 0.5358403767961818,
+    "effective_share_norm": 0.6703583671260714,
+    "mean_distance_norm": 1.038605630695593,
+    "selected_effective_share_norm": 0.9999999999999998,
+    "selected_mean_distance_norm": 0.9519767985596608
   },
   {
     "run": "out/m12_2b/6372-1/balance_connect",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "6372-1",
+    "setup": "8cb908e09aa9",
     "shape": false,
     "grid_YZX": [
       21,
@@ -265,7 +290,6 @@
     "effective": 180.9999999999999,
     "effective_share": 0.9999999999999993,
     "mean_distance": 0.5824292519042158,
-    "finished": true,
     "effective_share_at": {
       "0.05": 0.9999999999999993,
       "0.1": 0.9999999999999993,
@@ -273,16 +297,20 @@
       "0.3": 0.4519039804325994,
       "0.5": 0.01843325077054644
     },
+    "finished": true,
     "selected": 8,
-    "selected_effective": 7.999999999999998,
-    "selected_effective_share": 0.9999999999999998,
-    "selected_mean_distance": 0.6416226462936112
+    "unit": 0.5358403767961818,
+    "effective_share_norm": 0.7393128424835228,
+    "mean_distance_norm": 1.086945435852728,
+    "selected_effective_share_norm": 0.9999999999999998,
+    "selected_mean_distance_norm": 1.1974137711120376
   },
   {
     "run": "out/m12_demo/10182-1/d2",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "10182-1",
+    "setup": "666b85e79211",
     "shape": true,
     "grid_YZX": [
       13,
@@ -296,7 +324,6 @@
     "effective": 89.62421162869106,
     "effective_share": 0.9848814464691324,
     "mean_distance": 0.15116144001611695,
-    "finished": true,
     "effective_share_at": {
       "0.05": 0.9848814464691324,
       "0.1": 0.07590839455231681,
@@ -304,16 +331,20 @@
       "0.3": 0.01099704990744344,
       "0.5": 0.01098901098901099
     },
+    "finished": true,
     "selected": 4,
-    "selected_effective": 4.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.1932530583274434
+    "unit": 0.1446617501032155,
+    "effective_share_norm": 0.4849505116910069,
+    "mean_distance_norm": 1.0449302590924274,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": 1.335896034643285
   },
   {
     "run": "out/m12_demo/10182-1/d2_no_connect",
     "generator": "d2_noconnect",
     "alt_generator": "d2",
     "source": "10182-1",
+    "setup": "666b85e79211",
     "shape": true,
     "grid_YZX": [
       13,
@@ -327,7 +358,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -335,16 +365,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.1446617501032155,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_demo/374-1/d2",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "374-1",
+    "setup": "eae7875d7795",
     "shape": true,
     "grid_YZX": [
       8,
@@ -358,7 +392,6 @@
     "effective": 91.00000000000006,
     "effective_share": 1.0000000000000007,
     "mean_distance": 0.25202913756005635,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000007,
       "0.1": 0.9045521271851948,
@@ -366,16 +399,20 @@
       "0.3": 0.015504561907635394,
       "0.5": 0.011094849151169246
     },
+    "finished": true,
     "selected": 4,
-    "selected_effective": 4.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.20164002011343232
+    "unit": 0.24219644293088458,
+    "effective_share_norm": 0.5751086387167118,
+    "mean_distance_norm": 1.0405980141994806,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": 0.83254740521096
   },
   {
     "run": "out/m12_demo/374-1/d2_no_connect",
     "generator": "d2_noconnect",
     "alt_generator": "d2",
     "source": "374-1",
+    "setup": "eae7875d7795",
     "shape": true,
     "grid_YZX": [
       8,
@@ -389,7 +426,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -397,16 +433,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.24219644293088458,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_demo/374-1/wfc",
     "generator": "pipeline_wfc",
     "alt_generator": "wfc",
     "source": "374-1",
+    "setup": "eae7875d7795",
     "shape": true,
     "grid_YZX": [
       8,
@@ -420,7 +460,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -428,16 +467,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.24219644293088458,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_demo/4956-1/d2",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "4956-1",
+    "setup": "f2c0995e7071",
     "shape": true,
     "grid_YZX": [
       10,
@@ -451,7 +494,6 @@
     "effective": 91.00000000000006,
     "effective_share": 1.0000000000000007,
     "mean_distance": 0.2549418777353893,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000007,
       "0.1": 0.8522861670693708,
@@ -459,16 +501,20 @@
       "0.3": 0.016452783408494813,
       "0.5": 0.011160384636757439
     },
+    "finished": true,
     "selected": 4,
-    "selected_effective": 4.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.22816184571518072
+    "unit": 0.2349858775793014,
+    "effective_share_norm": 0.659983488924658,
+    "mean_distance_norm": 1.084924253157951,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": 0.970959821354295
   },
   {
     "run": "out/m12_demo/4956-1/d2_no_connect",
     "generator": "d2_noconnect",
     "alt_generator": "d2",
     "source": "4956-1",
+    "setup": "f2c0995e7071",
     "shape": true,
     "grid_YZX": [
       10,
@@ -482,7 +528,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -490,16 +535,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.2349858775793014,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_demo/4956-1/wfc",
     "generator": "pipeline_wfc",
     "alt_generator": "wfc",
     "source": "4956-1",
+    "setup": "f2c0995e7071",
     "shape": true,
     "grid_YZX": [
       10,
@@ -513,7 +562,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -521,16 +569,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.2349858775793014,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_demo/5891-1/d2",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "5891-1",
+    "setup": "f799781896d7",
     "shape": true,
     "grid_YZX": [
       8,
@@ -544,7 +596,6 @@
     "effective": 91.99999999999993,
     "effective_share": 0.9999999999999992,
     "mean_distance": 0.2306189366597222,
-    "finished": true,
     "effective_share_at": {
       "0.05": 0.9999999999999992,
       "0.1": 0.6474768448459541,
@@ -552,16 +603,20 @@
       "0.3": 0.013728888900273106,
       "0.5": 0.0108721480077849
     },
+    "finished": true,
     "selected": 4,
-    "selected_effective": 4.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.2951578311949851
+    "unit": 0.22407398142905333,
+    "effective_share_norm": 0.4775332487467394,
+    "mean_distance_norm": 1.0292089031887048,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": 1.3172338408617892
   },
   {
     "run": "out/m12_demo/5891-1/d2_no_connect",
     "generator": "d2_noconnect",
     "alt_generator": "d2",
     "source": "5891-1",
+    "setup": "f799781896d7",
     "shape": true,
     "grid_YZX": [
       8,
@@ -575,7 +630,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -583,16 +637,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.22407398142905333,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_demo/5891-1/wfc",
     "generator": "pipeline_wfc",
     "alt_generator": "wfc",
     "source": "5891-1",
+    "setup": "f799781896d7",
     "shape": true,
     "grid_YZX": [
       8,
@@ -606,7 +664,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -614,16 +671,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.22407398142905333,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_demo/6378-1/d2",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "6378-1",
+    "setup": "e30ef426467d",
     "shape": true,
     "grid_YZX": [
       7,
@@ -637,7 +698,6 @@
     "effective": 91.00000000000006,
     "effective_share": 1.0000000000000007,
     "mean_distance": 0.27257045678893344,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000007,
       "0.1": 0.5470736490842414,
@@ -645,16 +705,20 @@
       "0.3": 0.018933611181051843,
       "0.5": 0.011005265876568254
     },
+    "finished": true,
     "selected": 4,
-    "selected_effective": 4.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.27573519503464156
+    "unit": 0.2806946559207091,
+    "effective_share_norm": 0.19684522761438583,
+    "mean_distance_norm": 0.9710568086694512,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": 0.9823314737867027
   },
   {
     "run": "out/m12_demo/6378-1/d2_no_connect",
     "generator": "d2_noconnect",
     "alt_generator": "d2",
     "source": "6378-1",
+    "setup": "e30ef426467d",
     "shape": true,
     "grid_YZX": [
       7,
@@ -668,7 +732,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -676,16 +739,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.2806946559207091,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_demo/6378-1/wfc",
     "generator": "pipeline_wfc",
     "alt_generator": "wfc",
     "source": "6378-1",
+    "setup": "e30ef426467d",
     "shape": true,
     "grid_YZX": [
       7,
@@ -699,7 +766,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -707,16 +773,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.2806946559207091,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_demo/7743-1/d2",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "7743-1",
+    "setup": "2c5d5212e13d",
     "shape": true,
     "grid_YZX": [
       8,
@@ -730,7 +800,6 @@
     "effective": 91.00000000000006,
     "effective_share": 1.0000000000000007,
     "mean_distance": 0.3052929154041333,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000007,
       "0.1": 0.9553265957322215,
@@ -738,16 +807,20 @@
       "0.3": 0.0227146954447522,
       "0.5": 0.012128484791446561
     },
+    "finished": true,
     "selected": 4,
-    "selected_effective": 4.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.27594881448304603
+    "unit": 0.286835335615342,
+    "effective_share_norm": 0.40280444922244957,
+    "mean_distance_norm": 1.0643490445456958,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": 0.962046094812756
   },
   {
     "run": "out/m12_demo/7743-1/d2_no_connect",
     "generator": "d2_noconnect",
     "alt_generator": "d2",
     "source": "7743-1",
+    "setup": "2c5d5212e13d",
     "shape": true,
     "grid_YZX": [
       8,
@@ -761,7 +834,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -769,16 +841,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.286835335615342,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12_demo/7743-1/wfc",
     "generator": "pipeline_wfc",
     "alt_generator": "wfc",
     "source": "7743-1",
+    "setup": "2c5d5212e13d",
     "shape": true,
     "grid_YZX": [
       8,
@@ -792,7 +868,6 @@
     "effective": 0.0,
     "effective_share": null,
     "mean_distance": 0.0,
-    "finished": true,
     "effective_share_at": {
       "0.05": null,
       "0.1": null,
@@ -800,16 +875,20 @@
       "0.3": null,
       "0.5": null
     },
+    "finished": true,
     "selected": 0,
-    "selected_effective": 0.0,
-    "selected_effective_share": null,
-    "selected_mean_distance": 0.0
+    "unit": 0.286835335615342,
+    "effective_share_norm": null,
+    "mean_distance_norm": null,
+    "selected_effective_share_norm": null,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12b_brickgpt/10182-1/4b15b71c_exact",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "10182-1",
+    "setup": "9a3298326618",
     "shape": true,
     "grid_YZX": [
       34,
@@ -823,7 +902,6 @@
     "effective": 46.000000000000064,
     "effective_share": 1.0000000000000013,
     "mean_distance": 0.3702835361691807,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000013,
       "0.1": 1.0000000000000013,
@@ -831,16 +909,51 @@
       "0.3": 0.1519351954840446,
       "0.5": 0.023834848934872272
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 0.3566981925074027,
+    "effective_share_norm": 1.0000000000000013,
+    "mean_distance_norm": 1.0380863821211992,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
+  },
+  {
+    "run": "out/m12b_brickgpt/10182-1/5c5f88b6_exact",
+    "generator": "pipeline",
+    "alt_generator": "d2",
+    "source": "10182-1",
+    "setup": "45f60994dd6d",
+    "shape": true,
+    "grid_YZX": [
+      37,
+      43,
+      13
+    ],
+    "threshold": 0.05,
+    "candidates": 0,
+    "valid": 0,
+    "verified": 0,
+    "effective": 0.0,
+    "effective_share": null,
+    "mean_distance": 0.0,
+    "effective_share_at": {
+      "0.05": null,
+      "0.1": null,
+      "0.2": null,
+      "0.3": null,
+      "0.5": null
+    },
+    "finished": false,
+    "unit": null,
+    "effective_share_norm": null,
+    "mean_distance_norm": null
   },
   {
     "run": "out/m12b_brickgpt/10182-1/858f0955_exact",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "10182-1",
+    "setup": "cf3bc450f78c",
     "shape": true,
     "grid_YZX": [
       81,
@@ -854,7 +967,6 @@
     "effective": 46.000000000000064,
     "effective_share": 1.0000000000000013,
     "mean_distance": 1.8241239338681754,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000013,
       "0.1": 0.6565769449655854,
@@ -862,16 +974,20 @@
       "0.3": 0.07369553040259245,
       "0.5": 0.05096354436203534
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 3.18009571842213,
+    "effective_share_norm": 0.04343717257501929,
+    "mean_distance_norm": 0.5736066129397048,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12b_brickgpt/10182-1/a712684f_exact",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "10182-1",
+    "setup": "5b8b504ea8be",
     "shape": true,
     "grid_YZX": [
       89,
@@ -885,7 +1001,6 @@
     "effective": 46.000000000000064,
     "effective_share": 1.0000000000000013,
     "mean_distance": 1.6699351289295115,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000013,
       "0.1": 1.0000000000000013,
@@ -893,16 +1008,54 @@
       "0.3": 0.23031179641054403,
       "0.5": 0.06340860202305967
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 2.7372622321009716,
+    "effective_share_norm": 0.04343717257501928,
+    "mean_distance_norm": 0.6100749534865577,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
+  },
+  {
+    "run": "out/m12b_brickgpt/10182-1/d1137e5f_exact",
+    "generator": "pipeline",
+    "alt_generator": "d2",
+    "source": "10182-1",
+    "setup": "9a921c6b97f3",
+    "shape": true,
+    "grid_YZX": [
+      26,
+      23,
+      31
+    ],
+    "threshold": 0.05,
+    "candidates": 50,
+    "valid": 50,
+    "verified": 46,
+    "effective": 46.000000000000064,
+    "effective_share": 1.0000000000000013,
+    "mean_distance": 0.24257996745951294,
+    "effective_share_at": {
+      "0.05": 1.0000000000000013,
+      "0.1": 1.0000000000000013,
+      "0.2": 0.14465951164500385,
+      "0.3": 0.026109554606989514,
+      "0.5": 0.021739130434782608
+    },
+    "finished": true,
+    "selected": 1,
+    "unit": 0.231487815343897,
+    "effective_share_norm": 1.0000000000000013,
+    "mean_distance_norm": 1.047916786026675,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12b_brickgpt/5891-1/4b15b71c_exact",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "5891-1",
+    "setup": "8fed67653b70",
     "shape": true,
     "grid_YZX": [
       22,
@@ -916,7 +1069,6 @@
     "effective": 46.000000000000064,
     "effective_share": 1.0000000000000013,
     "mean_distance": 0.4650289365537519,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000013,
       "0.1": 1.0000000000000013,
@@ -924,16 +1076,54 @@
       "0.3": 0.43587786501079256,
       "0.5": 0.03620222450979925
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 0.42812840795818896,
+    "effective_share_norm": 1.0000000000000013,
+    "mean_distance_norm": 1.086190329605894,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
+  },
+  {
+    "run": "out/m12b_brickgpt/5891-1/5c5f88b6_exact",
+    "generator": "pipeline",
+    "alt_generator": "d2",
+    "source": "5891-1",
+    "setup": "5a6b0e13f424",
+    "shape": true,
+    "grid_YZX": [
+      24,
+      27,
+      8
+    ],
+    "threshold": 0.05,
+    "candidates": 50,
+    "valid": 50,
+    "verified": 46,
+    "effective": 46.000000000000064,
+    "effective_share": 1.0000000000000013,
+    "mean_distance": 0.33163508972585737,
+    "effective_share_at": {
+      "0.05": 1.0000000000000013,
+      "0.1": 1.0000000000000013,
+      "0.2": 0.7278980762132723,
+      "0.3": 0.07478559421054198,
+      "0.5": 0.022248515004043085
+    },
+    "finished": true,
+    "selected": 1,
+    "unit": 0.32610478645345864,
+    "effective_share_norm": 1.0000000000000013,
+    "mean_distance_norm": 1.016958669428141,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12b_brickgpt/5891-1/858f0955_exact",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "5891-1",
+    "setup": "b963654ef082",
     "shape": true,
     "grid_YZX": [
       52,
@@ -947,7 +1137,6 @@
     "effective": 46.000000000000064,
     "effective_share": 1.0000000000000013,
     "mean_distance": 1.1596715433476188,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000013,
       "0.1": 0.9703127527497994,
@@ -955,16 +1144,20 @@
       "0.3": 0.07144308277359582,
       "0.5": 0.04819239948987341
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 0.3158143543617686,
+    "effective_share_norm": 0.6048646170187315,
+    "mean_distance_norm": 3.672003907774259,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12b_brickgpt/5891-1/a712684f_exact",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "5891-1",
+    "setup": "231828aada90",
     "shape": true,
     "grid_YZX": [
       58,
@@ -978,7 +1171,6 @@
     "effective": 46.000000000000064,
     "effective_share": 1.0000000000000013,
     "mean_distance": 0.595537110706619,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000013,
       "0.1": 1.0000000000000013,
@@ -986,16 +1178,20 @@
       "0.3": 0.6706818862237945,
       "0.5": 0.07324798467866402
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 0.5797675319202582,
+    "effective_share_norm": 0.7406438653152879,
+    "mean_distance_norm": 1.0271998308255208,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12b_brickgpt/5891-1/d1137e5f_exact",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "5891-1",
+    "setup": "d9c5ad69c49f",
     "shape": true,
     "grid_YZX": [
       17,
@@ -1009,7 +1205,6 @@
     "effective": 46.000000000000064,
     "effective_share": 1.0000000000000013,
     "mean_distance": 0.2842837297896644,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000013,
       "0.1": 0.9703127527497994,
@@ -1017,16 +1212,20 @@
       "0.3": 0.03737077772739917,
       "0.5": 0.022220974210276048
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 0.26548736883652946,
+    "effective_share_norm": 0.8017729740979199,
+    "mean_distance_norm": 1.0707994547368034,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12b_brickgpt/6378-1/4b15b71c_exact",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "6378-1",
+    "setup": "679ab5b14425",
     "shape": true,
     "grid_YZX": [
       20,
@@ -1040,7 +1239,6 @@
     "effective": 46.000000000000064,
     "effective_share": 1.0000000000000013,
     "mean_distance": 0.5479375574410016,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000013,
       "0.1": 1.0000000000000013,
@@ -1048,16 +1246,54 @@
       "0.3": 0.6880426844928852,
       "0.5": 0.05916619015145108
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 0.5229938317215231,
+    "effective_share_norm": 0.9192873361754256,
+    "mean_distance_norm": 1.0476941107266446,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
+  },
+  {
+    "run": "out/m12b_brickgpt/6378-1/5c5f88b6_exact",
+    "generator": "pipeline",
+    "alt_generator": "d2",
+    "source": "6378-1",
+    "setup": "26d6e89276cc",
+    "shape": true,
+    "grid_YZX": [
+      21,
+      24,
+      7
+    ],
+    "threshold": 0.05,
+    "candidates": 50,
+    "valid": 50,
+    "verified": 46,
+    "effective": 46.000000000000064,
+    "effective_share": 1.0000000000000013,
+    "mean_distance": 0.31925493316469156,
+    "effective_share_at": {
+      "0.05": 1.0000000000000013,
+      "0.1": 1.0000000000000013,
+      "0.2": 0.6496171778330218,
+      "0.3": 0.06365600972250922,
+      "0.5": 0.021890378206063012
+    },
+    "finished": true,
+    "selected": 1,
+    "unit": 0.31758907642776124,
+    "effective_share_norm": 0.9703127527497994,
+    "mean_distance_norm": 1.005245321267557,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12b_brickgpt/6378-1/858f0955_exact",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "6378-1",
+    "setup": "b0e3d49f56b6",
     "shape": true,
     "grid_YZX": [
       46,
@@ -1071,7 +1307,6 @@
     "effective": 46.000000000000064,
     "effective_share": 1.0000000000000013,
     "mean_distance": 0.5613747391599625,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000013,
       "0.1": 1.0000000000000013,
@@ -1079,16 +1314,20 @@
       "0.3": 0.09066797966992875,
       "0.5": 0.02706731955246699
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 0.3401127937801094,
+    "effective_share_norm": 0.8998934434977055,
+    "mean_distance_norm": 1.6505546084305902,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12b_brickgpt/6378-1/a712684f_exact",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "6378-1",
+    "setup": "ac553e96dea9",
     "shape": true,
     "grid_YZX": [
       50,
@@ -1102,7 +1341,6 @@
     "effective": 46.000000000000064,
     "effective_share": 1.0000000000000013,
     "mean_distance": 1.1468128939966877,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000013,
       "0.1": 1.0000000000000013,
@@ -1110,16 +1348,20 @@
       "0.3": 0.3038454688731267,
       "0.5": 0.05485264297521331
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 0.4603974941269107,
+    "effective_share_norm": 0.7538163825628306,
+    "mean_distance_norm": 2.490919061519834,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
   },
   {
     "run": "out/m12b_brickgpt/6378-1/d1137e5f_exact",
     "generator": "pipeline",
     "alt_generator": "d2",
     "source": "6378-1",
+    "setup": "4c91c2e1131b",
     "shape": true,
     "grid_YZX": [
       14,
@@ -1133,7 +1375,6 @@
     "effective": 46.000000000000064,
     "effective_share": 1.0000000000000013,
     "mean_distance": 0.3161519048822556,
-    "finished": true,
     "effective_share_at": {
       "0.05": 1.0000000000000013,
       "0.1": 1.0000000000000013,
@@ -1141,9 +1382,12 @@
       "0.3": 0.05431771757443776,
       "0.5": 0.022384121523822333
     },
+    "finished": true,
     "selected": 1,
-    "selected_effective": 1.0,
-    "selected_effective_share": 1.0,
-    "selected_mean_distance": 0.0
+    "unit": 0.3047520315211521,
+    "effective_share_norm": 0.9135560918570103,
+    "mean_distance_norm": 1.0374070463261613,
+    "selected_effective_share_norm": 1.0,
+    "selected_mean_distance_norm": null
   }
 ]
