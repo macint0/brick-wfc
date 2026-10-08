@@ -1,0 +1,338 @@
+% Alternate brick builds from a real inventory, with guarantees by construction.
+% Draft skeleton (2026-10-08). Every number carries a "% src:" comment naming the results file it comes from,
+% so it can be checked; "% src: ... (pending merge)" means the file is on a branch not yet merged into main.
+% Tables are generated: run `python paper/tables.py` from the repository root after
+% `python -m brickwfc.experiments.paper_tables`.
+\documentclass[10pt,twocolumn]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=0.8in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\VENUE}{Draft --- venue to be decided}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+% A figure that falls back to a framed placeholder until its image exists.
+\newcommand{\figorplaceholder}[3]{%
+  \IfFileExists{#1}{\includegraphics[width=#2]{#1}}%
+  {\fbox{\parbox[c][7em][c]{\dimexpr#2-2\fboxsep-2\fboxrule\relax}{\centering\small\textit{Placeholder: #3}\\\texttt{\detokenize{#1}}}}}}
+
+\title{Alternate Brick Builds from a Real Inventory,\\ with Stability, Inventory and Shape Guaranteed by Construction}
+\author{\todo{authors and affiliation}\\ \small\VENUE}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Given the parts of a real brick set (any set number) and optionally a target shape, we generate new alternate
+builds that use only those parts, stand up on a table, form one piece, and resemble official designs. The
+physical and inventory requirements are guaranteed by construction rather than filtered afterwards: a bottom-up
+decoder places one part at a time under masks for support, inventory counts, the target shape, balance (no
+tip-over) and connectivity. Style is learned from 28 official building sets, as contact statistics that weight the
+decoder's choices and as a size-matched judge that cannot be won by repetition. A generate, verify, dedupe, judge,
+select funnel returns the best candidates. We set out to push these constraints into the propagation step of Wave
+Function Collapse (WFC); the constrained WFC is valid by construction too, but a bottom-up decoder matches or beats
+it on every measure we took, at 10--100$\times$ lower cost, and WFC fails to finish at the scale of real
+inventories. We report this comparison throughout, and the alternate-build system as the result.
+\end{abstract}
+
+% ------------------------------------------------------------------------------------------------------------
+\section{Introduction}
+
+A brick set comes with one official design, but its parts can build many others. Designing a good alternate build
+by hand takes hours; a generator has to respect three hard requirements at once: use only the parts in the box,
+stay physically sound (every part supported, nothing tipping over, one liftable piece), and, if the user wants a
+particular object, stay inside its shape. On top of these, the result should look like something a designer made.
+
+Text-to-brick generation \cite{pun2025brickgpt} produces stable structures from unlimited bricks of a few sizes;
+legolization \cite{luo2015legolization} turns a given 3D model into a stable layout. Neither starts from a fixed,
+real inventory, which is the situation of anyone holding a set.
+
+We treat the requirements as constraints on a sequential decoder and enforce each one by construction, so that every
+candidate the generator emits is valid. Our contributions:
+\begin{enumerate}
+  \item \textbf{Three guarantees by construction} for alternate builds from a real inventory: support (every part
+    rests on a stud), inventory (never more of a part than the set has) and target shape (nothing outside it),
+    plus two global ones added during the work: balance (no stud-connected cluster's centre of mass outside its
+    ground contact, checked exactly) and one piece (a repair pass that keeps the build a single connected cluster).
+  \item \textbf{A measured comparison of where to enforce them}: inside WFC's propagation, as planned, versus in a
+    bottom-up decoder. Both are valid by construction; the bottom-up decoder wins on validity within a time budget,
+    inventory use, physical robustness, shape fill and speed, and WFC does not finish on full real inventories
+    (Section~\ref{sec:experiments}).
+  \item \textbf{Learned style from official sets}: contact statistics from 28 building sets used as a proposal in
+    the decoder, and a judge (a divergence of contact statistics) compared at matched size, which ranks repetitive
+    builds below every real model.
+  \item \textbf{A complete pipeline}: generate, verify, dedupe, judge, select, with step-by-step building
+    instructions as output, from any set number (an LDraw model if one exists, otherwise the set's inventory from
+    Rebrickable, whose inventories agree with the models at 0.953 weighted Jaccard on 28 sets).
+    % src: results/m12c_rebrickable.md (pending merge): per (part, color) mean 0.953
+\end{enumerate}
+
+% ------------------------------------------------------------------------------------------------------------
+\section{Related work}
+
+\paragraph{Wave Function Collapse and model synthesis.}
+WFC \cite{gumin2016wfc} generates tile grids that locally resemble an example by repeatedly collapsing the
+lowest-entropy cell and propagating adjacency constraints; it descends from model synthesis \cite{merrell2007model}.
+Nested WFC \cite{nie2023nwfc} addresses conflicts and cost for large outputs. Our multi-cell parts are WFC tiles with
+integrity rules, and non-pairwise constraints (support, inventory, shape) prune domains during propagation.
+
+\paragraph{Legolization and stability.}
+Legolization \cite{luo2015legolization} converts a 3D model into a brick layout and refines weak regions with a
+force-based stability analysis. StableLego \cite{liu2024stablelego} analyses block-stacking stability by force
+balance and releases layouts with stability labels. Our physics check is a linear program over vertical forces with
+push-only contacts and pull-limited stud clutch (Section~\ref{sec:physics}); unlike both, we do not start from a
+target model with free choice of bricks, but from a fixed inventory.
+
+\paragraph{Text-to-brick generation.}
+BrickGPT \cite{pun2025brickgpt} fine-tunes a language model on StableText2Brick \cite{stabletext2brick}, structures
+legolized from ShapeNet \cite{chang2015shapenet} objects in a $20^3$ grid, and enforces stability by rolling back
+unstable bricks during decoding.
+% src: CLAUDE.md "Positioning vs BrickGPT" -- their reported 98.8% stable, ~40 s/build on GPU: \todo{verify against their paper}
+We differ in the input (an inventory and an optional shape instead of text), the source of style (official sets
+instead of legolized meshes), and how constraints are met (masks at decode time, so no rollback), and we run on a
+CPU without training for the statistics proposal.
+
+% ------------------------------------------------------------------------------------------------------------
+\section{Method}
+
+\subsection{Parts and builds}
+A build lives on a grid of cells, one stud wide and one plate tall, indexed $(y,z,x)$. The catalog holds 63
+rectangular parts: 24 plates, 15 bricks (three plates tall), 9 tiles (no studs) and 15 lookalikes that fill the same
+box with the same studs (round plates, grille bricks), kept as their own parts so that a build uses the set's actual
+pieces.
+% src: results/m8_parts.md ("Catalog ... 63 rectangular parts", 24/15/9/15)
+Parts are read from LDraw files \cite{ldraw}: an official model from the LDraw Official Model Repository
+\cite{ldrawomr} is voxelized onto the stud grid (parts at 90-degree rotations and grid-aligned positions), and its
+catalog parts form the inventory. With the catalog, 51\% of the parts of 20 OMR sets are usable, up from 8\% with
+four plate sizes.
+% src: results/m8_parts.md ("The usable share goes from 8% to 51%")
+\todo{M12b-4 slopes and corner parts, if merged before submission.}
+
+\paragraph{Any set number.} Sets without an LDraw model fall back to Rebrickable's public inventories
+\cite{rebrickable}: the latest inventory version without spares, part numbers mapped to catalog parts directly or
+through print and mold relationships, and colors mapped to LDraw codes. On the 28 sets of Section~\ref{sec:style}
+the two sources agree at a weighted Jaccard index of 0.953 per (part, color), 0.969 per part; the differences are
+lookalike numbering, printed parts, and two sets where the sources disagree.
+% src: results/m12c_rebrickable.md (pending merge): 0.953 mean (median 0.981), per part 0.969, per color 0.964
+
+\subsection{Bottom-up decoder with masks}
+The decoder fills the grid layer by layer from the ground. At each visited cell it draws an order over the candidate
+(part, color, orientation, offset) choices from a proposal distribution and places the first that passes every mask:
+\begin{itemize}
+  \item \textbf{integrity}: inside the grid, overlapping nothing, nothing on a studless tile;
+  \item \textbf{support}: above the ground, at least one stud under its bottom layer;
+  \item \textbf{inventory}: a (part, color) whose count is used up is skipped;
+  \item \textbf{shape}: every cell inside the target mask;
+  \item \textbf{balance}: the stud-connected cluster the part joins keeps its centre of mass inside the convex
+    hull of its ground contacts (Section~\ref{sec:physics});
+  \item \textbf{one piece}: a repair pass keeps the largest cluster, returns the other clusters' parts to the
+    inventory and refills above the ground, where every new part rests on the kept cluster.
+\end{itemize}
+A part may cover the visited cell with any of its cells (``any offset''), which lets it reach into a gap from the
+side; this variant (D2) is our default. Every random choice uses a seeded generator, so a seed determines a build.
+
+\paragraph{Constrained WFC (compared method).} The same parts become WFC tiles (one per cell of a part, per
+orientation and color) with integrity rules as pairwise adjacencies. Support, inventory and shape are constraint
+objects that prune domains after arc consistency, alternating to a fixpoint; inventory needs bounded chronological
+backtracking because the count limit is global.
+
+\subsection{Physics}\label{sec:physics}
+A build stands on a table if a linear program over vertical forces is feasible: each part has weight proportional to
+its cells at its footprint's centre, contacts can push anywhere on shared cells, studs can pull up to a clutch limit,
+and every part balances forces and both horizontal torques; the table pushes but never pulls. The result is the
+required clutch per stud (solved with HiGHS \cite{huangfu2018highs}). With unbounded clutch, stud-joined parts act as one rigid cluster, so a build needs finite
+clutch exactly when every cluster's centre of mass lies within the convex hull of its ground contacts; we check this
+in closed form (union-find and a 2D hull), which agrees with the LP on 240 of 240 candidates and lets the decoder
+enforce it incrementally.
+% src: results/m12_pipeline.md (step 1b: "agrees with the LP on 240/240 pipeline candidates")
+
+\subsection{Proposal: learned style}\label{sec:style}
+From 28 official building sets (12,595 parts on the stud grid) we count contacts: which part type rests on which,
+which sits beside which, how often touching parts share a color, and how many parts each part rests on.
+% src: results/m10_style.md ("28 building sets ... 12,595 parts on the stud grid")
+The decoder's proposal weights a candidate by the likelihood ratio of its contacts with the part below and the parts
+beside the cell. A learned sequence model can replace or multiply this proposal under the same masks; we train a
+small transformer \cite{vaswani2017attention} on brick token sequences from StableText2Brick and the official sets.
+\todo{results of the learned proposal (M12b step 2), pending training}
+% src: results/m12b_tokens.md (pending merge): 42,604 + 4,785 BrickGPT structures, 168 set sequences, vocab 488
+
+\subsection{Judge and funnel}
+The judge is minus the mean Jensen--Shannon divergence \cite{lin1991divergence} between a build's contact statistics
+and the learned ones (vertical pairs, side-by-side pairs, support counts), plus the gaps in same-color rates. The
+divergence shrinks with size (Spearman $\rho=0.93$ between judge and size over the real models), so builds and real
+models are compared after subsampling both to the same number of contact events. A per-contact likelihood would be
+gamed by repetition; under the size-matched divergence every repetitive build we tried (towers, sheets, walls) scores
+below every real model of its size.
+% src: results/m10_style.md ("Spearman rho = 0.93"; degenerate builds table)
+The funnel generates $n$ candidates, verifies them (all masks plus physics and a size floor), removes near-duplicates
+in a feature space (per-layer fill, part and color shares, a pooled height map), judges the rest, and selects a
+diversity-aware top-$k$; each selected build is written as an LDraw file with one building step per layer.
+
+% ------------------------------------------------------------------------------------------------------------
+\section{Experiments}\label{sec:experiments}
+
+Generators: \textbf{A} plain WFC with the constraint checked afterwards; \textbf{B} WFC with the constraints in
+propagation; \textbf{D} the bottom-up decoder (min corner on the visited cell); \textbf{D2} the decoder with any
+offset; and the full pipeline (D2 with learned style, balance and one piece). Table~\ref{tab:main} collects the main
+numbers and Table~\ref{tab:ablation} the ablations; each cell names its source experiment, and numbers are comparable
+within a column only when they share it.
+
+\begin{table*}[t]
+  \centering\small
+  \resizebox{\textwidth}{!}{\input{generated/main_table.tex}}
+  \caption{Main results per generator. Superscripts name the source experiment, and setups differ: m6/m7 plates
+    without inventory; m9 plates of 10 sets; m9b the full catalog of 10 sets; m10 28 sets, held-out folds; m11 10 sets
+    $\times$ 5 shapes; dm the spaceship demo from 6 sets; bl/cn the balance and one-piece studies; dv the diversity
+    pass; pr the learned-proposal comparison; bg BrickGPT's structures. Percent columns are shares of attempted builds; utilization and fill are over finished
+    builds. Diversity: effective share of distinct designs among verified candidates, distances in units of the
+    setup's typical D2 distance.}
+  \label{tab:main}
+\end{table*}
+
+\begin{table*}[t]
+  \centering\small
+  \resizebox{\textwidth}{!}{\input{generated/ablation_table.tex}}
+  \caption{Each constraint or component switched off.}
+  \label{tab:ablation}
+\end{table*}
+
+\subsection{Constraints in propagation versus post-filtering}
+Filtering afterwards does not scale. Plain WFC on plates is stable by the support rule in 19.6\% of builds on a
+$4\times4\times2$ grid, 3.9\% at $4\times4\times3$ and in none of 1000 at $8\times8\times6$; with the support
+constraint in propagation, 100\% at every size.
+% src: results/m6_stability.md (A_plain 19.6 / 3.9 / 0.0; B_aware 100.0)
+For a set's inventory, a post-filter keeps 1.5\% of builds (0\% on 9 of 10 sets), while the inventory constraint
+with backtracking keeps 100\% and uses 93.1\% of the parts.
+% src: results/m9_inventory.md (Findings 1-2)
+
+\subsection{WFC versus the bottom-up decoder}
+The bottom-up decoder is valid by construction as well, and is better on every measure we took.
+On the support rule it is 100\% stable and 27$\times$ faster than constrained WFC at $8\times8\times6$ (0.020\,s vs
+0.533\,s).
+% src: results/m6_stability.md (Finding 4; D 0.020 s, B 0.533 s)
+On a table, 93.2\% of its builds can stand with some clutch versus 85.6\% for WFC, and 27.1\% need no clutch at
+all versus 2.9\%: WFC's overhangs make its builds depend on grip. Every build that cannot stand tips over; on a
+baseplate all of them hold.
+% src: results/m7_physics.md (8x8x6: any clutch D 93.2 / B 85.6; no clutch D 27.1 / B 2.9; Finding 2)
+With a set's plates as inventory it uses 99.9\% of the parts versus 93.1\%, 99.0\% stand versus 83.0\%, at
+0.014\,s versus 1.41\,s per build.
+% src: results/m9_inventory.md (Finding 3)
+With the full catalog, D and D2 build every one of 10 sets in all 20 seeds (up to 746 parts in 4.4\,s), using
+99.5\% of the parts; constrained WFC finishes 4 of 20 builds within 30\,s on one set, none on seven, and cannot run
+on two for memory. Two causes are visible in its counters: late dead ends from the global part counts (about
+1000 backtracks per build) and the raw cost of propagation over large tile sets.
+% src: results/m9b_inventory_catalog.md (Findings 2, 4; per-set table: 10015-1 4/20, 10019-1 / 10134-1 not run)
+\todo{budget curve: builds finished within 30/120/300/600 s (\texttt{experiments/budget\_curve.py}), Fig.~\ref{fig:budget}}
+
+\paragraph{Target shapes.} With a shape and an inventory together, all 3000 builds of every generator are valid.
+WFC fills more of the shape than D (73.0\% vs 68.0\%) because it considers every placement covering a cell, but D2,
+which does the same greedily, fills 77.7\%, uses more of the parts and is 20$\times$ faster (0.031\,s vs 0.62\,s).
+WFC keeps an edge only on large overhangs (mushroom: 53.2\% vs 49.9\%), where its extra fill relies on long
+cantilevers held by grip.
+% src: results/m11_shape_inventory.md (mean table: B 73.0, D 68.0, D2 77.7; time 0.619 / 0.031; mushroom 53.2 / 49.9)
+% src: results/m11_shape_quick.md (Finding 3: WFC overhang fill relies on grip)
+
+\subsection{Learned style}
+With 4-fold cross-validation over the 28 sets (statistics from the 21 training sets), learned contacts bring D2's
+builds from a set's own parts closer to that held-out set's statistics on 23 of 28 sets (divergence 0.330 to 0.298),
+and shrink the size-matched gap to the real model from 0.073 to 0.029; for WFC, 0.467 to 0.373 on 12 of 13 sets.
+Under the judge, D2 beats WFC on 13 of 13 sets at about 1/100 of the time.
+% src: results/m10_style.md (Findings 1, 3; tables "All conditions" and "WFC vs bottom-up")
+
+\subsection{The full pipeline}
+Two global failure modes appeared once single parts were sound. First, tip-overs: on 10182-1, 186 of 200 candidates
+needed infinite clutch, all from small separate stacks; the balance mask takes the physics pass rate from 7\% to
+100\% (6372-1: 76\% to 100\%) without changing utilization or the judge. Second, piles: builds fell apart into many
+clusters when lifted; the repair pass makes 100\% of builds one piece (from 0.5\% and 5.5\%).
+% src: results/m12_pipeline.md (step 1b diagnosis 186/200; m12_balance_summary.json slab 7.0 -> 100, 6372-1 76 -> 100)
+% src: results/m12_connect_summary.json (balance 0.5 / 5.5 -> balance_connect 100)
+On a spaceship target built from six sets (1978--2010, 203--1514 parts), every D2 candidate is valid, stands, and is
+one piece, with 52--74\% fill and 66--92\% utilization; the one-piece rule costs 2--20 points of fill, most on
+inventories of 1-wide bricks. WFC finishes none of 50 candidates within the cap (Fig.~\ref{fig:demo}).
+% src: results/m12_demo_summary.json (d2 rows: fill 52.3-74.3, utilization 66.1-91.6, valid/physics/connected 100; parts 203-1514)
+% src: results/m12_pipeline.md (step 3: "costs 2-20 points of fill", "0 of 50 candidates")
+Among the verified candidates of a run, 71\% are distinct designs on average, measured as the effective number of
+distinct designs (similarity-sensitive diversity of order 1 \cite{leinster2012diversity}) where two designs are
+distinct when at least half a typical D2 distance apart in feature space; the diversity-aware selection keeps the top-$k$ fully distinct.
+% src: results/m13_diversity.md (pipeline: effective share 71.4%, selected 100%)
+
+\begin{figure*}[t]
+  \centering
+  \figorplaceholder{../results/m12_demo_sheet.png}{0.95\textwidth}{six-set spaceship demo sheet}
+  \caption{One target (a spaceship silhouette with height and color maps), built from the parts of six official sets
+    (1978--2010). Each build is valid, stands on a table and is one piece.}
+  \label{fig:demo}
+\end{figure*}
+
+\begin{figure}[t]
+  \centering
+  \figorplaceholder{../results/m12b_before_after.png}{\columnwidth}{3D target before/after (M12b step 1a: heightfield vs exact cells)}
+  \caption{A BrickGPT structure as target: solid columns (before) and exact cells (after). \todo{numbers from the 1a write-up}}
+  \label{fig:beforeafter}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \figorplaceholder{../results/m12b_catalog_before_after.png}{\columnwidth}{catalog before/after (slopes and corners, M12b-4)}
+  \caption{The same build with the rectangular catalog and with slopes and corner parts. \todo{pending M12b-4}}
+  \label{fig:catalog}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \figorplaceholder{../results/m13_budget_curve.png}{\columnwidth}{budget curve (experiments/budget\_curve.py)}
+  \caption{Share of builds finished versus time budget: constrained WFC and D2 on the same inventories.
+    \todo{run on an idle machine}}
+  \label{fig:budget}
+\end{figure}
+
+\todo{user study: pairwise preferences, Bradley--Terry \cite{bradley1952rank} (experiments/user\_study.py)}
+
+% ------------------------------------------------------------------------------------------------------------
+\section{Limitations}
+\begin{itemize}
+  \item \textbf{Local statistics.} The style proposal and judge see contacts between neighbouring parts only; global
+    structure (symmetry, rooms, facades) is not modelled. The learned proposal is meant to address this.
+  \item \textbf{Targets.} Model and image targets are heightfields by default (solid columns); exact cells keep
+    overhangs and voids but are filled less, and some exact targets produce candidates of clearly different heights.
+    % src: results/m12_pipeline.md (step 2: columns 76-84% vs cells 37-49% fill); results/m13_diversity.md (bimodal distances on two BrickGPT-target setups)
+  \item \textbf{Support outside the object.} The decoder needs a stud below every part, so overhangs need support
+    columns, which a target shape may not contain; the physics check does not reward clever cantilevers.
+  \item \textbf{Catalog gaps.} Slopes, corner parts, jumpers and Technic are not yet parts; with the rectangular
+    catalog the builds use 35--67\% of each set's parts.
+    % src: results/m9b_inventory_catalog.md (Finding 1)
+    \todo{update after M12b-4}
+  \item \textbf{Physics model.} Vertical forces only, rigid parts, an uncalibrated clutch limit.
+  \item \textbf{WFC memory and cost.} Constrained WFC's backtracking history grows with cells $\times$ tiles (e.g.
+    2.4\,GB for a 746-part set), so it does not run on the largest inventories at all.
+    % src: results/m9b_inventory_catalog.md (10019-1: "not run (memory: 2442 MB)")
+\end{itemize}
+
+% ------------------------------------------------------------------------------------------------------------
+\section{Conclusion}
+Alternate builds from a real inventory can be generated with support, inventory, shape, balance and connectivity all
+guaranteed by construction, from any set number, on a CPU in seconds to about two minutes per candidate
+depending on the inventory's size.
+% src: results/m12_demo_summary.json (seconds_per_candidate 10.6-139.9, 10 in parallel); results/m9b_inventory_catalog.md (D2 4.4 s for 746 parts, single process) Pushing the constraints into
+WFC's propagation works, but a bottom-up decoder with the same constraints as masks is simpler, faster and more
+robust, so we use WFC as a compared method. Style learned from official sets moves the builds measurably toward real
+designs. \todo{learned proposal and user study}
+
+\paragraph{Acknowledgements.} The generate--filter--judge--select framing was inspired by an essay at
+\url{https://content.moldandyeast.com/forage/y6fmx6n4}. LDraw models are from the LDraw OMR; inventories from
+Rebrickable; BrickGPT's structures from StableText2Brick (MIT).
+
+{\small
+\bibliographystyle{plain}
+\bibliography{refs}
+}
+
+\end{document}
