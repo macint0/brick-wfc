@@ -1,5 +1,6 @@
 """M12b step 2d: the bottom-up builder with a learned proposal and a raster visit order."""
 
+import hashlib
 from collections import Counter
 
 import numpy as np
@@ -10,8 +11,10 @@ from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.inventory import overuse
 from brickwfc.bricks.parts import CATALOG, extract_parts, part_tileset
 from brickwfc.bricks.proposal import Proposal, random_weights
+from brickwfc.bricks.style import StyleBias, StyleStats
 from brickwfc.bricks.support import is_stable
 from brickwfc.bricks.tokens import build_vocab
+from conftest import tiny_model
 
 RED, BLUE = colors_by_name(["red", "blue"])
 PARTS = [CATALOG[n] for n in ("plate1x1", "plate1x2", "plate2x4", "brick1x2", "brick2x2", "tile1x2")]
@@ -100,3 +103,34 @@ def test_masks_hold_with_a_real_model_and_builds_are_seeded() -> None:
         placed = check(grid, parts, inventory)
         assert placed and all(allowed[c] for p in placed for c in p.cells())
         assert np.array_equal(grid, builder.build((6, 6, 6), np.random.default_rng(seed), inventory, allowed))
+
+
+# Default builds are byte-identical to main before the hook (fingerprints recorded at e2a0e91).
+DEFAULT_FINGERPRINTS = {
+    "d2": ["5cc3994f83deea36", "8dc680590f3fbddd", "8c3b96c5098a44da"],
+    "d2_shape": ["44bc8c39d7c165f0", "0efb4a3036be2cba", "08115d588122bdcd"],
+    "d2_style": ["c552123fd0214a6c", "d1088215fb2bde0a", "a4d349a6328d2f6a"],
+    "d2_style_shape": ["f3e8a221d211371e", "c52bdadf59bcf7e3", "07170a18d49fcf91"],
+    "pipeline": ["b172e2ed010f934d", "6507019aeffecdb3", "e849578bebe70ced"],
+    "pipeline_shape": ["02d0c016e767da2f", "300f7a945c90dc52", "5831dd22e317483b"],
+}
+
+
+def test_default_builds_are_unchanged() -> None:
+    names = ("plate1x2", "plate2x4", "brick1x1", "brick1x2", "brick2x2", "brick2x4", "tile1x2")
+    parts = part_tileset([CATALOG[n] for n in names], [RED, BLUE], empty_weight=0.5)
+    style = StyleBias(StyleStats().add(tiny_model()), parts)
+    inventory = {(n, c): 5 for n in names for c in ("red", "blue")}
+    allowed = np.zeros((9, 7, 7), dtype=bool)
+    allowed[:, 1:6, :] = True
+    builders = {
+        "d2": BottomUpBuilder(parts, any_offset=True),
+        "d2_style": BottomUpBuilder(parts, any_offset=True, style=style),
+        "pipeline": BottomUpBuilder(parts, any_offset=True, style=style, balanced=True, connect=True, connect_rounds=10),
+    }
+    for name, builder in builders.items():
+        for suffix, target in (("", None), ("_shape", allowed)):
+            grids = [builder.build((9, 7, 7), np.random.default_rng(s), inventory, target) for s in range(3)]
+            assert all(check(g, parts, inventory) for g in grids)  # not empty, and valid
+            digests = [hashlib.sha256(g.tobytes()).hexdigest()[:16] for g in grids]
+            assert digests == DEFAULT_FINGERPRINTS[name + suffix], name + suffix
