@@ -1,7 +1,8 @@
 """What the alternate-build pipeline builds from: a parts inventory, and the learned style to build it in.
 
 The input is an OMR set number (downloaded to ``data/omr`` once), an LDraw model file (.mpd/.ldr), or a
-parts list (.csv: part file, LDraw color code, count). The inventory is every part in ``parts.CATALOG``,
+parts list (.csv: part file, LDraw color code, count). A set number without an OMR model falls back to its
+Rebrickable inventory (``bricks.rebrickable``; ``rebrickable:6372-1`` forces that source), which has no model. The inventory is every part in ``parts.CATALOG``,
 in any position; other parts are reported as ignored (LDraw primitives, which only appear inside custom
 parts defined in a model file, are not parts and are left out of that report).
 """
@@ -9,11 +10,13 @@ parts defined in a model file, are not parts and are left out of that report).
 from __future__ import annotations
 
 import json
+import urllib.error
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
 from brickwfc.bricks.colors import BrickColor
+from brickwfc.bricks import rebrickable
 from brickwfc.bricks.inventory import Inventory, inventory_from_csv, inventory_from_mpd
 from brickwfc.bricks.style import StyleStats, merged
 from brickwfc.experiments.coverage import PRIMITIVE
@@ -24,6 +27,7 @@ DATA_DIR = Path("data/omr")
 STYLE_DIR = Path("results/m10_style_stats")  # style_fold{i}.json from the M10 run
 SETS_FILE = Path("results/sets_selection.json")
 FOLDS, FOLD_SEED = 4, 0  # the M10 run's cross-validation (experiments.style defaults)
+REBRICKABLE_PREFIX = "rebrickable:"
 
 
 @dataclass(frozen=True)
@@ -43,7 +47,17 @@ class Source:
         return sum(self.ignored.values())
 
 
-def load_source(spec: str, data_dir: Path = DATA_DIR) -> Source:
+def rebrickable_source(set_num: str, data_dir: Path = rebrickable.DATA_DIR) -> Source:
+    """A set's Rebrickable inventory (latest version, no spares); ignored parts by Rebrickable part number."""
+    inventory, ignored, colors, _ = rebrickable.Rebrickable(data_dir).inventory(set_num)
+    if not inventory:
+        raise ValueError(f"{set_num}: none of its Rebrickable parts are in the part catalog")
+    return Source(set_num, inventory, tuple(colors), dict(ignored), None)
+
+
+def load_source(spec: str, data_dir: Path = DATA_DIR, rebrickable_dir: Path = rebrickable.DATA_DIR) -> Source:
+    if spec.startswith(REBRICKABLE_PREFIX):
+        return rebrickable_source(spec.removeprefix(REBRICKABLE_PREFIX), rebrickable_dir)
     path = Path(spec)
     suffix = path.suffix.lower()
     if suffix == ".csv":
@@ -53,7 +67,12 @@ def load_source(spec: str, data_dir: Path = DATA_DIR) -> Source:
         if suffix in (".mpd", ".ldr"):
             model = path.read_text(encoding="utf-8", errors="replace")
         else:
-            model = fetch_set(spec, data_dir).read_text(encoding="utf-8", errors="replace")
+            try:
+                model = fetch_set(spec, data_dir).read_text(encoding="utf-8", errors="replace")
+            except urllib.error.HTTPError as error:
+                if error.code != 404:
+                    raise
+                return rebrickable_source(spec, rebrickable_dir)  # no OMR model for this set
         inventory, ignored, colors = inventory_from_mpd(model)
     if not inventory:
         raise ValueError(f"{spec}: none of its parts are in the part catalog")
