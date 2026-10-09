@@ -47,6 +47,8 @@ from brickwfc.wfc import Bias, run
 GENERATORS = ("d2", "wfc")
 CHECKS = ("generate", "integrity", "inventory", "support", "shape", "physics", "disconnected")
 VERIFY_VERSION = 3  # bump when the checks change, so cached candidates are not reused
+BUILDER_VERSION = 2  # bump when D2 builds something else for the same seed and setup (2: _fit_key counts studs,
+# M12b completeness), so cached candidates are not reused
 WFC_MAX_ATTEMPTS, WFC_MAX_BACKTRACKS = 20, 1000
 
 

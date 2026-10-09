@@ -1,6 +1,7 @@
 """M12b completeness: metrics and the builder trace (causes of unfilled target cells)."""
 
 import numpy as np
+import pytest
 
 from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.colors import colors_by_name
@@ -43,3 +44,18 @@ def test_trace_keeps_builds_and_gives_every_unfilled_cell_a_cause() -> None:
         assert not found & {"unvisited", "missed"}
         seen |= found
     assert {"inventory", "support", "skipped"} <= seen
+
+
+@pytest.mark.parametrize("holes", [False, True])
+def test_failed_tile_does_not_block_plate_of_same_box(holes: bool) -> None:
+    """Under open tops a 1 x 1 tile may not sit under a target cell, a 1 x 1 plate may: the tile failing there must
+    not make the builder skip the plate (both have box 1 x 1 x 1). The main pass is checked with every cell visited,
+    the hole pass with (almost) none visited by the main pass."""
+    parts = part_tileset([CATALOG["plate1x1"], CATALOG["tile1x1"]], colors_by_name(["red"]),
+                         empty_weight=1e6 if holes else 1e-9)
+    inventory = {("plate1x1", "red"): 1, ("tile1x1", "red"): 1}
+    mask = np.ones((2, 1, 1), dtype=bool)  # a 2-cell column: the bottom cell has a target cell above it
+    builder = BottomUpBuilder(parts, any_offset=True, open_tops=True, holes=holes)
+    for seed in range(20):
+        grid = builder.build(mask.shape, np.random.default_rng(seed), inventory, mask)
+        assert parts.solid[grid].all(), seed  # plate below, tile on top

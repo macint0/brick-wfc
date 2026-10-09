@@ -246,7 +246,7 @@ class BottomUpBuilder:
                         self.trace.skipped(state, y, z, x)
                     continue
                 # Try parts in weighted-random order until one fits here. Whether a part fits depends
-                # only on its box, so once a box size fails here, other parts of that size are skipped.
+                # only on its _fit_key, so once one fails here, other parts with that key are skipped.
                 failed: set[tuple[int, int, int]] = set()
                 p = self._cell_p(state, y, z, x, preferred, bool(reachable[z, x]))
                 on_skin = state.skin is not None and bool(state.skin[y, z, x])
@@ -662,11 +662,13 @@ class _State:
 
 
 def _fit_key(shape: Shape) -> tuple:
-    """What decides whether a part fits at a cell: its box for a rectangular part (so once one part fails
-    there, others of the same box are skipped), its cells and their faces otherwise."""
+    """What decides whether a part fits at a cell: its box and whether it has studs for a rectangular part (so
+    once one part fails there, others of the same key are skipped), its cells and their faces otherwise. The studs
+    count since open tops (M12b 1d): a tile may not sit under a target cell where a plate of its box may (before M12b
+    completeness the key was the box alone, so a failed tile made the builder skip the plate)."""
     box = (shape.size_y, shape.size_z, shape.size_x)
     if shape.rectangular:
-        return box
+        return (*box, shape.part.studs)
     g = shape.geometry
     return box, g.footprint, g.studded, g.seated
 
