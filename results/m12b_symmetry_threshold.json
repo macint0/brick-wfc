@@ -1,0 +1,146 @@
+[
+ {
+  "object": "chair",
+  "set": "6378-1",
+  "box": {
+   "cells": 1725,
+   "plane": "x = 6",
+   "score": 0.7078260869565217,
+   "added": 504
+  },
+  "fillable": {
+   "cells": 1725,
+   "plane": "x = 6",
+   "score": 0.7078260869565217,
+   "added": 504
+  }
+ },
+ {
+  "object": "car",
+  "set": "6378-1",
+  "box": {
+   "cells": 1689,
+   "plane": "x = 4",
+   "score": 0.8478389579632919,
+   "added": 257
+  },
+  "fillable": {
+   "cells": 1689,
+   "plane": "x = 4",
+   "score": 0.8478389579632919,
+   "added": 257
+  }
+ },
+ {
+  "object": "table",
+  "set": "6378-1",
+  "box": {
+   "cells": 1706,
+   "plane": "x = 8.5",
+   "score": 0.9765533411488863,
+   "added": 40
+  },
+  "fillable": {
+   "cells": 1748,
+   "plane": "z = 8.5",
+   "score": 0.977116704805492,
+   "added": 40
+  }
+ },
+ {
+  "object": "chair",
+  "set": "5891-1",
+  "box": {
+   "cells": 4688,
+   "plane": "x = 8",
+   "score": 0.7734641638225256,
+   "added": 1062
+  },
+  "fillable": {
+   "cells": 2847,
+   "plane": "x = 7",
+   "score": 0.8061116965226555,
+   "added": 552
+  }
+ },
+ {
+  "object": "car",
+  "set": "5891-1",
+  "box": {
+   "cells": 4613,
+   "plane": "x = 5.5",
+   "score": 0.9226100151745068,
+   "added": 357
+  },
+  "fillable": {
+   "cells": 2775,
+   "plane": "x = 4.5",
+   "score": 0.8648648648648649,
+   "added": 375
+  }
+ },
+ {
+  "object": "table",
+  "set": "5891-1",
+  "box": {
+   "cells": 4632,
+   "plane": "z = 11.5",
+   "score": 0.9792746113989638,
+   "added": 96
+  },
+  "fillable": {
+   "cells": 2880,
+   "plane": "z = 9.5",
+   "score": 0.9756944444444444,
+   "added": 70
+  }
+ },
+ {
+  "object": "chair",
+  "set": "10182-1",
+  "box": {
+   "cells": 10656,
+   "plane": "x = 11",
+   "score": 0.745213963963964,
+   "added": 2715
+  },
+  "fillable": {
+   "cells": 10045,
+   "plane": "x = 10.5",
+   "score": 0.7775012444001991,
+   "added": 2235
+  }
+ },
+ {
+  "object": "car",
+  "set": "10182-1",
+  "box": {
+   "cells": 10704,
+   "plane": "x = 7.5",
+   "score": 0.9704783258594918,
+   "added": 316
+  },
+  "fillable": {
+   "cells": 9526,
+   "plane": "x = 7",
+   "score": 0.9087759815242494,
+   "added": 869
+  }
+ },
+ {
+  "object": "table",
+  "set": "10182-1",
+  "box": {
+   "cells": 10609,
+   "plane": "x = 15",
+   "score": 0.9208219436327646,
+   "added": 840
+  },
+  "fillable": {
+   "cells": 10100,
+   "plane": "z = 15",
+   "score": 0.9762376237623762,
+   "added": 240
+  }
+ }
+]

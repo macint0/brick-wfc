@@ -430,6 +430,24 @@ python -m brickwfc.experiments.skins --steps compare --sets 6378-1 5891-1 10182-
 - About 13 CPU-hours (2 new arms x 9 cells x 50 candidates), about 3 hours at 5 workers.
 - The findings and the decision at the end of the write-up are written by hand; a rerun overwrites the file, so copy them back.
 
+### `results/m12b_symmetry_threshold.md` (M12b step 3: the symmetrize threshold after M12b sizing), with `m12b_symmetry_threshold.json`, `m12b_symmetry_threshold_chair.json`, `m12b_symmetry_threshold_chair.png`
+
+The score table (scaled objects under box and fillable sizing; no generation, a few CPU-minutes):
+
+```
+python -m brickwfc.experiments.skins --steps threshold
+```
+
+The 5891-1 chair check: base, symmetric and both under fillable sizing, the symmetric arms forced to the old 0.8 threshold so they symmetrize the chair (the base arm reuses the sizing figure run's candidates when its setup key matches):
+
+```
+python -m brickwfc.experiments.skins --steps compare --sets 5891-1 --objects chair --arms base symmetric both     --n 50 --workers 5 --symmetrize-min-score 0.8 --runs out/m12b_sizing_fig     --compare-out out/m12b_symmetry_threshold --compare-results out/m12b_symmetry_threshold/chair_5891-1.md
+```
+
+- About 3 CPU-hours (2 arms x 50 candidates at about 100 s each), about 40 minutes at 5 workers.
+- `chair_5891-1.json` and `_sheet.png` are copied to `results/m12b_symmetry_threshold_chair.json` and `.png`.
+- The chair section and the notes at the end of the write-up are written by hand (from `chair_5891-1.md`); the threshold step rewrites the file, so copy them back.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
