@@ -158,8 +158,8 @@ def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -
     Usable sizing (M12b completeness) starts from the fillable volume, then leaves out every part that fits nowhere
     inside the scaled target (``inventory.unusable``: any orientation and position, every rule but the shape off),
     rescales, and repeats until the left-out parts no longer change: a smaller target can leave out more parts. The
-    left-out parts stay in the inventory (they just cannot go in). The details: the left-out parts (name -> count),
-    their cells, the rounds and whether the parts settled."""
+    left-out parts stay in the inventory (they just cannot go in). The details: the volume the target was scaled to
+    and, with usable sizing, the left-out parts (name -> count), their cells, the rounds and whether they settled."""
     if config.shape is None:
         return None, {}
     if not 0 < config.fill_slack <= 1:
@@ -168,7 +168,8 @@ def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -
     settled = False
     for round_ in range(1, USABLE_ROUNDS + 1):
         kept = {k: n for k, n in source.inventory.items() if k[0] not in left_out}
-        target = load_target(config.shape, config.fill_slack * target_volume(kept, config.sizing), source.colors,
+        volume = config.fill_slack * target_volume(kept, config.sizing)
+        target = load_target(config.shape, volume, source.colors,
                              Path(config.height_map) if config.height_map else None,
                              Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
                              config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
@@ -176,7 +177,7 @@ def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -
                              support_height=config.support_height, symmetric=config.symmetric,
                              keep_sections=config.sizing != "box", symmetrize_min_score=config.symmetrize_min_score)
         if config.sizing != "usable":
-            return target, {}
+            return target, {"volume": volume}
         now = unusable(source.inventory, target.mask)
         if now == left_out:
             settled = True
@@ -185,8 +186,8 @@ def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -
             break
         left_out = now
     dropped = {k: n for k, n in source.inventory.items() if k[0] in left_out}
-    return target, {"left_out": left_out, "left_out_cells": target_volume(dropped, "fillable"), "rounds": round_,
-                    "settled": settled}
+    return target, {"volume": volume, "left_out": left_out, "left_out_cells": target_volume(dropped, "fillable"),
+                    "rounds": round_, "settled": settled}
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:

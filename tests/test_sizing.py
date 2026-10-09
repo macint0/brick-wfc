@@ -60,9 +60,9 @@ def test_usable_sizing_leaves_out_parts_that_fit_nowhere_and_settles() -> None:
     source = SimpleNamespace(inventory={("plate6x14", "red"): 1, ("plate1x1", "red"): 60},
                              colors=tuple(colors_by_name(["red"])))
     full, info = sized_target(source, AltConfig(shape="pyramid"))
-    assert info == {} and not fits_inside(CATALOG["plate6x14"], full.mask)
+    assert info == {"volume": 84 + 60} and not fits_inside(CATALOG["plate6x14"], full.mask)
     usable, info = sized_target(source, AltConfig(shape="pyramid", sizing="usable"))
-    assert info == {"left_out": {"plate6x14": 1}, "left_out_cells": 84, "rounds": 2, "settled": True}
+    assert info == {"volume": 60, "left_out": {"plate6x14": 1}, "left_out_cells": 84, "rounds": 2, "settled": True}
     assert usable.mask.sum() < full.mask.sum()
     smaller, _ = sized_target(source, AltConfig(shape="pyramid", sizing="usable", fill_slack=0.5))
     assert smaller.mask.sum() < usable.mask.sum()

@@ -7,9 +7,10 @@ Reads finished pipeline runs (no generation): the chair and table on the six M12
 (``m12b_sizing_fig/<set>/<object>_default``) and the car on four (``m12b_sizing/<set>/car_cover``).
 
 ``final`` (final state): per pair, over the valid candidates and the selected build, fill, holes (6-connected
-components of unfilled target cells: count, largest, total), surface completeness (share of the target's outer
-surface cells, ``shapes.surface``, that are filled), and the share of unfilled cells on the surface versus inside;
-a missing map per selected build (the build with its unfilled target cells in red).
+components of unfilled target cells: count, largest, total), surface completeness (share of the target's exposed
+cells, ``features.exposed``: a face open to the outside, the ground not counted, that are filled), and the share
+of unfilled cells on that surface versus inside; a missing map per selected build (the build with its unfilled
+target cells in red).
 
 ``trace`` (causes as the builder saw them): the selected build and the next valid candidates in seed order are
 replayed with a trace on the builder (``BottomUpBuilder.trace``; it draws nothing, and each replay is checked
@@ -40,9 +41,10 @@ import numpy as np
 from scipy import ndimage
 
 from brickwfc.alt.candidates import Candidate, Context
-from brickwfc.alt.features import occupancy
+from brickwfc.alt.features import exposed, occupancy
 from brickwfc.alt.inputs import learned_style, load_source
-from brickwfc.alt.pipeline import AltConfig, cache_key, make_context, make_target
+from brickwfc.alt.pipeline import AltConfig, cache_key, make_context, make_target, sized_target
+from brickwfc.alt.pipeline import main as pipeline_main
 from brickwfc.bricks.bottomup import BottomUpBuilder, _FitMap
 from brickwfc.bricks.build import placed_colors, slope_profiles
 from brickwfc.bricks.parts import PlacedPart, extract_parts
@@ -94,7 +96,7 @@ def completeness(filled: np.ndarray, mask: np.ndarray) -> dict:
     missing = mask & ~filled
     labels, count = ndimage.label(missing)
     sizes = np.bincount(labels.ravel())[1:] if count else np.zeros(0, dtype=np.int64)
-    skin = surface(mask)
+    skin = exposed(mask)
     unfilled = int(missing.sum())
     return {
         "fill_pct": 100 * float((filled & mask).sum() / mask.sum()),
@@ -142,7 +144,7 @@ def final_pair(set_number: str, obj: str, directory: Path, out: Path) -> dict:
             rows[c.seed] = completeness(occupancy(c.placed, mask.shape), mask) | {"parts": len(c.placed)}
     valid = list(rows.values())
     summary = {"set": set_number, "object": obj, "run": directory.as_posix(), "target_cells": int(mask.sum()),
-               "surface_cells": int(surface(mask).sum()), "valid": len(valid), "candidates": len(candidates),
+               "surface_cells": int(exposed(mask).sum()), "valid": len(valid), "candidates": len(candidates),
                "selected_seed": selected, "complete": sum(complete(r) for r in valid)}
     for name in ("fill_pct", "holes", "largest_hole", "unfilled", "surface_pct", "unfilled_on_surface_pct"):
         summary[f"mean_{name}"] = mean([r[name] for r in valid])
@@ -457,13 +459,164 @@ def step_report(args: argparse.Namespace) -> None:
     print(text)
 
 
+# Sweep: sizing and the hole pass ----------------------------------------------------------------------------
+
+SWEEP_SETS = ("6378-1", "5891-1", "4956-1")
+STRUCTURES = {"chair": "a712684f-8e79-4ecd-81de-11aef42b50d4", "table": "858f0955-846e-4138-84d9-df66b66eddc2",
+              "car": "4b15b71c-f400-4e54-a118-f0c2afba6e17"}
+HANG = ["--holes", "--hang"]
+ARMS = {  # name: (title, pipeline flags); "old" is the cached pre-fix run (run_dir), not run again
+    "old": ("old base (pre-fix)", []),
+    "base": ("base", []),
+    "hang": ("hang", HANG),
+    "usable": ("usable + hang", ["--sizing", "usable", *HANG]),
+    "usable90": ("usable 0.9 + hang", ["--sizing", "usable", "--fill-slack", "0.9", *HANG]),
+    "usable80": ("usable 0.8 + hang", ["--sizing", "usable", "--fill-slack", "0.8", *HANG]),
+}
+
+
+def arm_dir(out: Path, arm: str, set_number: str, obj: str, runs: Path) -> Path:
+    return run_dir(runs, set_number, obj) if arm == "old" else out / "sweep" / arm / set_number / obj
+
+
+def arm_config(arm: str, obj: str, **changes) -> AltConfig:
+    flags = ARMS[arm][1]
+    sizing = flags[flags.index("--sizing") + 1] if "--sizing" in flags else "fillable"
+    slack = float(flags[flags.index("--fill-slack") + 1]) if "--fill-slack" in flags else 1.0
+    return AltConfig(shape="brickgpt:" + STRUCTURES[obj], sizing=sizing, fill_slack=slack, **changes)
+
+
+def same_target(arm: str, other: str, set_number: str, obj: str) -> bool:
+    """Whether two arms' targets (and so, with the same flags, their candidates) are the same for this pair."""
+    source = load_source(set_number)
+    a, _ = sized_target(source, arm_config(arm, obj))
+    b, _ = sized_target(source, arm_config(other, obj))
+    return a.mask.shape == b.mask.shape and bool((a.mask == b.mask).all())
+
+
+def step_sweep(args: argparse.Namespace) -> None:
+    """The arms' pipeline runs, one after another (each on ``--workers``); resumable (the pipeline's cache). The
+    usable arm is run only where usable sizing changes the target: elsewhere it is the hang arm."""
+    for arm in ARMS:
+        if arm == "old":
+            continue
+        for obj in OBJECTS:
+            for set_number in SWEEP_SETS:
+                out = arm_dir(args.out, arm, set_number, obj, args.runs)
+                if arm == "usable" and same_target("usable", "hang", set_number, obj):
+                    print(f"{arm} {obj} {set_number}: same target as hang, not run", flush=True)
+                    continue
+                stats = out / "stats.json"
+                if stats.exists() and json.loads(stats.read_text(encoding="utf-8"))["requested"] == args.n:
+                    continue
+                argv = [set_number, "--shape", "brickgpt:" + STRUCTURES[obj], "--n", str(args.n), "--k", "1",
+                        "--workers", str(args.workers), "--out", str(out), *ARMS[arm][1]]
+                print(f"{arm} {obj} {set_number}: python -m brickwfc.alt {' '.join(argv)}", flush=True)
+                pipeline_main(argv)
+
+
+def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) -> dict | None:
+    """One arm x pair: completeness of the valid candidates and the selected build, and the run's numbers."""
+    directory = arm_dir(args.out, arm, set_number, obj, args.runs)
+    alias = None
+    if arm == "usable" and not (directory / "stats.json").exists() and same_target("usable", "hang", set_number, obj):
+        alias, directory = "hang", arm_dir(args.out, "hang", set_number, obj, args.runs)
+    if not (directory / "stats.json").exists():
+        return None
+    key, stats, candidates = load_run(directory)
+    mask = key_mask(key)
+    source = load_source(set_number)
+    config_arm = "base" if arm == "old" else arm
+    _, sizing = sized_target(source, arm_config(config_arm, obj))
+    obj_target, _ = sized_target(source, arm_config(config_arm, obj, supports=False))
+    valid = [c for c in candidates if c.valid]
+    rows = {c.seed: completeness(occupancy(c.placed, mask.shape), mask) for c in valid}
+    selected = stats["selected"][0] if stats["selected"] else None
+    cell = {"arm": arm, "set": set_number, "object": obj, "run": directory.as_posix(), "same_as": alias,
+            "target_cells": int(mask.sum()), "object_cells": int(obj_target.mask.sum()), "sizing": sizing,
+            "valid": len(valid), "candidates": len(candidates),
+            "s_per_candidate": stats["generation_cpu_s"] / max(1, len(candidates)),
+            "complete": sum(complete(r) for r in rows.values())}
+    for name in ("fill_pct", "holes", "largest_hole", "surface_pct"):
+        cell[f"mean_{name}"] = mean([r[name] for r in rows.values()])
+    if selected is not None:
+        chosen = next(c for c in candidates if c.seed == selected["seed"])
+        cell["selected"] = rows[selected["seed"]] | {"seed": selected["seed"], "parts": selected["parts"],
+                                                     "utilization_pct": selected["utilization_pct"],
+                                                     "clutch": selected["clutch"]}
+        cell["selected"]["complete"] = complete(cell["selected"])
+        cell["preview"] = (directory / selected["png"]).as_posix()
+        path = args.out / "sweep_missing" / f"{obj}_{set_number}_{arm}.png"
+        cell["missing_png"] = missing_png(chosen.placed, mask, path).as_posix()
+    return cell
+
+
+def sweep_report(cells: list[dict]) -> str:
+    lines = ["| object | set | arm | target cells | object cells | valid | complete | fill % (sel / mean) | "
+             "holes (sel / mean) | largest hole (sel / mean) | surface % (sel / mean) | parts (sel) | used % (sel) | "
+             "s / candidate |",
+             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for c in cells:
+        s = c.get("selected", {})
+        title = ARMS[c["arm"]][0] + (f" (= {ARMS[c['same_as']][0]})" if c["same_as"] else "")
+        lines.append(
+            f"| {c['object']} | {c['set']} | {title} | {c['target_cells']} | {c['object_cells']} | "
+            f"{c['valid']}/{c['candidates']} | {c['complete']} | "
+            f"{s.get('fill_pct', math.nan):.1f} / {c['mean_fill_pct']:.1f} | "
+            f"{s.get('holes', 0)} / {c['mean_holes']:.1f} | {s.get('largest_hole', 0)} / {c['mean_largest_hole']:.0f} | "
+            f"{s.get('surface_pct', math.nan):.1f} / {c['mean_surface_pct']:.1f} | {s.get('parts', 0)} | "
+            f"{s.get('utilization_pct', math.nan):.0f} | {c['s_per_candidate']:.1f} |")
+    return "\n".join(lines)
+
+
+def sweep_sheets(cells: list[dict], out: Path) -> list[Path]:
+    """Two sheets, pairs as rows and arms as columns: the selected builds' previews, and their missing maps."""
+    from PIL import Image
+
+    by_key = {(c["object"], c["set"], c["arm"]): c for c in cells}
+    blank = out / "sweep_missing" / "none.png"
+    blank.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (8, 8), (255, 255, 255)).save(blank)
+    paths = []
+    for which, name in (("preview", "sweep_previews.png"), ("missing_png", "sweep_missing.png")):
+        images, labels = [], []
+        for obj in OBJECTS:
+            for set_number in SWEEP_SETS:
+                for arm in ARMS:
+                    c = by_key.get((obj, set_number, arm))
+                    if c is None or which not in c:
+                        images.append(blank)
+                        labels.append(f"{obj} {set_number}\n{ARMS[arm][0]}: no run")
+                        continue
+                    s = c["selected"]
+                    images.append(Path(c[which]))
+                    labels.append(f"{obj} {set_number}, {ARMS[arm][0]}\nfill {s['fill_pct']:.0f}%, surface "
+                                  f"{s['surface_pct']:.0f}%\nlargest hole {s['largest_hole']}, {s['parts']} parts")
+        path = out / name
+        labeled_sheet(images, labels, path, columns=len(ARMS), width=500)
+        paths.append(path)
+    return paths
+
+
+def step_sweep_report(args: argparse.Namespace) -> None:
+    cells = [c for obj in OBJECTS for set_number in SWEEP_SETS for arm in ARMS
+             if (c := sweep_cell(args, arm, set_number, obj)) is not None]
+    (args.out / "sweep.json").write_text(json.dumps(cells, indent=2), encoding="utf-8")
+    sheets = sweep_sheets(cells, args.out)
+    text = sweep_report(cells) + "\n"
+    (args.out / "sweep.md").write_text(text, encoding="utf-8")
+    print(text)
+    print("wrote sweep.json, sweep.md, " + ", ".join(p.name for p in sheets))
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.complete", description=__doc__.splitlines()[0])
     parser.add_argument("--runs", type=Path, default=Path("out"), help="folder holding m12b_sizing_fig and m12b_sizing")
     parser.add_argument("--out", type=Path, default=Path("out/m12b_complete"))
-    parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report"])
+    parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report", "sweep", "sweep-report"])
     parser.add_argument("--per-pair", type=int, default=10, help="trace: builds replayed per pair (selected first)")
     parser.add_argument("--workers", type=int, default=5)
+    parser.add_argument("--n", type=int, default=50, help="sweep: candidates per run")
     args = parser.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
     if "final" in args.steps:
@@ -472,6 +625,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         step_trace(args)
     if "report" in args.steps:
         step_report(args)
+    if "sweep" in args.steps:
+        step_sweep(args)
+    if "sweep-report" in args.steps:
+        step_sweep_report(args)
     return 0
 
 
