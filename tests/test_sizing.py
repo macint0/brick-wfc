@@ -37,6 +37,33 @@ def test_keep_sections_keeps_thin_parts_thick() -> None:
     assert thicker  # nearest-neighbour scaling thins the post at some volumes; the kept scale avoids it
 
 
+
+def _cut(mask: np.ndarray) -> bool:
+    """Whether a layer between the lowest and the highest filled layer is empty (the shape is in two pieces)."""
+    filled = np.nonzero(mask.any(axis=(1, 2)))[0]
+    return len(filled) < filled[-1] - filled[0] + 1
+
+
+def test_keep_sections_does_not_cut_a_thin_post() -> None:
+    """M12b completeness: at some volumes nearest-neighbour scaling drops a thin post entirely (the 6378-1 chair at
+    the usable volume: 13 empty layers between base and seat). Before the fix ``thinnest_section`` skipped the empty
+    layers, so such a scale scored as thick and was chosen."""
+    split = np.zeros((5, 3, 3), dtype=bool)
+    split[:2] = split[4] = True
+    assert thinnest_section(split) == 0 and thinnest_section(split[:2]) == 9
+    occupied = np.zeros((20, 12, 12), dtype=bool)  # a stool: a base, a 1 x 2 post, a seat
+    occupied[:3, 3:9, 3:9] = True
+    occupied[3:15, 6, 5:7] = True
+    occupied[15:] = True
+    plain_cut = 0
+    for cells in range(300, 1200, 5):
+        plain = scaled_to(occupied, cells)
+        plain_cut += _cut(plain)
+        kept = scaled_to(occupied, cells, keep_sections=True)
+        assert not _cut(kept), cells
+        assert abs(int(kept.sum()) - cells) <= max(2 * SECTION_BAND * cells, abs(int(plain.sum()) - cells))
+    assert plain_cut  # the post does vanish at some of these volumes
+
 def test_usable_parts_fit_somewhere_inside() -> None:
     lane = np.ones((1, 2, 5), dtype=bool)  # one plate layer, 2 x 5 studs
     assert fits_inside(CATALOG["plate2x4"], lane) and fits_inside(CATALOG["plate2x4"], lane.transpose(0, 2, 1))

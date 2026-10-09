@@ -160,13 +160,17 @@ SECTION_BAND = 0.05  # thin-aware scaling: volumes within 5% of the target count
 
 
 def thinnest_section(mask: Mask) -> int:
-    """The smallest 4-connected region of any layer of ``mask``, in cells (0 if the mask is empty)."""
+    """The smallest 4-connected region of any layer of ``mask``, in cells (0 if the mask is empty). An empty layer
+    between the lowest and the highest filled layer is a section of 0 cells: the shape is cut in two there (M12b
+    completeness: resampling can drop a thin post entirely, and skipping its empty layers scored that as thick)."""
+    filled = np.nonzero(mask.any(axis=(1, 2)))[0]
+    if len(filled) == 0 or len(filled) < filled[-1] - filled[0] + 1:
+        return 0
     sizes = []
-    for layer in mask:
+    for layer in mask[filled[0]:filled[-1] + 1]:
         labels, regions = ndimage.label(layer)
-        if regions:
-            sizes.append(int(np.bincount(labels.ravel())[1:].min()))
-    return min(sizes, default=0)
+        sizes.append(int(np.bincount(labels.ravel())[1:].min()))
+    return min(sizes)
 
 
 def fit_scale(volume: Callable[[float], int], cells: float, dims: int, steps: int = 121,
@@ -175,15 +179,30 @@ def fit_scale(volume: Callable[[float], int], cells: float, dims: int, steps: in
     ``section`` (f -> the thinnest horizontal section of the scaled shape, ``thinnest_section``), among the factors
     whose volume is within ``band`` of ``cells`` (relative), the one with the thickest thinnest section, ties by
     the closest volume (M12b sizing: nearest-neighbour resampling thins a part unevenly, e.g. a chair's post from
-    8 cells to 3 between factors 2% apart). Without a factor in the band, the closest volume."""
+    8 cells to 3 between factors 2% apart). If no factor in the band keeps the shape whole (all cut it: section
+    0), the band is widened once to ``2 * band`` (M12b completeness: a chair's 2-cell post vanished at some volumes).
+    Without a factor in either band, the closest volume."""
     estimate = (cells / volume(1.0)) ** (1 / dims)
     factors = [float(f) for f in estimate * np.exp(np.linspace(-0.3, 0.3, steps))]
     errors = [abs(volume(f) - cells) for f in factors]
     best = int(np.argmin(errors))
     if section is not None:
-        fitting = [i for i, error in enumerate(errors) if error <= band * cells]
-        if fitting:
-            best = max(fitting, key=lambda i: (section(factors[i]), -errors[i], -i))
+        sections: dict[int, int] = {}
+
+        def thickest(width: float) -> int | None:
+            fitting = [i for i, error in enumerate(errors) if error <= width * cells]
+            for i in fitting:
+                if i not in sections:
+                    sections[i] = section(factors[i])
+            return max(fitting, key=lambda i: (sections[i], -errors[i], -i), default=None)
+
+        found = thickest(band)
+        if found is None or sections[found] == 0:
+            wider = thickest(2 * band)
+            if wider is not None and sections[wider] > 0:
+                found = wider
+        if found is not None:
+            best = found
     return factors[best]
 
 
