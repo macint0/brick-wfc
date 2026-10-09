@@ -211,7 +211,7 @@ The arm set is base, skin, both, skin_a1, both_a1 and symmetric. Seeds are the s
   - On the means, adding the soft skin to `--symmetric` costs nothing and cleans the skin. On the selected build it is mixed: the judge is better in 4/9 cells, worse in 4/9 and tied in 1. The 6378-1 table is the largest trade there: −0.4236 at 80.6% fill against −0.3620 at 58.8%.
 - **both_a1 against hard both:**
   - Judge −0.0072 against −0.0207, but fill −1.6 against +0.3 points.
-  - Fragmentation −0.55 / −0.27 against −0.13 / −0.82.
+  - Fragmentation −0.55 / −0.27 against −1.13 / −0.82.
   - The hard sort cleans more and fills more, while the soft weighting keeps the style.
 - **Time:** s/candidate is within the run-to-run spread of base, so there is no cost.
 
