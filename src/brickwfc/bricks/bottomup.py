@@ -85,8 +85,9 @@ ground through stud joints. Physics needs no change: the LP already lets a stud 
 
 Diagnosis (M12b completeness): a ``trace`` object set on the builder hears about every cell visit of the main pass
 that places nothing (``skipped``: the solid-share draw passed the cell over; ``failed``: no part fits there) and
-about every connect repair (``repaired``, with the state before it); the hole pass is not traced. It must not draw
-from the generator, so traced builds are identical to untraced ones.
+about every connect repair (``repaired``, with the state before it); of the hole pass it hears only when each
+pass starts (``holes``, with the state then), and it gets the final state (``finished``). It must not draw from the
+generator, so traced builds are identical to untraced ones.
 """
 
 from __future__ import annotations
@@ -217,6 +218,8 @@ class BottomUpBuilder:
             self._fill(state, layers, rng, allowed, preferred)
             if self.holes:
                 self._fill_holes(state, layers, rng, allowed, preferred)
+        if self.trace is not None:
+            self.trace.finished(state)
         return state.grid
 
     def _new_state(self, shape: tuple[int, int, int], inventory: Mapping[tuple[str, str], int] | None,
@@ -295,6 +298,8 @@ class BottomUpBuilder:
     def _fill_holes(self, state: "_State", layers: range, rng: np.random.Generator, allowed: np.ndarray,
                     preferred: np.ndarray | None) -> None:
         """The hole-filling pass (see the module docstring): sweeps over ``layers`` until one places nothing."""
+        if self.trace is not None:
+            self.trace.holes(state)
         _, nz, nx = state.filled.shape
         changed = True
         while changed:

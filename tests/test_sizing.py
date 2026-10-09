@@ -5,7 +5,8 @@ import pytest
 
 from brickwfc.bricks.inventory import fillable_cells, fits_inside, inventory_cells, part_cells, target_volume, unusable
 from brickwfc.bricks.parts import CATALOG
-from brickwfc.bricks.shapes import SECTION_BAND, scaled_to, thinnest_section
+from brickwfc.bricks.shapes import (SECTION_BAND, fit_scale, overhang_moment, resample, scaled_to,
+                                    thinnest_section)
 
 
 def test_fillable_cells() -> None:
@@ -63,6 +64,43 @@ def test_keep_sections_does_not_cut_a_thin_post() -> None:
         assert not _cut(kept), cells
         assert abs(int(kept.sum()) - cells) <= max(2 * SECTION_BAND * cells, abs(int(plain.sum()) - cells))
     assert plain_cut  # the post does vanish at some of these volumes
+
+
+def test_overhang_moment() -> None:
+    stool = np.zeros((6, 5, 5), dtype=bool)  # a base, a 1 x 1 post, a 5 x 5 seat of 50 cells
+    stool[:2] = stool[4:] = True
+    stool[2:4, 2, 2] = True
+    assert overhang_moment(stool) == 0  # the post under the seat's centre
+    stool[2:4, 2, 2] = False
+    stool[2:4, 0, 2] = True
+    assert overhang_moment(stool) == 50 * 1.5  # the seat's centre 2.5 studs from the post's centre, 1.5 beyond it
+    table = np.zeros((4, 6, 6), dtype=bool)
+    table[:3, 0, 0] = table[:3, 0, 5] = table[:3, 5, 0] = table[:3, 5, 5] = True
+    table[3] = True
+    assert overhang_moment(table) == 0  # the top's centre within the legs' hull
+
+
+def test_fit_scale_prefers_the_post_under_its_load() -> None:
+    """M12b completeness: nearest-neighbour scaling puts a thin post under its load's centre at one factor and off
+    it at a neighbouring one (the 5891-1 chair at 0.9 of its volume: 47 of 50 builds over real clutch). Among
+    equally thick factors in the band, the one with the smallest overhang moment."""
+    occupied = np.zeros((20, 9, 9), dtype=bool)  # a stool: a base, a 1 x 1 post under the seat's centre, a seat
+    occupied[:3, 2:7, 2:7] = True
+    occupied[3:15, 4, 4] = True
+    occupied[15:] = True
+
+    def at(f: float) -> np.ndarray:
+        return resample(occupied, (f, f, f))
+
+    better = 0
+    for cells in range(400, 800, 10):
+        args = (lambda f: int(at(f).sum()), cells, 3)
+        plain = fit_scale(*args, section=lambda f: thinnest_section(at(f)))
+        kept = fit_scale(*args, section=lambda f: thinnest_section(at(f)), moment=lambda f: overhang_moment(at(f)))
+        assert thinnest_section(at(kept)) == thinnest_section(at(plain))
+        assert overhang_moment(at(kept)) <= overhang_moment(at(plain))
+        better += overhang_moment(at(kept)) < overhang_moment(at(plain))
+    assert better  # e.g. 460 cells: the post off-centre at f 1.003 (moment 229), centred at f 0.978
 
 def test_usable_parts_fit_somewhere_inside() -> None:
     lane = np.ones((1, 2, 5), dtype=bool)  # one plate layer, 2 x 5 studs

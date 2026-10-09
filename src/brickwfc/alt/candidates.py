@@ -115,16 +115,19 @@ def load_proposal(path: str) -> Proposal:
     return Proposal.load(Path(path))
 
 
+def d2_builder(context: Context, parts: PartSet, bias: StyleBias) -> BottomUpBuilder:
+    """The D2 builder of ``context``'s setup."""
+    return BottomUpBuilder(parts, any_offset=True, style=bias, balanced=context.balanced, bridge=context.bridge,
+                           connect=context.connect, connect_rounds=context.connect_rounds,
+                           open_tops=context.open_tops, order=context.order,
+                           proposal=load_proposal(context.proposal) if context.proposal else None,
+                           skin=context.skin, skin_power=context.skin_power, holes=context.holes, hang=context.hang)
+
+
 def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.ndarray | None:
     """One grid of tile ids for ``seed``, or None if the generator gave up."""
     if context.generator == "d2":
-        builder = BottomUpBuilder(parts, any_offset=True, style=bias, balanced=context.balanced,
-                                  bridge=context.bridge, connect=context.connect,
-                                  connect_rounds=context.connect_rounds, open_tops=context.open_tops,
-                                  order=context.order,
-                                  proposal=load_proposal(context.proposal) if context.proposal else None,
-                                  skin=context.skin, skin_power=context.skin_power, holes=context.holes,
-                                  hang=context.hang)
+        builder = d2_builder(context, parts, bias)
         return builder.build(context.grid, np.random.default_rng(seed), context.inventory, context.mask,
                              context.preferred, context.plane)
     constraints = [SupportConstraint(parts), InventoryConstraint(parts, context.inventory)]

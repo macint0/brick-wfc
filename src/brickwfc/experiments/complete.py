@@ -32,6 +32,7 @@ import argparse
 import functools
 import json
 import math
+from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import fields
 from pathlib import Path
@@ -40,14 +41,15 @@ from typing import Sequence
 import numpy as np
 from scipy import ndimage
 
-from brickwfc.alt.candidates import Candidate, Context
+from brickwfc.alt.candidates import Candidate, Context, d2_builder
 from brickwfc.alt.features import exposed, occupancy
 from brickwfc.alt.inputs import learned_style, load_source
 from brickwfc.alt.pipeline import AltConfig, cache_key, make_context, make_target, sized_target
 from brickwfc.alt.pipeline import main as pipeline_main
 from brickwfc.bricks.bottomup import BottomUpBuilder, _FitMap
 from brickwfc.bricks.build import placed_colors, slope_profiles
-from brickwfc.bricks.parts import PlacedPart, extract_parts
+from brickwfc.bricks.inventory import fits_inside, part_cells
+from brickwfc.bricks.parts import CATALOG, PlacedPart, extract_parts
 from brickwfc.bricks.shapes import surface
 from brickwfc.bricks.style import StyleBias, styled_tileset
 from brickwfc.bricks.support import studded
@@ -218,6 +220,8 @@ class Trace:
         self.studs_everywhere = np.ones(watch.shape, dtype=bool)
         self.epoch = 0  # bumped at every repair (a new state)
         self.maps: tuple | None = None  # (epoch, parts placed, layer, full fit map, space fit map)
+        self.at_holes: dict | None = None  # inventory left when the last hole pass started
+        self.final = None  # the builder's final state
 
     def skipped(self, state, y: int, z: int, x: int) -> None:
         if self.watch[y, z, x]:
@@ -227,27 +231,37 @@ class Trace:
         self.before_repair |= state.filled
         self.epoch += 1
 
+    def holes(self, state) -> None:
+        self.at_holes = None if state.remaining is None else dict(state.remaining)  # the last hole pass's start
+
+    def finished(self, state) -> None:
+        self.final = state
+
     def failed(self, builder: BottomUpBuilder, state, allowed: np.ndarray, reachable: np.ndarray,
                y: int, z: int, x: int) -> None:
         if self.watch[y, z, x]:
             self.cause[y, z, x] = VISIT_CAUSES.index(self.classify(builder, state, allowed, reachable, y, z, x))
 
-    def fit_maps(self, builder: BottomUpBuilder, state, allowed: np.ndarray, y: int) -> tuple[_FitMap, _FitMap]:
-        """Fit maps of layer ``y`` as the build stands: every rule, and every rule but the stud below."""
-        stamp = (self.epoch, len(state.placed), y)
-        if self.maps is None or self.maps[:3] != stamp:
+    def fit_maps(self, builder: BottomUpBuilder, state, allowed: np.ndarray, y: int,
+                 hang: bool = False) -> tuple[_FitMap, _FitMap]:
+        """Fit maps of layer ``y`` as the build stands: every rule, and every rule but support (``hang``: a part
+        may also hang from the part above, as in the hole pass with hang)."""
+        stamp = (self.epoch, len(state.placed), y, hang, id(state))
+        if self.maps is None or self.maps[:5] != stamp:
             studless = builder._studless_top if builder.open_tops else None
             open_bottom = state.open_bottom if builder.open_bottoms else None
-            full = _FitMap(state.filled, state.studs, allowed, y, studless, open_bottom)
+            full = _FitMap(state.filled, state.studs, allowed, y, studless, open_bottom,
+                           state.open_bottom if hang else None)
             space = _FitMap(state.filled, self.studs_everywhere, allowed, y, studless, open_bottom)
             self.maps = (*stamp, full, space)
-        return self.maps[3], self.maps[4]
+        return self.maps[5], self.maps[6]
 
     def classify(self, builder: BottomUpBuilder, state, allowed: np.ndarray, reachable: np.ndarray,
-                 y: int, z: int, x: int) -> str:
+                 y: int, z: int, x: int, hang: bool = False) -> str:
         if not reachable[z, x]:
             return "support"
-        full, space = self.fit_maps(builder, state, allowed, y)
+        full, space = self.fit_maps(builder, state, allowed, y, hang)
+        hang_bottom = state.open_bottom if hang else None
         open_bottom = state.open_bottom if builder.open_bottoms else None
         remaining = state.remaining
         fits_space = tips = used_up = False
@@ -265,13 +279,15 @@ class Trace:
                         and bool(space_map[part.z, part.x])
                 else:
                     args = (cells, state.filled)
-                    fits = builder._fits_cells(part, *args, state.studs, allowed, open_bottom, builder.open_tops)
+                    fits = builder._fits_cells(part, *args, state.studs, allowed, open_bottom, builder.open_tops,
+                                               hang_bottom)
                     roomy = builder._fits_cells(part, *args, self.studs_everywhere, allowed, open_bottom,
                                                 builder.open_tops)
                 fits_space |= roomy
                 if not fits:
                     continue
-                if state.balance is None or state.balance.can_add(part, builder._below(part, state.owner)):
+                links = builder._links(part, state.owner) if hang else builder._below(part, state.owner)
+                if state.balance is None or state.balance.can_add(part, links):
                     if left:
                         return "missed"
                     used_up = True
@@ -459,6 +475,167 @@ def step_report(args: argparse.Namespace) -> None:
     print(text)
 
 
+# Holes: why the hole pass leaves cells empty ----------------------------------------------------------------
+
+# Why no part fits at an unfilled target cell of the final build, under the hole pass's rules (hanging support with
+# hang) and the inventory left: inventory, balance and geometry as in the trace; unreachable: no stud below and no
+# part above within reach; support: within reach, but no part covering the cell rests or hangs there; ground: a part
+# fits on the ground layer, which the last connect round's hole pass does not visit; missed: a part fits (none
+# expected: the pass ends when nothing fits).
+FINAL_CAUSES = ("inventory", "balance", "support", "unreachable", "geometry", "ground", "missed")
+HOLE_BINS = ((1, 1), (2, 4), (5, 16), (17, 64), (65, None))  # hole sizes in cells, inclusive
+SMALL_HOLE = 4  # holes up to this many cells get the smallest part that fits them
+
+
+def hole_bin(size: int) -> str:
+    return next(f"{lo}" if lo == hi else f"{lo}+" if hi is None else f"{lo}-{hi}"
+                for lo, hi in HOLE_BINS if size >= lo and (hi is None or size <= hi))
+
+
+def small_parts(size: int) -> list:
+    """Catalog parts of at most ``size`` cells, smallest first."""
+    return sorted((part for part in CATALOG.values() if part_cells(part) <= size), key=lambda p: (part_cells(p), p.name))
+
+
+def final_causes(builder: BottomUpBuilder, trace: Trace, mask: np.ndarray) -> np.ndarray:
+    """Per unfilled target cell of the traced build's final state, its index into FINAL_CAUSES; -1 elsewhere."""
+    state = trace.final
+    cause = np.full(mask.shape, -1, dtype=np.int8)
+    for y in np.unique(np.argwhere(mask & ~state.filled)[:, 0]):
+        reach = builder._reachable(state.studs, y)
+        if builder.hang:
+            reach = reach | builder._hang_reachable(state, y)
+        anywhere = np.ones_like(reach)
+        for z, x in np.argwhere(mask[y] & ~state.filled[y]).tolist():
+            if not reach[z, x]:
+                name = "unreachable"
+            else:
+                name = trace.classify(builder, state, mask, anywhere, y, z, x, hang=builder.hang)
+                if name == "missed" and y == 0:
+                    name = "ground"
+            cause[y, z, x] = FINAL_CAUSES.index(name)
+    return cause
+
+
+def holes_of(filled: np.ndarray, mask: np.ndarray, cause: np.ndarray, at_holes: dict | None,
+             remaining: dict | None) -> tuple[list[dict], list[dict]]:
+    """(per size bin: holes and cells, per hole of at most SMALL_HOLE cells: the smallest catalog parts that fit
+    inside it, how many parts that fit it the inventory had when the last hole pass started and at the end, and
+    its cells' causes)."""
+    labels, count = ndimage.label(mask & ~filled)
+    sizes = np.bincount(labels.ravel(), minlength=count + 1)[1:]
+    bins = []
+    for lo, hi in HOLE_BINS:
+        chosen = (sizes >= lo) & (sizes <= (hi if hi is not None else sizes.max(initial=0)))
+        bins.append({"bin": hole_bin(lo), "holes": int(chosen.sum()), "cells": int(sizes[chosen].sum())})
+    small = []
+    candidates = small_parts(SMALL_HOLE)
+    for index, region in enumerate(ndimage.find_objects(labels), 1):
+        if sizes[index - 1] > SMALL_HOLE:
+            continue
+        hole = labels[region] == index
+        fitting = [part for part in candidates if part_cells(part) <= hole.sum() and fits_inside(part, hole)]
+        smallest = [p.name for p in fitting if part_cells(p) == part_cells(fitting[0])] if fitting else []
+        names = {p.name for p in fitting}
+
+        def held(inventory: dict | None) -> int | None:
+            return None if inventory is None else sum(n for (name, _), n in inventory.items() if name in names)
+
+        cells = np.argwhere(labels == index)
+        small.append({"size": int(sizes[index - 1]), "smallest": smallest, "fitting": sorted(names),
+                      "at_holes": held(at_holes), "at_end": held(remaining),
+                      "causes": sorted(FINAL_CAUSES[cause[tuple(c)]] for c in cells),
+                      "layers": sorted({int(c[0]) for c in cells})})
+    return bins, small
+
+
+def replay_final(directory: str, seed: int) -> dict:
+    """Replay one cached candidate with a trace; why its unfilled target cells stayed empty, and its holes."""
+    context, parts, bias = replay_setup(directory)
+    _, _, candidates = load_run(Path(directory))
+    cached = next(c for c in candidates if c.seed == seed)
+    mask = context.mask
+    final = occupancy(cached.placed, mask.shape)
+    trace = Trace(mask & ~final)
+    builder = d2_builder(context, parts, bias)
+    builder.trace = trace
+    grid = builder.build(context.grid, np.random.default_rng(seed), context.inventory, mask, context.preferred,
+                         context.plane)
+    placed, _ = extract_parts(grid, parts)
+    if sorted(map(placement, placed)) != sorted(map(placement, cached.placed)) or \
+            not np.array_equal(trace.final.filled, final):
+        raise SystemExit(f"{directory} seed {seed}: the traced replay differs from the cached build")
+    cause = final_causes(builder, trace, mask)
+    skin = exposed(mask)
+    bins, small = holes_of(final, mask, cause, trace.at_holes, trace.final.remaining)
+    left = trace.final.remaining
+    return {"seed": seed, "unfilled": int((cause >= 0).sum()),
+            "causes": {c: int((cause == i).sum()) for i, c in enumerate(FINAL_CAUSES)},
+            "on_surface": {c: int(((cause == i) & skin).sum()) for i, c in enumerate(FINAL_CAUSES)},
+            "parts_left_at_holes": None if trace.at_holes is None else sum(trace.at_holes.values()),
+            "parts_left_at_end": None if left is None else sum(left.values()),
+            "bins": bins, "small": small, "completeness": completeness(final, mask)}
+
+
+def holes_report(rows: list[dict]) -> str:
+    shown = [c for c in FINAL_CAUSES if any(r["causes"][c] for r in rows)]
+    lines = ["Why the selected builds' unfilled target cells stayed empty (share of unfilled cells; on the surface in "
+             "brackets):", "",
+             "| object | set | fill % | unfilled | " + " | ".join(shown) + " | parts left (hole pass start / end) |",
+             "|---|---|---:|---:|" + "---:|" * len(shown) + "---:|"]
+    for r in rows:
+        n = max(1, r["unfilled"])
+        causes = " | ".join(f"{100 * r['causes'][c] / n:.0f} ({100 * r['on_surface'][c] / n:.0f})" for c in shown)
+        lines.append(f"| {r['object']} | {r['set']} | {r['completeness']['fill_pct']:.1f} | {r['unfilled']} | {causes} | "
+                     f"{r['parts_left_at_holes']} / {r['parts_left_at_end']} |")
+    labels = [hole_bin(lo) for lo, _ in HOLE_BINS]
+    lines += ["", "Holes by size (holes; share of unfilled cells):", "",
+              "| object | set | holes | " + " | ".join(f"{b} cells" for b in labels) + " |",
+              "|---|---|---:|" + "---:|" * len(labels)]
+    for r in rows:
+        n = max(1, r["unfilled"])
+        cells = " | ".join(f"{b['holes']}; {100 * b['cells'] / n:.0f}%" for b in r["bins"])
+        lines.append(f"| {r['object']} | {r['set']} | {sum(b['holes'] for b in r['bins'])} | {cells} |")
+    lines += ["", f"Holes of 1-{SMALL_HOLE} cells: the smallest catalog part that fits inside each, whether the inventory "
+              "had a part that fits it when the last hole pass started and at the end, and why its cells stayed empty:",
+              "", "| object | set | small holes | smallest part (holes) | had one at hole pass start | had one at end "
+              "| causes of their cells |", "|---|---|---:|---|---:|---:|---|"]
+    for r in rows:
+        small = r["small"]
+        smallest = Counter("/".join(h["smallest"]) or "none" for h in small)
+        causes = Counter(c for h in small for c in h["causes"])
+        lines.append(f"| {r['object']} | {r['set']} | {len(small)} | "
+                     f"{', '.join(f'{k} ({v})' for k, v in smallest.most_common())} | "
+                     f"{sum(bool(h['at_holes']) for h in small)} | {sum(bool(h['at_end']) for h in small)} | "
+                     f"{', '.join(f'{k} {v}' for k, v in causes.most_common())} |")
+    return "\n".join(lines)
+
+
+def step_holes(args: argparse.Namespace) -> None:
+    """The ``--arm``'s selected builds, replayed with a trace (identity asserted): causes, hole sizes, small holes."""
+    jobs = []
+    for obj in OBJECTS:
+        for set_number in SWEEP_SETS:
+            directory = arm_dir(args.out, args.arm, set_number, obj, args.runs)
+            if not (directory / "stats.json").exists():
+                print(f"{args.arm} {obj} {set_number}: no run", flush=True)
+                continue
+            _, stats, _ = load_run(directory)
+            if stats["selected"]:
+                jobs.append((obj, set_number, directory.as_posix(), stats["selected"][0]["seed"]))
+    rows = []
+    with ProcessPoolExecutor(args.workers) if args.workers > 1 else InlineExecutor() as pool:
+        futures = [(obj, set_number, pool.submit(replay_final, directory, seed))
+                   for obj, set_number, directory, seed in jobs]
+        for obj, set_number, future in futures:  # in job order: the same file for any workers
+            rows.append({"object": obj, "set": set_number, "arm": args.arm} | future.result())
+            print(f"  {obj} {set_number}: {rows[-1]['causes']}", flush=True)
+    (args.out / f"holes_{args.arm}.json").write_text(json.dumps(rows, indent=1), encoding="utf-8")
+    text = holes_report(rows) + "\n"
+    (args.out / f"holes_{args.arm}.md").write_text(text, encoding="utf-8")
+    print(text)
+
+
 # Sweep: sizing and the hole pass ----------------------------------------------------------------------------
 
 SWEEP_SETS = ("6378-1", "5891-1", "4956-1")
@@ -613,10 +790,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.complete", description=__doc__.splitlines()[0])
     parser.add_argument("--runs", type=Path, default=Path("out"), help="folder holding m12b_sizing_fig and m12b_sizing")
     parser.add_argument("--out", type=Path, default=Path("out/m12b_complete"))
-    parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report", "sweep", "sweep-report"])
+    parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report", "sweep", "sweep-report", "holes"])
     parser.add_argument("--per-pair", type=int, default=10, help="trace: builds replayed per pair (selected first)")
     parser.add_argument("--workers", type=int, default=5)
     parser.add_argument("--n", type=int, default=50, help="sweep: candidates per run")
+    parser.add_argument("--arm", default="usable80", help="holes: the sweep arm whose selected builds to diagnose")
     args = parser.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
     if "final" in args.steps:
@@ -629,6 +807,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         step_sweep(args)
     if "sweep-report" in args.steps:
         step_sweep_report(args)
+    if "holes" in args.steps:
+        step_holes(args)
     return 0
 
 
