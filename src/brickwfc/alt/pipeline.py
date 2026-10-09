@@ -100,6 +100,9 @@ class AltConfig:
     sizing: str = "fillable"  # target volume: slopes count their stud cells x 1 layer, and the scale keeps thin parts
     # thick ("box": both as before M12b sizing)
     proposal: str | None = None  # d2: learned proposal model (.npz from training/, vocab.json next to it)
+    skin: bool = False  # d2 with a target: largest parts first on the target's skin (M12b step 3)
+    skin_power: float | None = None  # with skin: soft preference, choice weights x cells ** this (None: hard sort)
+    symmetric: bool = False  # d2 with a target: mirror-preserving scale + symmetric decoding (M12b step 3)
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = 1111.0  # physics: keep builds needing at most this clutch per stud, in plate-cell weights;
     # 1111 is a real stud (calibrated in results/m12b_overhangs_tables.md); inf: no limit
@@ -145,7 +148,8 @@ def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) ->
                        Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
                        config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
                        hollow=config.hollow, supports=config.supports and takes_supports(config.shape),
-                       support_height=config.support_height, keep_sections=config.sizing == "fillable")
+                       support_height=config.support_height, symmetric=config.symmetric,
+                       keep_sections=config.sizing == "fillable")
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
@@ -160,7 +164,8 @@ def make_context(source: Source, stats: StyleStats, config: AltConfig, target: T
     return Context(source.inventory, source.colors, stats, grid, mask, preferred, empty, config.strength,
                    config.generator, config.max_clutch, config.wfc_time_limit_s, config.balanced,
                    config.bridge, config.connect, config.connect_rounds, config.open_tops and target is not None,
-                   config.order, config.proposal or "")
+                   config.order, config.proposal or "", config.skin and target is not None,
+                   target.plane if target is not None and config.symmetric else None, config.skin_power)
 
 
 # Generation, resumable ---------------------------------------------------------------------------
@@ -181,6 +186,12 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
         key["open_tops"] = True
     if context.order != "random":  # likewise
         key["order"] = context.order
+    if context.skin:  # likewise
+        key["skin"] = True
+        if context.skin_power is not None:
+            key["skin_power"] = context.skin_power
+    if context.plane is not None:  # likewise
+        key["plane"] = [context.plane.axis, context.plane.total]
     if context.proposal:  # the model by content, so retrained weights are not mixed with old candidates
         key["proposal"] = hashlib.sha256(Path(context.proposal).read_bytes()).hexdigest()[:16]
     return json.loads(json.dumps(key))
@@ -356,6 +367,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="target sizing: fillable (a slope counts its stud cells x 1 layer toward the volume, and "
                         "the scale keeps thin parts thick) or box (as before)")
     parser.add_argument("--proposal", help="d2: learned proposal model (.npz, vocab.json next to it; see training/)")
+    parser.add_argument("--skin", action="store_true",
+                        help="d2 with a target shape: try the largest parts first on the target's outer surface")
+    parser.add_argument("--skin-power", type=float,
+                        help="with --skin: a soft preference instead of largest first, choice weights x cells ** this")
+    parser.add_argument("--symmetric", action="store_true",
+                        help="d2 with a target shape: find its mirror plane, scale a 3D target so the plane survives, "
+                        "and place each part's mirror image with it where it fits")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -392,8 +410,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, help="output directory (default out/alt/<input name>)")
     parser.add_argument("--fresh", action="store_true", help="discard cached candidates")
     args = parser.parse_args(argv)
-    if args.generator != "d2" and (args.proposal or args.order != "random"):
-        parser.error("--order and --proposal apply to --generator d2 only")
+    if args.generator != "d2" and (args.proposal or args.order != "random" or args.skin or args.symmetric):
+        parser.error("--order, --proposal, --skin and --symmetric apply to --generator d2 only")
+    if args.skin_power is not None and not args.skin:
+        parser.error("--skin-power goes with --skin")
 
     start = time.perf_counter()
     config = AltConfig(
@@ -403,7 +423,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         shape=args.shape, height_map=args.height_map, color_map=args.color_map, shape_height=args.shape_height,
         shape_exact=args.shape_exact, shape_columns=args.shape_columns, voxels=args.voxels, mesh_up=args.mesh_up,
         hollow=args.hollow, supports=args.supports, support_height=args.support_height, open_tops=not args.no_open_tops,
-        order=args.order, proposal=args.proposal, sizing=args.sizing,
+        order=args.order, proposal=args.proposal, skin=args.skin, skin_power=args.skin_power,
+        symmetric=args.symmetric, sizing=args.sizing,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,

@@ -18,6 +18,14 @@ thick plus internal pillars, ``shapes.hollow``); the hollowed shape is what is s
 same parts make a larger object. With ``supports``, columns are added under overhangs out of a part's reach
 (``shapes.with_supports``), after scaling: the object keeps its size and gets extra cells outside it.
 
+With ``symmetric`` (M12b step 3), the target carries the mirror plane of the object (``symmetry``; the best
+vertical plane if it covers at least ``DECODE_MIN_SCORE`` of the object, else none) for symmetric decoding. If
+the plane covers at least ``SYMMETRIZE_MIN_SCORE`` of it, the object is made exactly symmetric by adding the
+mirror image of its cells: nearest-neighbor scaling breaks some symmetry (BrickGPT's car, 0.97 symmetric on its
+20-unit grid, is 0.85 at 6378-1's scale). Adding cells keeps thin features (a resampling that is symmetric by
+construction drops the chair's one-cell stem). Support columns are mirrored too (their placement is not symmetric
+by itself). Off by default (targets as before).
+
 With a silhouette, an optional color image of the same size gives each column a preferred color: the
 inventory color nearest to its pixel (transparent pixels: no preference).
 """
@@ -47,6 +55,7 @@ from brickwfc.bricks.shapes import (
     sized_for,
     with_supports,
 )
+from brickwfc.bricks.symmetry import DECODE_MIN_SCORE, SYMMETRIZE_MIN_SCORE, Plane, mirror_plane, reflected
 from brickwfc.bricks.voxelize import voxelize
 from brickwfc.ldraw.fetch import fetch_set
 from brickwfc.ldraw.mpd import flatten
@@ -60,6 +69,7 @@ class Target:
     mask: Mask
     preferred: np.ndarray | None  # (Z, X) color names, "" for no preference
     description: str
+    plane: Plane | None = None  # with ``symmetric``: the object's mirror plane
 
 
 def takes_supports(spec: str) -> bool:
@@ -72,13 +82,40 @@ def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_ma
                 color_map: Path | None = None, height: int = 6, data_dir: Path = Path("data/omr"),
                 exact: bool = False, columns: bool = False, brickgpt_dir: Path = brickgpt.DATA_DIR,
                 voxels: int = 32, up: str = "y", hollow: int = 0, supports: bool = False,
-                support_height: int = 0, keep_sections: bool = False) -> Target:
+                support_height: int = 0, symmetric: bool = False, keep_sections: bool = False) -> Target:
     """The target ``spec`` with a volume of about ``cells`` grid cells. ``exact``: a model keeps its own
     cells instead of solid columns; ``columns``: a 3D target becomes solid columns instead of its own cells;
     ``voxels``, ``up``: mesh resolution and up axis; ``hollow``: shell thickness of a 3D target (0: solid);
     ``supports``: add support columns under far overhangs of a 3D target; ``support_height`` > 0: only columns
-    at most that many cells tall; ``keep_sections``: a 3D target or model is scaled so its thin parts stay thick
-    (``shapes.fit_scale``; the pipeline's fillable sizing)."""
+    at most that many cells tall; ``symmetric``: find the mirror plane (see the module docstring); ``keep_sections``:
+    a 3D target or model is scaled so its thin parts stay thick (``shapes.fit_scale``; the pipeline's fillable
+    sizing)."""
+    if symmetric and supports and not takes_supports(spec):
+        raise ValueError("--hollow and --supports go with a 3D target (a model, a BrickGPT structure or a mesh)")
+    target = _load(spec, cells, colors, height_map, color_map, height, data_dir, exact, columns, brickgpt_dir,
+                   voxels, up, hollow, supports and not symmetric, support_height, keep_sections)
+    if not symmetric:
+        return target
+    plane = mirror_plane(target.mask, DECODE_MIN_SCORE)
+    obj = target.mask
+    if plane is not None and plane.score >= SYMMETRIZE_MIN_SCORE:
+        obj = obj | reflected(obj, plane)
+        plane = Plane(plane.axis, plane.total, 1.0)
+    mask = obj
+    if supports:
+        mask = with_supports(mask, max_height=support_height)
+        if plane is not None:
+            extra = mask & ~obj
+            mask = mask | (reflected(extra, plane) & ~obj)
+    hollowed = ", supports" + (f" up to {support_height} cells" if support_height else "") if supports else ""
+    found = f", mirror plane {plane.name} ({plane.score:.2f})" if plane is not None else ", no mirror plane"
+    return Target(mask, target.preferred, target.description[:-1] + hollowed + found + ")", plane)
+
+
+def _load(spec: str, cells: float, colors: Sequence[BrickColor], height_map: Path | None, color_map: Path | None,
+          height: int, data_dir: Path, exact: bool, columns: bool, brickgpt_dir: Path, voxels: int, up: str,
+          hollow: int, supports: bool, support_height: int, keep_sections: bool = False) -> Target:
+    """``load_target`` without the symmetric step."""
     path = Path(spec)
     suffix = path.suffix.lower()
     is_image = suffix in IMAGE_SUFFIXES

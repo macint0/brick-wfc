@@ -51,6 +51,17 @@ choice probabilities at a cell are also multiplied by the model's weights for a 
 to ``proposal_strength``; every mask (inventory, support, balance, shape, one piece) is unchanged. The model
 reads the parts in the order they are placed, so pair it with ``order="raster"`` (cells of a layer visited
 by z, then x, as in its training data) rather than the default random order.
+
+Looks (M12b step 3), both off by default (builds as before). With ``skin=True`` and a target, at a cell on the
+target's outer surface (``shapes.surface``) parts are tried largest first (most cells; the sampled order breaks
+ties), so the first one that fits is the largest that fits: the skin shows fewer, larger parts. With
+``skin_power`` = a, the preference is soft instead: on those cells the choice weights (style included) are
+multiplied by each part's cells ** a before the order is drawn, so larger parts are tried earlier but the learned
+style still decides among them (a -> infinity is the hard sort). With a mirror
+``plane`` passed to ``build`` (``symmetry.Plane``), every placed part is followed by its mirror image when it
+fits there (every rule as for any part, balance included) and the inventory has it: in the part's color, else
+in the first color of that part left (in the choices' fixed order). Both only reorder or add placements that
+pass the same checks, so every guarantee stays.
 """
 
 from __future__ import annotations
@@ -64,6 +75,8 @@ from scipy import ndimage
 from brickwfc.bricks.balance import Balance, clusters
 from brickwfc.bricks.colors import BrickColor
 from brickwfc.bricks.parts import PartSet, PlacedPart, Shape, TileInfo
+from brickwfc.bricks.shapes import surface
+from brickwfc.bricks.symmetry import Plane, mirror_part
 
 if TYPE_CHECKING:
     from brickwfc.bricks.proposal import Proposal, Session
@@ -76,12 +89,15 @@ class BottomUpBuilder:
     def __init__(self, parts: PartSet, any_offset: bool = False, style: StyleBias | None = None,
                  balanced: bool = False, bridge: bool = False, connect: bool = False,
                  connect_rounds: int = 1, open_tops: bool = False, order: str = "random",
-                 proposal: Proposal | None = None, proposal_strength: float = 1.0) -> None:
+                 proposal: Proposal | None = None, proposal_strength: float = 1.0, skin: bool = False,
+                 skin_power: float | None = None) -> None:
         if bridge and not (balanced and any_offset):
             raise ValueError("bridge needs balanced=True and any_offset=True")
         if order not in ("random", "raster"):
             raise ValueError(f"order must be 'random' or 'raster', not {order!r}")
         self.order = order
+        self.skin = skin
+        self.skin_power = skin_power  # None: hard largest-first sort on the skin; a: weights x cells ** a
         self.proposal = proposal
         self.proposal_strength = proposal_strength
         self.parts = parts
@@ -110,6 +126,11 @@ class BottomUpBuilder:
         weights = np.array([totals[k] for k in self.choices])
         self.choice_p = weights / weights.sum()
         self.choice_color_names = np.array([color.name for _, color in self.choices])
+        self.choice_cells = np.array([shape.cells for shape, _ in self.choices])
+        self.skin_weights = None if skin_power is None else self.choice_cells.astype(float) ** skin_power
+        self.shape_colors: dict[Shape, list[BrickColor]] = {}  # colors each shape has tiles in, in choice order
+        for shape, color in self.choices:
+            self.shape_colors.setdefault(shape, []).append(color)
         self.solid_share = float(weights.sum() / parts.tileset.weights.sum())
         if style is not None:
             from brickwfc.bricks.style import TYPE_INDEX
@@ -126,14 +147,16 @@ class BottomUpBuilder:
         inventory: Mapping[tuple[str, str], int] | None = None,
         allowed: np.ndarray | None = None,
         preferred: np.ndarray | None = None,
+        plane: Plane | None = None,
     ) -> np.ndarray:
         """A (Y, Z, X) grid of tile ids; every placed part is whole, supported, within ``inventory``
         ((part name, color name) -> count) and inside ``allowed`` (bool, grid-shaped) if given.
-        ``preferred`` (Z, X) color names, "" for none, reorders the parts tried at each cell."""
+        ``preferred`` (Z, X) color names, "" for none, reorders the parts tried at each cell; ``plane``: place
+        each part's mirror image with it where possible."""
         target = allowed
         allowed = np.ones(shape, dtype=bool) if allowed is None else allowed
-        state = _State(shape, self.index[TileInfo(None)], inventory, self.balanced)
-        state.session = None if self.proposal is None else self.proposal.session(shape, target)
+        skin = surface(target) if self.skin and target is not None else None
+        state = self._new_state(shape, inventory, target, skin, plane)
         self._fill(state, range(shape[0]), rng, allowed, preferred)
         for round_ in range(self.connect_rounds if self.connect else 0):
             found = clusters(state.placed)
@@ -146,14 +169,20 @@ class BottomUpBuilder:
             returned = Counter((p.shape.part.name, p.color.name) for i, p in enumerate(state.placed) if i not in keep)
             remaining = None if state.remaining is None else dict(Counter(state.remaining) + returned)
             kept = sorted((state.placed[i] for i in keep), key=lambda p: p.layer)
-            state = _State(shape, self.index[TileInfo(None)], None, self.balanced)
-            state.session = None if self.proposal is None else self.proposal.session(shape, target)
+            state = self._new_state(shape, None, target, skin, plane)
             for part in kept:  # already counted against the inventory
                 self._put(state, part)
             state.remaining = remaining
             last = round_ == self.connect_rounds - 1
             self._fill(state, range(1 if last else 0, shape[0]), rng, allowed, preferred)
         return state.grid
+
+    def _new_state(self, shape: tuple[int, int, int], inventory: Mapping[tuple[str, str], int] | None,
+                   target: np.ndarray | None, skin: np.ndarray | None, plane: Plane | None) -> "_State":
+        state = _State(shape, self.index[TileInfo(None)], inventory, self.balanced)
+        state.session = None if self.proposal is None else self.proposal.session(shape, target)
+        state.skin, state.plane = skin, plane
+        return state
 
     def _fill(self, state: "_State", layers: range, rng: np.random.Generator, allowed: np.ndarray,
               preferred: np.ndarray | None) -> None:
@@ -179,7 +208,14 @@ class BottomUpBuilder:
                     p = p / p.sum()
                 if state.session is not None and reachable[z, x]:
                     p = self._proposed_p(p, state.session, y, z, x)
-                for choice in rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p):
+                on_skin = state.skin is not None and bool(state.skin[y, z, x])
+                if on_skin and self.skin_weights is not None:  # soft: larger parts weigh more on the skin
+                    p = p * self.skin_weights
+                    p = p / p.sum()
+                order = rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p)
+                if on_skin and self.skin_weights is None:  # hard: largest first on the skin
+                    order = order[np.argsort(-self.choice_cells[order], kind="stable")]
+                for choice in order:
                     part_shape, color = self.choices[choice]
                     key = (part_shape.part.name, color.name)
                     if remaining is not None and remaining.get(key, 0) <= 0:
@@ -195,6 +231,8 @@ class BottomUpBuilder:
                         failed.add(box)
                     else:
                         self._put(state, part)
+                        if state.plane is not None:
+                            self._put_mirror(state, part, allowed)
                         fit_map.reset()
                         break
 
@@ -216,6 +254,31 @@ class BottomUpBuilder:
         state.placed.append(part)
         if state.session is not None:
             state.session.add(part)
+
+    def _put_mirror(self, state: "_State", part: PlacedPart, allowed: np.ndarray) -> None:
+        """Place ``part``'s mirror image across ``state.plane`` if it fits and the inventory has it."""
+        image = mirror_part(part, state.plane)
+        if image is None or image == part:
+            return
+        colors = self.shape_colors.get(image.shape, [])
+        left = [c for c in sorted(colors, key=lambda c: c != part.color)  # the part's own color first
+                if state.remaining is None or state.remaining.get((image.shape.part.name, c.name), 0) > 0]
+        if not left:
+            return
+        image = PlacedPart(image.shape, left[0], image.layer, image.x, image.z)
+        if self._fits_now(image, state, allowed):  # whether a part fits does not depend on its color
+            self._put(state, image)
+
+    def _fits_now(self, part: PlacedPart, state: "_State", allowed: np.ndarray) -> bool:
+        """Every check ``_place`` makes, for this exact placement."""
+        open_bottom = state.open_bottom if self.open_bottoms else None
+        cells = self.cell_masks.get(part.shape)
+        if cells is not None:
+            fits = self._fits_cells(part, cells, state.filled, state.studs, allowed, open_bottom, self.open_tops)
+        else:
+            studless = self._studless_top(part.shape) if self.open_tops else None
+            fits = self._fits(part, state.filled, state.studs, allowed, studless, open_bottom)
+        return fits and (state.balance is None or state.balance.can_add(part, self._below(part, state.owner)))
 
     def _proposed_p(self, p: np.ndarray, session: Session, y: int, z: int, x: int) -> np.ndarray:
         """Choice probabilities ``p`` times the proposal's weights (normalized, floored so that every choice
@@ -442,6 +505,8 @@ class _State:
         self.balance = Balance() if balanced else None
         self.grid = np.full(shape, empty_tile, dtype=np.int64)
         self.session: Session | None = None  # the proposal model's view of this build
+        self.skin: np.ndarray | None = None  # skin=True: the target's outer surface cells
+        self.plane: Plane | None = None  # symmetric decoding: the mirror plane
 
 
 def _fit_key(shape: Shape) -> tuple:

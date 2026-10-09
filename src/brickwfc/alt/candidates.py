@@ -40,6 +40,7 @@ from brickwfc.bricks.proposal import Proposal
 from brickwfc.bricks.shapes import Mask, ShapeConstraint, outside
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.style import StyleBias, StyleStats, styled_tileset
+from brickwfc.bricks.symmetry import Plane
 from brickwfc.bricks.support import is_stable
 from brickwfc.wfc import Bias, run
 
@@ -71,6 +72,9 @@ class Context:
     open_tops: bool = False  # d2: studless top cells only under empty target cells (see bottomup)
     order: str = "random"  # d2: cells of a layer visited in "random" or "raster" order
     proposal: str = ""  # d2: a learned proposal model (.npz, vocab.json next to it); "" for none
+    skin: bool = False  # d2: largest parts first on the target's skin (M12b step 3, see bottomup)
+    plane: Plane | None = None  # d2: symmetric decoding across this mirror plane (M12b step 3)
+    skin_power: float | None = None  # d2 with skin: soft preference, weights x cells ** this (None: hard sort)
 
 
 @dataclass(frozen=True)
@@ -114,9 +118,10 @@ def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.nd
                                   bridge=context.bridge, connect=context.connect,
                                   connect_rounds=context.connect_rounds, open_tops=context.open_tops,
                                   order=context.order,
-                                  proposal=load_proposal(context.proposal) if context.proposal else None)
+                                  proposal=load_proposal(context.proposal) if context.proposal else None,
+                                  skin=context.skin, skin_power=context.skin_power)
         return builder.build(context.grid, np.random.default_rng(seed), context.inventory, context.mask,
-                             context.preferred)
+                             context.preferred, context.plane)
     constraints = [SupportConstraint(parts), InventoryConstraint(parts, context.inventory)]
     if context.mask is not None:
         constraints.append(ShapeConstraint(parts, context.mask))
