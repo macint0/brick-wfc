@@ -64,7 +64,7 @@ from brickwfc.alt.target import BRICKGPT_PREFIX, Target, load_target
 from brickwfc.bricks import brickgpt
 from brickwfc.bricks.balance import clusters
 from brickwfc.bricks.colors import color_for_code
-from brickwfc.bricks.inventory import inventory_cells, utilization
+from brickwfc.bricks.inventory import target_volume, utilization
 from brickwfc.bricks.physics import table_clutch
 from brickwfc.bricks.parts import CATALOG, PlacedPart, Shape
 from brickwfc.bricks.physics import required_clutch
@@ -156,10 +156,11 @@ def supported(variant: str) -> bool:
     return variant in ("supports", "default")
 
 
-def target_for(set_number: str, structure: brickgpt.Structure, variant: str) -> Target:
+def target_for(set_number: str, structure: brickgpt.Structure, variant: str, sizing: str = "fillable") -> Target:
+    """The target a run of ``variant`` built; ``sizing`` as the run's (runs before M12b sizing: "box")."""
     source = load_source(set_number)
     hollow = int(variant.removeprefix("hollow")) if variant.startswith("hollow") else 0  # opentops: as exact
-    return load_target(BRICKGPT_PREFIX + structure.structure_id, inventory_cells(source.inventory),
+    return load_target(BRICKGPT_PREFIX + structure.structure_id, target_volume(source.inventory, sizing),
                        source.colors, columns=variant == "columns", hollow=hollow, supports=supported(variant),
                        support_height=AltConfig().support_height if variant == "default" else 0)
 
@@ -177,7 +178,8 @@ def run_ours(set_number: str, structure: brickgpt.Structure, out: Path, n: int, 
 def ours(set_number: str, structure: brickgpt.Structure, directory: Path, variant: str = "exact") -> dict:
     candidates, stats = load_run(directory)
     source = load_source(set_number)
-    target = target_for(set_number, structure, variant)
+    sizing = stats["config"].get("sizing", "box")
+    target = target_for(set_number, structure, variant, sizing)
     outer = surface(target.mask)
     built = [c for c in candidates if "generate" not in c.failed]
     valid = [c for c in candidates if c.valid]
@@ -187,7 +189,7 @@ def ours(set_number: str, structure: brickgpt.Structure, directory: Path, varian
     best_filled = next((f for f, c in zip(filled, valid) if best and c.seed == best["seed"]), None)
     max_clutch = stats["config"]["max_clutch"]
     # The object itself (without support columns), on the same grid, for the overhang measures.
-    obj = target_for(set_number, structure, "exact").mask if supported(variant) else target.mask
+    obj = target_for(set_number, structure, "exact", sizing).mask if supported(variant) else target.mask
     extra = {}
     if variant in ("exact", "supports", "opentops", "default"):
         extra = {

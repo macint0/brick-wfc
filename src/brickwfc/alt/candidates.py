@@ -69,8 +69,9 @@ class Context:
     connect: bool = True  # d2: repair pass that makes the build one piece (see bottomup)
     connect_rounds: int = 10
     open_tops: bool = False  # d2: studless top cells only under empty target cells (see bottomup)
-    order: str = "random"  # d2: cells of a layer visited in "random" or "raster" order
+    order: str = "random"  # d2: cells of a layer visited in "random", "raster" or "thin" order
     proposal: str = ""  # d2: a learned proposal model (.npz, vocab.json next to it); "" for none
+    thin: int = 0  # d2 with a target: reserve parts for sections of at most this many cells (0: off)
 
 
 @dataclass(frozen=True)
@@ -113,7 +114,7 @@ def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.nd
         builder = BottomUpBuilder(parts, any_offset=True, style=bias, balanced=context.balanced,
                                   bridge=context.bridge, connect=context.connect,
                                   connect_rounds=context.connect_rounds, open_tops=context.open_tops,
-                                  order=context.order,
+                                  order=context.order, thin=context.thin,
                                   proposal=load_proposal(context.proposal) if context.proposal else None)
         return builder.build(context.grid, np.random.default_rng(seed), context.inventory, context.mask,
                              context.preferred)

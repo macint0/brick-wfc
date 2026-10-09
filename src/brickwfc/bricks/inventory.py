@@ -80,6 +80,29 @@ def inventory_cells(inventory: Inventory) -> int:
     return sum(count * part_cells(CATALOG[part]) for (part, _), count in inventory.items())
 
 
+SIZINGS = ("fillable", "box")
+
+
+def fillable_cells(part: Part) -> int:
+    """The cells a part counts for when a target is sized to an inventory (M12b): its box, except a slope,
+    which counts its stud cells x 1 layer. A slope's sloped face takes nothing above it, so (with open tops) it
+    goes only on the object's top surface, not inside it; on 5891-1 builds use 14-22% of the slopes' box volume,
+    about their stud cells. Studless slopes (ridges, cheese slopes) count 0; tiles count their box as before."""
+    if part.kind != "slope":
+        return part_cells(part)
+    return len(part.studded_cells)
+
+
+def target_volume(inventory: Inventory, sizing: str = "fillable") -> int:
+    """The volume a target shape is scaled to: every part by ``fillable_cells`` ("fillable", M12b) or by its
+    box (``inventory_cells``, "box": as before)."""
+    if sizing == "box":
+        return inventory_cells(inventory)
+    if sizing != "fillable":
+        raise ValueError(f"sizing must be one of {SIZINGS}, not {sizing!r}")
+    return sum(count * fillable_cells(CATALOG[part]) for (part, _), count in inventory.items())
+
+
 def inventory_coverage(inventory: Inventory) -> dict[tuple[str, str], float]:
     """``part_tileset`` coverage weights: each (part, color) covers cells in proportion to its count
     and volume, split evenly over the part's orientations."""

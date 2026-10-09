@@ -51,6 +51,15 @@ choice probabilities at a cell are also multiplied by the model's weights for a 
 to ``proposal_strength``; every mask (inventory, support, balance, shape, one piece) is unchanged. The model
 reads the parts in the order they are placed, so pair it with ``order="raster"`` (cells of a layer visited
 by z, then x, as in its training data) rather than the default random order.
+
+Thin columns (M12b sizing). A target's *section* at a cell is the size of the 4-connected region of the
+target in that cell's layer. With ``thin=N`` > 0, parts are set aside before building for the cells whose
+section is at most N (a table's post, a chair's legs): every (part, color) whose part fits some thin section's
+bounding box and has a stud on every top cell (no tiles, no slopes) is reserved in proportion to its count,
+until the reserved parts cover the thin cells' volume. Elsewhere only the unreserved count is available;
+a part placed at a thin cell uses up its reservation first. Lower layers then cannot use up the small parts a
+narrow stem higher up needs. With ``order="thin"``, the cells of a layer are visited in random order, but cells
+with smaller sections first.
 """
 
 from __future__ import annotations
@@ -63,25 +72,27 @@ from scipy import ndimage
 
 from brickwfc.bricks.balance import Balance, clusters
 from brickwfc.bricks.colors import BrickColor
-from brickwfc.bricks.parts import PartSet, PlacedPart, Shape, TileInfo
+from brickwfc.bricks.parts import Part, PartSet, PlacedPart, Shape, TileInfo
 
 if TYPE_CHECKING:
     from brickwfc.bricks.proposal import Proposal, Session
     from brickwfc.bricks.style import StyleBias
 
 PREFERRED_BOOST = 1e6  # weight factor for parts of a cell's preferred color: in practice, tried first
+ORDERS = ("random", "raster", "thin")
 
 
 class BottomUpBuilder:
     def __init__(self, parts: PartSet, any_offset: bool = False, style: StyleBias | None = None,
                  balanced: bool = False, bridge: bool = False, connect: bool = False,
                  connect_rounds: int = 1, open_tops: bool = False, order: str = "random",
-                 proposal: Proposal | None = None, proposal_strength: float = 1.0) -> None:
+                 proposal: Proposal | None = None, proposal_strength: float = 1.0, thin: int = 0) -> None:
         if bridge and not (balanced and any_offset):
             raise ValueError("bridge needs balanced=True and any_offset=True")
-        if order not in ("random", "raster"):
-            raise ValueError(f"order must be 'random' or 'raster', not {order!r}")
+        if order not in ORDERS:
+            raise ValueError(f"order must be one of {ORDERS}, not {order!r}")
         self.order = order
+        self.thin = thin
         self.proposal = proposal
         self.proposal_strength = proposal_strength
         self.parts = parts
@@ -134,6 +145,11 @@ class BottomUpBuilder:
         allowed = np.ones(shape, dtype=bool) if allowed is None else allowed
         state = _State(shape, self.index[TileInfo(None)], inventory, self.balanced)
         state.session = None if self.proposal is None else self.proposal.session(shape, target)
+        if target is not None and (self.thin or self.order == "thin"):
+            state.sections = sections(target)
+            if self.thin and inventory is not None:
+                state.thin = (state.sections > 0) & (state.sections <= self.thin)
+                state.reserved = self._reserve(state.thin, inventory)
         self._fill(state, range(shape[0]), rng, allowed, preferred)
         for round_ in range(self.connect_rounds if self.connect else 0):
             found = clusters(state.placed)
@@ -146,7 +162,9 @@ class BottomUpBuilder:
             returned = Counter((p.shape.part.name, p.color.name) for i, p in enumerate(state.placed) if i not in keep)
             remaining = None if state.remaining is None else dict(Counter(state.remaining) + returned)
             kept = sorted((state.placed[i] for i in keep), key=lambda p: p.layer)
+            old = state
             state = _State(shape, self.index[TileInfo(None)], None, self.balanced)
+            state.sections, state.thin, state.reserved = old.sections, old.thin, old.reserved
             state.session = None if self.proposal is None else self.proposal.session(shape, target)
             for part in kept:  # already counted against the inventory
                 self._put(state, part)
@@ -159,17 +177,25 @@ class BottomUpBuilder:
               preferred: np.ndarray | None) -> None:
         """One bottom-up pass over ``layers``: visit free cells in random order and place a part at some."""
         _, nz, nx = state.filled.shape
-        remaining = state.remaining
+        remaining, reserved = state.remaining, state.reserved
         for y in layers:
             # Parts placed on layer y never add studs to layer y - 1, so this holds for the whole layer.
             reachable = self._reachable(state.studs, y)
             open_bottom = state.open_bottom if self.open_bottoms else None
             fit_map = _FitMap(state.filled, state.studs, allowed, y, self._studless_top if self.open_tops else None,
                               open_bottom)
-            for flat in rng.permutation(nz * nx) if self.order == "random" else range(nz * nx):
+            if self.order == "raster":
+                cells = range(nz * nx)
+            else:
+                cells = rng.permutation(nz * nx)
+                if self.order == "thin" and state.sections is not None:  # smaller sections first, ties random
+                    size = np.where(state.sections[y] > 0, state.sections[y], nz * nx + 1).ravel()
+                    cells = cells[np.argsort(size[cells], kind="stable")]
+            for flat in cells:
                 z, x = divmod(int(flat), nx)
                 if state.filled[y, z, x] or not allowed[y, z, x] or rng.random() >= self.solid_share:
                     continue
+                thin_here = state.thin is not None and bool(state.thin[y, z, x])
                 # Try parts in weighted-random order until one fits here. Whether a part fits depends
                 # only on its box, so once a box size fails here, other parts of that size are skipped.
                 failed: set[tuple[int, int, int]] = set()
@@ -182,8 +208,12 @@ class BottomUpBuilder:
                 for choice in rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p):
                     part_shape, color = self.choices[choice]
                     key = (part_shape.part.name, color.name)
-                    if remaining is not None and remaining.get(key, 0) <= 0:
-                        continue
+                    if remaining is not None:
+                        left = remaining.get(key, 0)
+                        if reserved is not None and not thin_here:
+                            left -= reserved.get(key, 0)  # set aside for the thin columns
+                        if left <= 0:
+                            continue
                     box = _fit_key(part_shape)
                     if box in failed or not reachable[z, x]:
                         if self.any_offset:  # draw what _place would have drawn: same seed, same build
@@ -195,8 +225,25 @@ class BottomUpBuilder:
                         failed.add(box)
                     else:
                         self._put(state, part)
+                        if thin_here and reserved is not None and reserved.get(key, 0) > 0:
+                            reserved[key] -= 1
                         fit_map.reset()
                         break
+
+    def _reserve(self, thin: np.ndarray, inventory: Mapping[tuple[str, str], int]) -> dict[tuple[str, str], int]:
+        """(part, color) -> count set aside for the ``thin`` cells (see the module docstring)."""
+        boxes = set()
+        for layer in thin:
+            labels, _ = ndimage.label(layer)
+            boxes |= {(s[0].stop - s[0].start, s[1].stop - s[1].start) for s in ndimage.find_objects(labels)}
+        parts = {shape.part.name: shape.part for shape, _ in self.choices}
+        fitting = {key: count for key, count in inventory.items()
+                   if key[0] in parts and _fits_thin(parts[key[0]], boxes) and count > 0}
+        volume = sum(count * Shape(parts[name]).cells for (name, _), count in fitting.items())
+        if not volume:
+            return {}
+        share = min(1.0, float(thin.sum()) / volume)
+        return {key: int(np.ceil(count * share)) for key, count in fitting.items()}
 
     def _put(self, state: "_State", part: PlacedPart) -> None:
         """Record a placed part in every structure of ``state``."""
@@ -370,6 +417,25 @@ class BottomUpBuilder:
         return bool((below_studs & masks.seated).any()) and not (below_filled & ~below_studs).any()
 
 
+def sections(mask: np.ndarray) -> np.ndarray:
+    """(Y, Z, X) int: for each cell of ``mask``, the size of its 4-connected region in its layer; 0 outside."""
+    out = np.zeros(mask.shape, dtype=np.int64)
+    for y, layer in enumerate(mask):
+        labels, _ = ndimage.label(layer)
+        sizes = np.bincount(labels.ravel())
+        sizes[0] = 0
+        out[y] = sizes[labels]
+    return out
+
+
+def _fits_thin(part: Part, boxes: set[tuple[int, int]]) -> bool:
+    """Whether a part can build up a thin column: a stud on every top cell (no tile, no slope) and a footprint
+    that fits one of the thin sections' bounding boxes ((Z, X) sizes), in either orientation."""
+    if part.kind == "slope" or not part.studs or len(part.studded_cells) < len(part.footprint_cells):
+        return False
+    return any((part.depth <= bz and part.width <= bx) or (part.width <= bz and part.depth <= bx) for bz, bx in boxes)
+
+
 def _window_sums(cells: np.ndarray, sz: int, sx: int) -> np.ndarray:
     """(Z - sz + 1, X - sx + 1): number of True cells in the sz x sx window at each min corner."""
     total = np.zeros((cells.shape[0] + 1, cells.shape[1] + 1), dtype=np.int64)
@@ -442,6 +508,9 @@ class _State:
         self.balance = Balance() if balanced else None
         self.grid = np.full(shape, empty_tile, dtype=np.int64)
         self.session: Session | None = None  # the proposal model's view of this build
+        self.sections: np.ndarray | None = None  # (Y, Z, X) section size of each target cell (see ``sections``)
+        self.thin: np.ndarray | None = None  # (Y, Z, X) the thin target cells, with ``thin``
+        self.reserved: dict[tuple[str, str], int] | None = None  # parts still set aside for them
 
 
 def _fit_key(shape: Shape) -> tuple:
