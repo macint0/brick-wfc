@@ -263,8 +263,14 @@ def tables(objects: list[dict], rows: list[dict], figure: list[dict]) -> str:
                      f"{f(their_clutch[r['structure_id']], '{:.1f}')} | {r['best_clusters']} | "
                      f"{r['seconds_per_candidate']:.2f} |")
     lines += ["", "### Before / after on the demo sets (chair; before: solid columns, after: exact cells, pipeline defaults)",
-              "", "| set | target | grid (WxDxH) | target cells | valid % | cap rejected | fill % | IoU | best: parts "
-              "| best: fill % | best: clutch | s/candidate |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+              "", figure_table(figure)]
+    return "\n".join(lines)
+
+
+def figure_table(figure: list[dict]) -> str:
+    """The chair figure's runs: solid columns and exact cells with the pipeline defaults, per set."""
+    lines = ["| set | target | grid (WxDxH) | target cells | valid % | cap rejected | fill % | IoU | best: parts "
+             "| best: fill % | best: clutch | s/candidate |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in figure:
         y, z, x = r["grid_YZX"]
         lines.append(f"| {r['set']} | {'columns' if r['columns'] else 'exact, defaults'} | {x}x{z}x{y} | {r['target_cells']} | "
@@ -370,13 +376,23 @@ def before_after(structure: brickgpt.Structure, runs: list[dict], variants: tupl
     labeled_sheet(images, labels, path, columns=2)
 
 
+def chair_figure(picked: list[brickgpt.Structure], args: argparse.Namespace) -> tuple[brickgpt.Structure, list[dict]]:
+    """The chair's runs on the demo sets, solid columns then the pipeline defaults, and ``before_after.png``."""
+    chair = next((s for s in picked if s.category_id == FIGURE_CATEGORY), picked[0])
+    figure = [ours(set_number, chair, run_ours(set_number, chair, args.out, args.n, args.workers, variant), variant)
+              for set_number in args.figure_sets for variant in ("columns", "default")]
+    before_after(chair, figure, ("columns", "default"),
+                 ("before: target as solid columns\n(heightfield, scaled to each set)",
+                  "after: target as exact 3D cells\n(open tops, short supports, real clutch)"),
+                 args.figure_sets[-1], args.out, args.out / "before_after.png")
+    return chair, figure
+
+
 def step_1a(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
     objects = [theirs(s, args.out / "brickgpt") for s in picked]
     rows = [ours(set_number, s, run_ours(set_number, s, args.out, args.n, args.workers, "default"), "default")
             for s in picked for set_number in args.sets]
-    chair = next((s for s in picked if s.category_id == FIGURE_CATEGORY), picked[0])
-    figure = [ours(set_number, chair, run_ours(set_number, chair, args.out, args.n, args.workers, variant), variant)
-              for set_number in args.figure_sets for variant in ("columns", "default")]
+    _, figure = chair_figure(picked, args)
 
     (args.out / "summary.json").write_text(json.dumps({"objects": objects, "ours": rows, "before_after": figure},
                                                       indent=2), encoding="utf-8")
@@ -393,10 +409,16 @@ def step_1a(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
                 images.append(Path(r["best_png"]))
                 labels.append(build_label(r))
     labeled_sheet(images, labels, args.out / "objects.png", columns=1 + len(args.sets))
-    before_after(chair, figure, ("columns", "default"),
-                 ("before: target as solid columns\n(heightfield, scaled to each set)",
-                  "after: target as exact 3D cells\n(open tops, short supports, real clutch)"),
-                 args.figure_sets[-1], args.out, args.out / "before_after.png")
+
+
+def step_1a_figure(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
+    """Only the chair figure of step 1a, without the head-to-head."""
+    chair, figure = chair_figure(picked, args)
+    (args.out / "chair_figure_summary.json").write_text(json.dumps({"before_after": figure}, indent=2),
+                                                       encoding="utf-8")
+    text = f"### Figure runs ({category(chair)})\n\n{figure_table(figure)}\n"
+    (args.out / "chair_figure.md").write_text(text, encoding="utf-8")
+    print(text)
 
 
 def step_1c(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
@@ -453,7 +475,7 @@ def step_1d_figure(picked: list[brickgpt.Structure], args: argparse.Namespace) -
                  args.figure_sets[-1], args.out, args.out / "overhangs_before_after.png")
 
 
-STEPS = {"1a": step_1a, "1c": step_1c, "1d": step_1d, "1d-figure": step_1d_figure}
+STEPS = {"1a": step_1a, "1a-figure": step_1a_figure, "1c": step_1c, "1d": step_1d, "1d-figure": step_1d_figure}
 
 
 def main(argv: Sequence[str] | None = None) -> int:
