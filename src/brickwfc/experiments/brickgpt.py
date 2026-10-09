@@ -7,13 +7,14 @@ count, ties by id) of each of the ``--categories`` most common categories. This 
 BrickGPT's *data*, not its model (which needs a GPU, a gated Llama checkpoint and Gurobi): their
 structure for an object is built from unlimited bricks of 8 sizes; ours is the alternate-build pipeline
 (``alt``: D2, ``--n`` candidates, top-judged build) from one real set's inventory, with the structure's
-exact cells as the target (open tops: the 1d runs), scaled to that inventory's volume. Every brick size they use is a catalog
+exact cells as the target and the pipeline defaults (open tops, support columns up to 6 cells, real
+clutch), scaled to that inventory's volume. Every brick size they use is a catalog
 brick, so their structures convert exactly into our parts and the stability (``physics.table_clutch``)
 and piece counts (``balance.clusters``) are the same measurements on both sides.
 
 Also the before/after figure for step 1 on the M12 demo sets: one object (the chair) as the pipeline saw it
 before M12b (solid columns, ``--shape-columns``: the heightfield inputs) and after step 1 (its exact cells,
-with open tops, see 1d).
+the pipeline defaults).
 
 Step 1c (``--steps 1c``): the same objects and sets hollowed (``--hollow``, default 2: a 2-cell shell plus
 internal pillars), against their solid runs (both with open tops); the same inventory then makes a larger
@@ -30,12 +31,14 @@ cells outside the object, so fill and IoU are measured against the object withou
 (the pipeline default from 1d on; ``--no-open-tops`` before): studless top cells only under empty target
 cells, so tiles cannot cap thin parts (the cause of the table's and chair's low builds on 10182-1). Exact
 runs pass ``--no-open-tops`` so they match the 1a runs; support columns are measured with open tops on.
-Figure: the table, exact | open tops, on the demo sets.
+Figure: the table, exact | open tops, on the demo sets. ``--steps 1d-figure`` runs only the figure, exact |
+the pipeline defaults (the 1d tables are kept from the 63-part catalog).
 
 Runs reuse the pipeline's candidate cache, so a killed run resumes. Writes, under ``--out``: step 1a
 ``results.md``, ``summary.json``, ``objects.png`` (their structure, then our best build per set, per object)
 and ``before_after.png``; step 1c ``hollow.md``, ``hollow_summary.json`` and ``hollow_before_after.png``;
-step 1d ``overhangs.md``, ``overhangs_summary.json`` and ``overhangs_before_after.png``.
+step 1d ``overhangs.md``, ``overhangs_summary.json`` and ``overhangs_before_after.png``; 1d-figure
+``overhangs_figure.md``, ``overhangs_figure_summary.json`` and ``overhangs_before_after.png``.
 """
 
 from __future__ import annotations
@@ -182,6 +185,7 @@ def ours(set_number: str, structure: brickgpt.Structure, directory: Path, varian
     mean = lambda values: statistics.mean(values) if values else math.nan  # noqa: E731
     best = stats["selected"][0] if stats["selected"] else {}
     best_filled = next((f for f, c in zip(filled, valid) if best and c.seed == best["seed"]), None)
+    max_clutch = stats["config"]["max_clutch"]
     # The object itself (without support columns), on the same grid, for the overhang measures.
     obj = target_for(set_number, structure, "exact").mask if supported(variant) else target.mask
     extra = {}
@@ -213,7 +217,9 @@ def ours(set_number: str, structure: brickgpt.Structure, directory: Path, varian
         "best_clusters": best.get("clusters", 0),
         "best_png": str(directory / best["png"]) if best else None,
         "seconds_per_candidate": mean([c.seconds + c.physics_seconds for c in candidates]),
-        "check_failures": stats["check_failures"],
+        "check_failures": stats["check_failures"], "max_clutch": max_clutch,
+        "cap_rejected": sum(math.isfinite(c.clutch) and c.clutch > max_clutch for c in built),
+        "within_real_pct": 100 * mean([float(c.clutch <= REAL_CLUTCH) for c in valid]),
     }
 
 
@@ -235,26 +241,32 @@ def tables(objects: list[dict], rows: list[dict], figure: list[dict]) -> str:
                      f"{o['size_studs'][0]}x{o['size_studs'][1]}x{o['height_bricks']} | {o['cells']} | "
                      f"{stands(o['clutch'])} | {f(o['clutch'], '{:.1f}')} | {o['clusters']} | {o['score_min']:.3f} | "
                      f"{o['score_positive_pct']:.0f} |")
-    lines += ["", "### Ours (D2 + learned style from one set's inventory; the structure's exact cells as target, open tops)", "",
-              "| object | set | inventory parts | grid (WxDxH) | target cells | valid % | physics % | one piece % "
-              "| fill % | IoU | utilization % | best: parts | best: fill % | best: clutch | their clutch | best: pieces "
-              "| s/candidate |",
-              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    lines += ["", "### Ours (D2 + learned style from one set's inventory; the structure's exact cells as target, "
+              "pipeline defaults)", "",
+              "Fill and IoU are against the object (without support columns); best: fill % is against the target.", "",
+              "| object | set | inventory parts | grid (WxDxH) | object cells | support cells | valid % | physics % "
+              "| one piece % | cap rejected | fill % | IoU | utilization % | best: parts | best: fill % | best: clutch "
+              "| their clutch | best: pieces | s/candidate |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         y, z, x = r["grid_YZX"]
-        lines.append(f"| {r['category']} | {r['set']} | {r['inventory_parts']} | {x}x{z}x{y} | {r['target_cells']} | "
-                     f"{r['valid_pct']:.0f} | {r['physics_pct']:.0f} | {r['connected_pct']:.0f} | "
-                     f"{f(r['fill_pct'], '{:.1f}')} | {f(r['iou'], '{:.2f}')} | {f(r['utilization_pct'], '{:.1f}')} | "
+        cells = r.get("object_cells", r["target_cells"])
+        lines.append(f"| {r['category']} | {r['set']} | {r['inventory_parts']} | {x}x{z}x{y} | {cells} | "
+                     f"{r['target_cells'] - cells} | {r['valid_pct']:.0f} | {r['physics_pct']:.0f} | "
+                     f"{r['connected_pct']:.0f} | {r.get('cap_rejected', 0)}/{r['candidates']} | "
+                     f"{f(r.get('object_fill_pct', r['fill_pct']), '{:.1f}')} | {f(r.get('object_iou', r['iou']), '{:.2f}')} | "
+                     f"{f(r['utilization_pct'], '{:.1f}')} | "
                      f"{r['best_parts']} | {f(r['best_fill_pct'], '{:.1f}')} | {f(r['best_clutch'], '{:.1f}')} | "
                      f"{f(their_clutch[r['structure_id']], '{:.1f}')} | {r['best_clusters']} | "
                      f"{r['seconds_per_candidate']:.2f} |")
-    lines += ["", "### Before / after on the demo sets (chair; before: solid columns, after: exact cells with open tops)", "",
-              "| set | target | grid (WxDxH) | target cells | valid % | fill % | IoU | best: parts | best: fill % "
-              "| best: clutch | s/candidate |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+    lines += ["", "### Before / after on the demo sets (chair; before: solid columns, after: exact cells, pipeline defaults)",
+              "", "| set | target | grid (WxDxH) | target cells | valid % | cap rejected | fill % | IoU | best: parts "
+              "| best: fill % | best: clutch | s/candidate |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in figure:
         y, z, x = r["grid_YZX"]
-        lines.append(f"| {r['set']} | {'columns' if r['columns'] else 'exact, open tops'} | {x}x{z}x{y} | {r['target_cells']} | "
-                     f"{r['valid_pct']:.0f} | {f(r['fill_pct'], '{:.1f}')} | {f(r['iou'], '{:.2f}')} | "
+        lines.append(f"| {r['set']} | {'columns' if r['columns'] else 'exact, defaults'} | {x}x{z}x{y} | {r['target_cells']} | "
+                     f"{r['valid_pct']:.0f} | {r.get('cap_rejected', 0)}/{r['candidates']} | "
+                     f"{f(r.get('object_fill_pct', r['fill_pct']), '{:.1f}')} | {f(r.get('object_iou', r['iou']), '{:.2f}')} | "
                      f"{r['best_parts']} | {f(r['best_fill_pct'], '{:.1f}')} | {f(r['best_clutch'], '{:.1f}')} | "
                      f"{r['seconds_per_candidate']:.2f} |")
     return "\n".join(lines)
@@ -357,11 +369,11 @@ def before_after(structure: brickgpt.Structure, runs: list[dict], variants: tupl
 
 def step_1a(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
     objects = [theirs(s, args.out / "brickgpt") for s in picked]
-    rows = [ours(set_number, s, run_ours(set_number, s, args.out, args.n, args.workers, "opentops"), "opentops")
-            for s in picked for set_number in args.sets]  # the pipeline default; exact runs: step 1d
+    rows = [ours(set_number, s, run_ours(set_number, s, args.out, args.n, args.workers, "default"), "default")
+            for s in picked for set_number in args.sets]
     chair = next((s for s in picked if s.category_id == FIGURE_CATEGORY), picked[0])
     figure = [ours(set_number, chair, run_ours(set_number, chair, args.out, args.n, args.workers, variant), variant)
-              for set_number in args.figure_sets for variant in ("columns", "opentops")]
+              for set_number in args.figure_sets for variant in ("columns", "default")]
 
     (args.out / "summary.json").write_text(json.dumps({"objects": objects, "ours": rows, "before_after": figure},
                                                       indent=2), encoding="utf-8")
@@ -378,9 +390,9 @@ def step_1a(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
                 images.append(Path(r["best_png"]))
                 labels.append(build_label(r))
     labeled_sheet(images, labels, args.out / "objects.png", columns=1 + len(args.sets))
-    before_after(chair, figure, ("columns", "opentops"),
+    before_after(chair, figure, ("columns", "default"),
                  ("before: target as solid columns\n(heightfield, scaled to each set)",
-                  "after: target as exact 3D cells, open tops\n(scaled to each set)"),
+                  "after: target as exact 3D cells\n(open tops, short supports, real clutch)"),
                  args.figure_sets[-1], args.out, args.out / "before_after.png")
 
 
@@ -423,7 +435,22 @@ def step_1d(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
                  args.figure_sets[-1], args.out, args.out / "overhangs_before_after.png")
 
 
-STEPS = {"1a": step_1a, "1c": step_1c, "1d": step_1d}
+def step_1d_figure(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
+    table = next((s for s in picked if s.category_id == OVERHANG_FIGURE_CATEGORY), picked[0])
+    figure = [ours(set_number, table, run_ours(set_number, table, args.out, args.n, args.workers, variant), variant)
+              for set_number in args.figure_sets for variant in ("exact", "default")]
+    (args.out / "overhangs_figure_summary.json").write_text(json.dumps({"before_after": figure}, indent=2),
+                                                            encoding="utf-8")
+    text = f"### Figure runs ({category(table)})\n\n{overhang_table(figure)}\n"
+    (args.out / "overhangs_figure.md").write_text(text, encoding="utf-8")
+    print(text)
+    before_after(table, figure, ("exact", "default"),
+                 ("before: exact target\n(tiles may cap thin parts)",
+                  "after: pipeline defaults\n(open tops, short supports, real clutch)"),
+                 args.figure_sets[-1], args.out, args.out / "overhangs_before_after.png")
+
+
+STEPS = {"1a": step_1a, "1c": step_1c, "1d": step_1d, "1d-figure": step_1d_figure}
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -318,19 +318,28 @@ python -m brickwfc.experiments.rebrickable_check --omr data/omr --out out/m12c/r
 - The write-up used the 63-part catalog (run before the 88-part catalog merged, at 056cff2). A rerun on main reads
   both inventories with corners and slopes, so the part counts and agreements change.
 
-### `results/m12b_brickgpt.md` (M12b steps 1a and 1c), with `m12b_brickgpt_summary.json`, `m12b_hollow_summary.json`, `m12b_before_after.png`, `m12b_hollow_before_after.png`
+### `results/m12b_brickgpt.md` (M12b steps 1a and 1c), with `m12b_brickgpt_summary.json`, `m12b_overhangs_figure_summary.json`, `m12b_hollow_summary.json`, `m12b_before_after.png`, `m12b_opentops_before_after.png`, `m12b_hollow_before_after.png`
+
+The 88-part rerun with the pipeline defaults (1a, Table 1a, the chair and table figures):
 
 ```
-python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt --steps 1d 1c 1a --workers 6
+python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt_v2 --steps 1a 1d-figure --workers 10
 ```
 
-- Step 1a's head-to-head uses step 1d's open-tops runs, so run 1d first (or in the same command, as above).
-- Writes `results.md`, `summary.json`, `objects.png`, `before_after.png` (1a) and `hollow.md`,
-  `hollow_summary.json`, `hollow_before_after.png` (1c) under `--out`.
+- Writes `results.md`, `summary.json`, `objects.png`, `before_after.png` (1a) and `overhangs_figure.md`,
+  `overhangs_figure_summary.json`, `overhangs_before_after.png` (1d-figure, copied to
+  `results/m12b_opentops_before_after.png`) under `--out`.
 - Downloads the StableText2Brick test split into `data/brickgpt/` on first use (resumable).
-- Resumable through the pipeline caches. The 21 hollow runs (1c) take 6.3 CPU-hours.
+- 36 runs, 27 CPU-hours; 3.4 hours wall time on 10 workers. Resumable through the pipeline caches.
+- The 5891-1 catalog control is a loop of two pipeline runs, given in the write-up's Reproduce section.
 
-### `results/m12b_overhangs_tables.md` (M12b step 1d), with `m12b_opentops_before_after.png`
+Step 1c (hollow) is from commit 9c4a108, on the 63-part catalog with open tops only:
+`python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt --steps 1d 1c --workers 6` at that commit. The 21
+hollow runs take 6.3 CPU-hours.
+
+### `results/m12b_overhangs_tables.md` (M12b step 1d), with `m12b_overhangs_summary.json`
+
+The tables are from commit 9c4a108 (63-part catalog, before the support and clutch defaults); at that commit:
 
 ```
 python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt --steps 1d --workers 6
