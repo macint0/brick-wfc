@@ -55,6 +55,7 @@ from PIL import Image
 from brickwfc.alt.features import occupancy
 from brickwfc.alt.inputs import load_source
 from brickwfc.alt.output import write_build
+from brickwfc.alt.pipeline import AltConfig
 from brickwfc.alt.pipeline import main as alt_main
 from brickwfc.alt.target import BRICKGPT_PREFIX, Target, load_target
 from brickwfc.bricks import brickgpt
@@ -128,27 +129,36 @@ def theirs(structure: brickgpt.Structure, out: Path) -> dict:
 
 
 def variant_args(variant: str) -> list[str]:
-    """Pipeline arguments of a target variant. As in 1a, before open tops (M12b 1d (iii)), so they match
-    the 1a runs: "exact", "columns" (the heightfield inputs of M12). With open tops, the pipeline default
-    from 1d on: "opentops" (exact cells), "hollow<N>", "supports"."""
-    if variant == "exact":
-        return ["--no-open-tops"]
-    if variant == "columns":
-        return ["--no-open-tops", "--shape-columns"]
-    if variant == "opentops":
+    """Pipeline arguments of a target variant. Before open tops (M12b 1d (iii)), as the first 1a runs:
+    "exact", "columns" (the heightfield inputs of M12). With open tops: "opentops" (exact cells), "hollow<N>",
+    "supports" (columns of any height, as in 1d). These pass ``--no-supports`` or their own supports, so they
+    keep their meaning under the pipeline defaults; "default" is the pipeline as is (open tops, support
+    columns up to 6 cells). The clutch limit is the pipeline's in every variant."""
+    if variant == "default":
         return []
+    if variant == "exact":
+        return ["--no-open-tops", "--no-supports"]
+    if variant == "columns":
+        return ["--no-open-tops", "--shape-columns", "--no-supports"]
+    if variant == "opentops":
+        return ["--no-supports"]
     if variant.startswith("hollow"):
-        return ["--hollow", variant.removeprefix("hollow")]
+        return ["--hollow", variant.removeprefix("hollow"), "--no-supports"]
     if variant == "supports":
-        return ["--supports"]
+        return ["--supports", "--support-height", "0"]
     raise ValueError(f"unknown variant {variant!r}")
+
+
+def supported(variant: str) -> bool:
+    return variant in ("supports", "default")
 
 
 def target_for(set_number: str, structure: brickgpt.Structure, variant: str) -> Target:
     source = load_source(set_number)
     hollow = int(variant.removeprefix("hollow")) if variant.startswith("hollow") else 0  # opentops: as exact
     return load_target(BRICKGPT_PREFIX + structure.structure_id, inventory_cells(source.inventory),
-                       source.colors, columns=variant == "columns", hollow=hollow, supports=variant == "supports")
+                       source.colors, columns=variant == "columns", hollow=hollow, supports=supported(variant),
+                       support_height=AltConfig().support_height if variant == "default" else 0)
 
 
 def run_ours(set_number: str, structure: brickgpt.Structure, out: Path, n: int, workers: int | None,
@@ -173,9 +183,9 @@ def ours(set_number: str, structure: brickgpt.Structure, directory: Path, varian
     best = stats["selected"][0] if stats["selected"] else {}
     best_filled = next((f for f, c in zip(filled, valid) if best and c.seed == best["seed"]), None)
     # The object itself (without support columns), on the same grid, for the overhang measures.
-    obj = target_for(set_number, structure, "exact").mask if variant == "supports" else target.mask
+    obj = target_for(set_number, structure, "exact").mask if supported(variant) else target.mask
     extra = {}
-    if variant in ("exact", "supports", "opentops"):
+    if variant in ("exact", "supports", "opentops", "default"):
         extra = {
             "object_cells": int(obj.sum()),
             "object_fill_pct": 100 * mean([fill(f, obj) for f in filled]),

@@ -1,8 +1,12 @@
 """M12b step 1d: support columns under far overhangs, the overhang loss, clutch calibration."""
 
+import json
+
 import numpy as np
 import pytest
 
+from brickwfc.alt.inputs import load_source
+from brickwfc.alt.pipeline import AltConfig, main, make_target
 from brickwfc.alt.target import load_target
 from brickwfc.bricks.shapes import mushroom, unsupported_empty, with_supports
 from brickwfc.experiments.brickgpt import REAL_CLUTCH, cantilever_clutch, variant_args
@@ -63,6 +67,24 @@ def test_supports_target(tmp_path) -> None:
     supported = load_target(str(tmp_path / "table.txt"), 900, [RED], supports=True)
     assert supported.mask.shape == plain.mask.shape and (supported.mask >= plain.mask).all()
     assert supported.mask.sum() > plain.mask.sum() and "supports" in supported.description
-    assert variant_args("supports") == ["--supports"]
+    assert variant_args("supports") == ["--supports", "--support-height", "0"] and variant_args("default") == []
+    assert "--no-supports" in variant_args("exact") and "--no-supports" in variant_args("opentops")
     with pytest.raises(ValueError):
         load_target("pyramid", 500, [RED], supports=True)
+
+
+def test_pipeline_defaults_real_clutch_and_short_supports(tiny_ldr, style_dir, tmp_path) -> None:
+    defaults = AltConfig()
+    assert defaults.max_clutch == pytest.approx(REAL_CLUTCH, abs=1)
+    assert defaults.supports and defaults.support_height == 6
+    table = tmp_path / "table.txt"
+    table.write_text(TABLE_TOP, encoding="utf-8")
+    source = load_source(str(tiny_ldr))
+    assert "supports up to 6 cells" in make_target(source, AltConfig(shape=str(table))).description
+    assert "supports" not in make_target(source, AltConfig(shape=str(table), supports=False)).description
+    assert "supports" not in make_target(source, AltConfig(shape="pyramid")).description  # 2D targets: skipped
+    out = tmp_path / "off"
+    main([str(tiny_ldr), "--shape", str(table), "--no-supports", "--max-clutch", "inf", "--n", "2", "--k", "1",
+          "--workers", "1", "--out", str(out), "--style-dir", str(style_dir[0]), "--sets-file", str(style_dir[1])])
+    config = json.loads((out / "stats.json").read_text(encoding="utf-8"))["config"]
+    assert config["supports"] is False and config["max_clutch"] == float("inf")

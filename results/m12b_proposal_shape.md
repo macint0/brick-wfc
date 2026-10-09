@@ -33,7 +33,7 @@ the no-training baseline in every table. Numbers: `results/m12b_proposal_shape.j
 
 - Target: the car `brickgpt:4b15b71c-f400-4e54-a118-f0c2afba6e17`, a BrickGPT test structure with its exact cells
   (overhangs kept), scaled to each inventory's volume.
-- Builds: pipeline defaults with open tops: D2 with balance, the bridge preference, the connect pass (10 rounds),
+- Builds: pipeline defaults of the time (open tops; no clutch limit or support columns, both defaults since 2026-10-09): D2 with balance, the bridge preference, the connect pass (10 rounds),
   and the fill floor. 20 candidates per (set, arm), seeds 0-19, the same seeds in every arm.
 
 | arm | pipeline options |

@@ -62,6 +62,12 @@ class Target:
     description: str
 
 
+def takes_supports(spec: str) -> bool:
+    """Whether ``--shape spec`` can have support columns (and a hollow): a model, a BrickGPT structure or a mesh,
+    not a primitive or a silhouette."""
+    return Path(spec).suffix.lower() not in IMAGE_SUFFIXES and spec not in SHAPES
+
+
 def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_map: Path | None = None,
                 color_map: Path | None = None, height: int = 6, data_dir: Path = Path("data/omr"),
                 exact: bool = False, columns: bool = False, brickgpt_dir: Path = brickgpt.DATA_DIR,

@@ -85,8 +85,8 @@ The calibration therefore says:
 - **For long cantilevers, support columns are the lever:** a clutch cap only removes builds, and open tops does
   not shorten a cantilever.
 
-A calibrated `--max-clutch 1111` as the pipeline default (with `--supports` for cantilevered targets) is the
-proposed follow-up. It is not applied here.
+`--max-clutch 1111` and, for 3D targets, `--supports --support-height 6` are pipeline defaults since 2026-10-09;
+the runs here predate them.
 
 ### Before / after: `results/m12b_before_after.png`
 

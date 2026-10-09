@@ -110,7 +110,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             directory = args.out / set_number / name
             workers = ["--workers", str(args.workers)] if args.workers else []
             alt_main([set_number, "--n", str(args.n), "--out", str(directory), *extra, *workers,
-                      "--catalog", args.catalog, "--style-version", args.style_version])
+                      "--catalog", args.catalog, "--style-version", args.style_version,
+                      "--max-clutch", "inf"])  # the M12 tables predate the real-clutch default
             runs[name] = load(directory)
         rows += summarize(set_number, runs, catalog=args.catalog, style_version=args.style_version)
     (args.out / "summary.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")

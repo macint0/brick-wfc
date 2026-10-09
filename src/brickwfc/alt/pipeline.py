@@ -53,7 +53,7 @@ from brickwfc.alt.features import feature_vector, occupancy
 from brickwfc.alt.inputs import (CATALOGS, DATA_DIR, SETS_FILE, STYLE_DIR, STYLE_FILES, STYLE_VERSION, Source,
                                  learned_style, load_source)
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
-from brickwfc.alt.target import Target, load_target
+from brickwfc.alt.target import Target, load_target, takes_supports
 from brickwfc.bricks.inventory import inventory_cells, utilization
 from brickwfc.bricks.shapes import SHAPES, fill, iou
 from brickwfc.bricks.style import StyleStats, events, matched_divergence
@@ -92,13 +92,15 @@ class AltConfig:
     voxels: int = 32  # mesh target: cells along its longest side before scaling
     mesh_up: str = "y"
     hollow: int = 0  # 3D target: shell thickness in cells, plus internal pillars (0: solid)
-    supports: bool = False  # 3D target: support columns under overhangs out of a part's reach
-    support_height: int = 0  # with supports: only columns at most this many cells tall (0: any)
+    supports: bool = True  # 3D target: support columns under overhangs out of a part's reach (M12b 1d)
+    support_height: int = 6  # with supports: only columns at most this many cells tall (0: any); 6 props the
+    # chair's caster hub without towers under a table top (results/m12b_brickgpt.md)
     open_tops: bool = True  # with a target shape: studless top cells only under empty target cells
     order: str = "random"  # d2: cells of a layer visited in random or raster order
     proposal: str | None = None  # d2: learned proposal model (.npz from training/, vocab.json next to it)
     strength: float = 1.0  # exponent on the learned style weights
-    max_clutch: float = math.inf  # physics: keep builds needing at most this clutch per stud
+    max_clutch: float = 1111.0  # physics: keep builds needing at most this clutch per stud, in plate-cell weights;
+    # 1111 is a real stud (calibrated in results/m12b_overhangs_tables.md); inf: no limit
     wfc_time_limit_s: float = 30.0
     min_size_quantile: float = 0.1
     fill_floor: float = 0.5  # with a target: fail builds filling < this x the 90th-percentile fill (0: off)
@@ -140,7 +142,8 @@ def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) ->
                        Path(config.height_map) if config.height_map else None,
                        Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
                        config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
-                       hollow=config.hollow, supports=config.supports, support_height=config.support_height)
+                       hollow=config.hollow, supports=config.supports and takes_supports(config.shape),
+                       support_height=config.support_height)
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
@@ -339,10 +342,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="3D target: a shell this many cells thick plus internal pillars (0: solid)")
     parser.add_argument("--no-open-tops", action="store_true",
                         help="with a target shape: let studless tops (tiles) sit under target cells (as before M12b 1d)")
-    parser.add_argument("--supports", action="store_true",
-                        help="3D target: add support columns under overhangs out of a part's reach (extra cells)")
+    parser.add_argument("--supports", action=argparse.BooleanOptionalAction, default=defaults.supports,
+                        help="3D target (a model, BrickGPT structure or mesh; not a primitive or silhouette): add "
+                        "support columns under overhangs out of a part's reach (extra cells); on by default")
     parser.add_argument("--support-height", type=int, default=defaults.support_height,
-                        help="with --supports: only columns at most this many cells (plates) tall (0: any)")
+                        help="with supports: only columns at most this many cells (plates) tall; 0: any height "
+                        f"(default {defaults.support_height})")
     parser.add_argument("--order", choices=("random", "raster"), default=defaults.order,
                         help="d2: order the cells of a layer are visited in")
     parser.add_argument("--proposal", help="d2: learned proposal model (.npz, vocab.json next to it; see training/)")
@@ -359,7 +364,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="repair rounds of the connect pass (1: as in step 2b)")
     parser.add_argument("--room", type=float, default=defaults.room, help="grid volume / inventory volume (no --shape)")
     parser.add_argument("--strength", type=float, default=defaults.strength, help="exponent on the style weights")
-    parser.add_argument("--max-clutch", type=float, default=defaults.max_clutch, help="physics limit per stud")
+    parser.add_argument("--max-clutch", type=float, default=defaults.max_clutch,
+                        help="physics: most clutch per stud a build may need, in plate-cell weights "
+                        f"(default {defaults.max_clutch:.0f}: real bricks; inf: no limit)")
     parser.add_argument("--wfc-time-limit", type=float, default=defaults.wfc_time_limit_s, help="seconds per WFC build")
     parser.add_argument("--min-size-quantile", type=float, default=defaults.min_size_quantile)
     parser.add_argument("--fill-floor", type=float, default=defaults.fill_floor,
