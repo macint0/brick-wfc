@@ -50,6 +50,8 @@ https://content.moldandyeast.com/forage/y6fmx6n4
 
 ## Working rules for Claude Code
 
+- **Quality over speed (Mac, 2026-10-09).** Generation time is not a constraint: minutes per candidate and hundreds of
+  candidates per run are fine if the selected build gets better. Report time, but never trade build quality for it.
 - Work **one milestone at a time**. When a milestone's "Done when" passes, stop and summarize; don't start the next one unasked.
 - Python 3.11+, `numpy`, `Pillow`, `scipy` (LP solver for physics, M7+), `pytest`, `trimesh` (mesh voxelizer for 3D
   targets, approved by Mac 2026-10-08 for M12b). Ask before adding any other dependency.
