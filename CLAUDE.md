@@ -214,11 +214,10 @@ Also landed: `rebrickable:<set>` / any set number as the inventory from Rebricka
 (`bricks/rebrickable.py`, `results/m12c_rebrickable.md`); diversity metric for M13 (Leinster–Cobbold, threshold
 kernel normalized per setup by the median D2 pair distance, `funnel/diversity.py`, `results/m13_diversity.md`);
 paper skeleton in `paper/`. Not now: style-bias tuning, color logic, WFC.
-**Decisions for Mac (2026-10-09):** (a) make `--supports --support-height 6` the default for 3D targets;
-(b) make `--max-clutch 1111` (real clutch) the pipeline default; (c) rerun 1a/1d on the 88-part catalog with
-whatever defaults you choose and redraw the figures (the cached runs predate the catalog). ee does (c) on a go.
-(d) Whether to spend more on the proposal model (bigger, longer, plates-heavy data) or to close step 2 with the
-result as is and move to step 3 / M13.
+**Decisions (Mac, 2026-10-09 morning):** (a) yes: `--supports --support-height 6` is the default with a 3D target;
+(b) yes: `--max-clutch 1111` (real clutch, StableLego calibration) is the pipeline default everywhere; (c) yes: ee reruns
+1a/1d on the 88-part catalog with these defaults and redraws the figures; (d) close step 2 with the result as is:
+statistics stay the baseline and the default, the comparison is a paper result, no more model training now.
 **Done when:** the six-set demo re-rendered with a 3D target looks clearly better side by side (yes:
 `m12b_before_after.png`), every build still valid/stable/one piece (yes), the learned proposal is compared to
 statistics under the judge (yes, `m12b_proposal.md`, `m12b_proposal_shape.md`), and the per-set coverage rises (yes).
