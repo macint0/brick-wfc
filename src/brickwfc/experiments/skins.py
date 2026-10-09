@@ -1,6 +1,7 @@
-"""M12b step 3: clean skins and mirror symmetry, measured before anything is built.
+"""M12b step 3: clean skins and mirror symmetry, measured before anything is built, then before/after.
 
     python -m brickwfc.experiments.skins --steps measure
+    python -m brickwfc.experiments.skins --steps compare --workers 5
 
 Measures (``bricks.skin``, ``bricks.symmetry``) on:
 
@@ -17,6 +18,16 @@ the object without support columns). "Mirrorable" parts are those whose mirror i
 five-arm base) is measured where symmetry is possible.
 
 Writes ``results/m12b_skins_measure.md`` and ``.json`` (``--results``).
+
+``compare``: chair, car and table on the three sets, ``--n`` candidates each, in four arms of the pipeline
+(``ARMS``): base (pipeline defaults; the step-1a rerun's candidates are reused, the pipeline checks their setup
+key), ``--skin``, ``--symmetric`` and both. Per arm: valid share, object fill (against the arm's own object,
+without support columns; the symmetric arms scale the target so its mirror plane survives), the judge
+size-matched across the four arms (every valid candidate subsampled to the smallest one's contact events),
+fragmentation, faces per visible part, the mirrored share of mirrorable parts, and seconds per candidate; for
+the valid candidates (mean) and the selected build. Runs go to ``--compare-out`` (resumable: rerun the same
+command); writes ``results/m12b_skins.md``, ``.json`` and ``m12b_skins_sheet.png`` (the selected build of
+each arm, side by side).
 """
 
 from __future__ import annotations
@@ -24,32 +35,36 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import shutil
 import statistics
-from dataclasses import asdict
 from pathlib import Path
 from typing import Sequence
 
 import numpy as np
 
 from brickwfc.alt.candidates import Candidate
+from brickwfc.alt.features import occupancy
+from brickwfc.alt.inputs import learned_style, load_source
+from brickwfc.alt.pipeline import AltConfig, make_target
+from brickwfc.alt.pipeline import main as alt_main
+from brickwfc.alt.target import BRICKGPT_PREFIX
 from brickwfc.bricks import brickgpt
 from brickwfc.bricks.colors import color_for_code
 from brickwfc.bricks.parts import BY_FILE, PlacedPart
+from brickwfc.bricks.shapes import fill
+from brickwfc.bricks.style import events, matched_divergence
 from brickwfc.bricks.skin import SIZE_CLASSES, Skin, skin
-from brickwfc.bricks.symmetry import Plane, mirror_part, part_symmetry, plane_on
+from brickwfc.bricks.symmetry import Plane, best_plane, mirror_part, part_symmetry
 from brickwfc.bricks.voxelize import grid_shape, voxelize
 from brickwfc.experiments.brickgpt import SETS, target_for
-from brickwfc.experiments.demo import load_run
+from brickwfc.experiments.demo import labeled_sheet, load_run
 from brickwfc.ldraw.fetch import fetch_set
 from brickwfc.ldraw.mpd import flatten
 
 OBJECTS = {"chair": "a712684f", "table": "858f0955", "car": "4b15b71c"}
+ARMS = {"base": [], "skin": ["--skin"], "symmetric": ["--symmetric"], "both": ["--skin", "--symmetric"]}
+JUDGE_DRAWS = 5
 GRAY = color_for_code(71)
-
-
-def best_plane(mask: np.ndarray) -> Plane:
-    """The better of the two vertical planes through the middle of the mask's extent (any score)."""
-    return max((plane_on(mask, axis) for axis in (1, 2)), key=lambda p: p.score)
 
 
 def mirrorable(placed: Sequence[PlacedPart], plane: Plane, mask: np.ndarray) -> list[bool]:
@@ -224,18 +239,178 @@ def step_measure(args: argparse.Namespace) -> None:
     print(f"wrote {args.results}")
 
 
+# Before / after ---------------------------------------------------------------------------------------------
+
+
+def run_arm(set_number: str, structure: brickgpt.Structure, arm: str, args: argparse.Namespace) -> Path:
+    """One pipeline run (resumable); the base arm starts from the step-1a rerun's candidates."""
+    directory = args.compare_out / set_number / f"{structure.structure_id[:8]}_{arm}"
+    cache = directory / "candidates.jsonl"
+    reused = args.runs / set_number / f"{structure.structure_id[:8]}_default" / "candidates.jsonl"
+    if arm == "base" and not cache.exists() and reused.exists():
+        directory.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(reused, cache)
+    alt_main([set_number, "--shape", BRICKGPT_PREFIX + structure.structure_id, "--n", str(args.n), "--k", "1",
+              "--out", str(directory), "--workers", str(args.workers), *ARMS[arm]])
+    return directory
+
+
+def arm_masks(set_number: str, structure: brickgpt.Structure, arm: str) -> tuple[np.ndarray, np.ndarray]:
+    """(the arm's target, as built in; its object without support columns)."""
+    source = load_source(set_number)
+    symmetric = "--symmetric" in ARMS[arm]
+    shape = BRICKGPT_PREFIX + structure.structure_id
+    full = make_target(source, AltConfig(shape=shape, symmetric=symmetric)).mask
+    obj = make_target(source, AltConfig(shape=shape, symmetric=symmetric, supports=False)).mask
+    return full, obj
+
+
+def compare_cell(set_number: str, name: str, structure: brickgpt.Structure, args: argparse.Namespace) -> dict:
+    """Every arm of one (object, set): per-candidate measures, the judge size-matched across arms."""
+    stats, _ = learned_style(set_number)
+    loaded = {}
+    for arm in ARMS:
+        directory = args.compare_out / set_number / f"{structure.structure_id[:8]}_{arm}"
+        loaded[arm] = (directory, *load_run(directory))
+    found = {(arm, c.seed): events(c.placed) for arm, (_, cands, _) in loaded.items() for c in cands if c.valid}
+    size = min((e.count for e in found.values()), default=0)
+    arms = {}
+    _, base_obj = arm_masks(set_number, structure, "base")
+    for arm, (directory, candidates, run_stats) in loaded.items():
+        full, obj = arm_masks(set_number, structure, arm)
+        plane = best_plane(obj)
+        valid = [c for c in candidates if c.valid]
+        per = []
+        for c in valid:
+            judge = -matched_divergence(found[(arm, c.seed)], size, stats, np.random.default_rng([0, c.seed]), JUDGE_DRAWS)
+            per.append({"judge": judge, "fill": fill(occupancy(c.placed, full.shape), obj),
+                        "base_fill": fill(occupancy(c.placed, full.shape), base_obj), "parts_placed": len(c.placed),
+                        **skin_row(skin(c.placed, full.shape)), **symmetry_row(c.placed, plane, full)})
+        chosen = run_stats["selected"][0]["seed"] if run_stats["selected"] else None
+        index = next((i for i, c in enumerate(valid) if c.seed == chosen), None)
+        arms[arm] = {"valid_pct": 100 * len(valid) / len(candidates), "candidates": len(candidates),
+                     "plane": plane.name, "plane_score": plane.score, "object_cells": int(obj.sum()),
+                     "seconds_per_candidate": statistics.mean(c.seconds + c.physics_seconds for c in candidates),
+                     "check_failures": run_stats["check_failures"],
+                     "mean": mean_rows(per) if per else None, "selected": None if index is None else per[index],
+                     "selected_seed": chosen,
+                     "png": str(directory / run_stats["selected"][0]["png"]) if run_stats["selected"] else None}
+    return {"set": set_number, "object": name, "judge_size": size, "arms": arms}
+
+
+COMPARE_HEAD = ("| object | set | arm | valid % | judge | fill % | base-object fill % | top: parts per 4x4 | sides: parts per 4x4 | "
+                "faces / visible part | mirrored of mirrorable % | same color % | s/candidate |")
+
+
+def compare_line(cell: dict, arm: str, which: str) -> str:
+    a = cell["arms"][arm]
+    r = a[which]
+    if r is None:
+        return f"| {cell['object']} | {cell['set']} | {arm} | {a['valid_pct']:.0f} |" + " — |" * 9
+    return (f"| {cell['object']} | {cell['set']} | {arm} | {a['valid_pct']:.0f} | {r['judge']:.4f} | "
+            f"{100 * r['fill']:.1f} | {100 * r['base_fill']:.1f} | {f(r['top_patch_parts'])} | {f(r['side_patch_parts'])} | "
+            f"{f(r['faces_per_part'], '{:.1f}')} | {f(100 * r['mirrorable_mirrored'], '{:.0f}')} | "
+            f"{f(100 * r['mirrorable_mirrored_color'], '{:.0f}')} | {a['seconds_per_candidate']:.1f} |")
+
+
+def delta_table(cells: list[dict]) -> list[str]:
+    """Each arm minus base, averaged over the (object, set) cells (means over valid candidates)."""
+    keys = ("judge", "fill", "base_fill", "top_patch_parts", "side_patch_parts", "faces_per_part", "mirrorable_mirrored")
+    lines = ["| arm | judge | fill (points) | base-object fill (points) | top parts per 4x4 | side parts per 4x4 | faces / visible part | "
+             "mirrored of mirrorable (points) | judge up in | fill up in |", "|---|---|---|---|---|---|---|---|---|---|"]
+    for arm in ARMS:
+        if arm == "base":
+            continue
+        pairs = [(c["arms"][arm]["mean"], c["arms"]["base"]["mean"]) for c in cells
+                 if c["arms"][arm]["mean"] and c["arms"]["base"]["mean"]]
+        d = {k: statistics.mean(a[k] - b[k] for a, b in pairs if not math.isnan(a[k] - b[k])) for k in keys}
+        up_judge = sum(a["judge"] > b["judge"] for a, b in pairs)
+        up_fill = sum(a["fill"] > b["fill"] for a, b in pairs)
+        lines.append(f"| {arm} | {d['judge']:+.4f} | {100 * d['fill']:+.1f} | {100 * d['base_fill']:+.1f} | {d['top_patch_parts']:+.2f} | "
+                     f"{d['side_patch_parts']:+.2f} | {d['faces_per_part']:+.1f} | {100 * d['mirrorable_mirrored']:+.0f} | "
+                     f"{up_judge}/{len(pairs)} | {up_fill}/{len(pairs)} |")
+    return lines
+
+
+def compare_report(cells: list[dict]) -> str:
+    lines = ["# M12b step 3: skin preference and symmetric decoding, before / after", "",
+             "`python -m brickwfc.experiments.skins --steps compare` (measures: `results/m12b_skins_measure.md`). "
+             "Chair, car and table on 6378-1, 5891-1 and 10182-1, 50 candidates per run, pipeline defaults plus the "
+             "arm's flags: **base** (the step-1a rerun), **skin** (`--skin`: largest parts first on the target's "
+             "surface), **symmetric** (`--symmetric`: mirror-preserving target scale and each part's mirror image "
+             "placed with it where it fits and the inventory has it), **both**.", "",
+             "Judge: size-matched across the four arms of a cell (every valid candidate subsampled to the smallest "
+             "one's contact events; higher is better). Fill: of the arm's own object (no support columns). "
+             "Base-object fill: of the base arm's object, on the same grid (the symmetric arms make a car or table "
+             "exactly symmetric by adding the mirror image of its cells, so their own object is 2-15% larger). "
+             "Fragmentation: distinct parts per all-skin 4 x 4-cell window (lower is cleaner). Mirrored: share of "
+             "mirrorable parts whose mirror image is placed (any color; then same color).", "",
+             "## Change against base (means over valid candidates, averaged over the 9 cells)", ""]
+    lines += delta_table(cells)
+    for which, title in (("mean", "Means over valid candidates"), ("selected", "Selected build (k = 1)")):
+        lines += ["", f"## {title}", "", COMPARE_HEAD, "|---|---|---|" + "---|" * 10]
+        for cell in cells:
+            for arm in ARMS:
+                lines.append(compare_line(cell, arm, which))
+    lines += ["", "## Targets", "", "| object | set | arm | object cells | plane (score) | judge size (events) |",
+              "|---|---|---|---|---|---|"]
+    for cell in cells:
+        for arm in ARMS:
+            a = cell["arms"][arm]
+            lines.append(f"| {cell['object']} | {cell['set']} | {arm} | {a['object_cells']} | {a['plane']} "
+                         f"({a['plane_score']:.2f}) | {cell['judge_size']} |")
+    return "\n".join(lines) + "\n"
+
+
+def compare_sheet(cells: list[dict], path: Path) -> None:
+    images, labels = [], []
+    for cell in cells:
+        for arm in ARMS:
+            a = cell["arms"][arm]
+            r = a["selected"]
+            if a["png"] is None or r is None:
+                continue
+            images.append(Path(a["png"]))
+            labels.append(f"{cell['object']} {cell['set']}: {arm}\nfill {100 * r['fill']:.0f}%, top {f(r['top_patch_parts'], '{:.1f}')}, "
+                          f"sides {f(r['side_patch_parts'], '{:.1f}')}\nmirrored {f(100 * r['mirrorable_mirrored'], '{:.0f}')}%")
+    labeled_sheet(images, labels, path, columns=len(ARMS), width=600)
+
+
+def step_compare(args: argparse.Namespace) -> None:
+    structures = {name: brickgpt.find(OBJECTS[name], args.brickgpt_data) for name in args.objects}
+    for set_number in args.sets:  # small sets first: their rows are ready early
+        for name, structure in structures.items():
+            for arm in ARMS:
+                print(f"== {name} {set_number} {arm}", flush=True)
+                run_arm(set_number, structure, arm, args)
+    cells = [compare_cell(set_number, name, structure, args)
+             for name, structure in structures.items() for set_number in args.sets]
+    out = args.compare_results
+    out.with_suffix(".json").write_text(json.dumps(cells, indent=1), encoding="utf-8")
+    out.write_text(compare_report(cells), encoding="utf-8")
+    compare_sheet(cells, out.with_name(out.stem + "_sheet.png"))
+    print(f"wrote {out}")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.skins", description=__doc__.splitlines()[0])
-    parser.add_argument("--steps", nargs="+", choices=("measure",), default=["measure"])
+    parser.add_argument("--steps", nargs="+", choices=("measure", "compare"), default=["measure"])
     parser.add_argument("--sets", nargs="+", default=list(SETS))
     parser.add_argument("--runs", type=Path, default=Path("out/m12b_brickgpt_v2"))
     parser.add_argument("--data", type=Path, default=Path("data/omr"))
     parser.add_argument("--brickgpt-data", type=Path, default=brickgpt.DATA_DIR)
     parser.add_argument("--sets-file", type=Path, default=Path("results/sets_selection.json"))
     parser.add_argument("--results", type=Path, default=Path("results/m12b_skins_measure.md"))
+    parser.add_argument("--objects", nargs="+", choices=sorted(OBJECTS), default=["chair", "car", "table"])
+    parser.add_argument("--n", type=int, default=50, help="compare: candidates per run")
+    parser.add_argument("--workers", type=int, default=5)
+    parser.add_argument("--compare-out", type=Path, default=Path("out/m12b_skins"))
+    parser.add_argument("--compare-results", type=Path, default=Path("results/m12b_skins.md"))
     args = parser.parse_args(argv)
     if "measure" in args.steps:
         step_measure(args)
+    if "compare" in args.steps:
+        step_compare(args)
     return 0
 
 

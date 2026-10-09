@@ -22,6 +22,13 @@ from brickwfc.bricks.parts import PlacedPart, Shape, shapes_of
 
 AXES = {1: "z", 2: "x"}
 MIN_SCORE = 0.9  # a mask has a mirror plane if its reflection covers at least this share of it
+# Symmetric decoding uses the best plane if its reflection covers at least this share of the target: the
+# mirror image of a part is placed only where it lies inside the target, so a partly symmetric target (a
+# chair's seat and back on a five-arm base, 0.7) is mirrored where it is symmetric.
+DECODE_MIN_SCORE = 0.5
+# A target this symmetric is made exactly symmetric (``alt.target``); the car and table score 0.85-0.98 after
+# scaling, the chair (not symmetric: a five-arm base) 0.71-0.77.
+SYMMETRIZE_MIN_SCORE = 0.8
 
 
 @dataclass(frozen=True)
@@ -56,11 +63,16 @@ def plane_on(mask: np.ndarray, axis: int) -> Plane:
     return Plane(axis, plane.total, score)
 
 
+def best_plane(mask: np.ndarray) -> Plane:
+    """The better of the two vertical planes through the middle of the mask's extent (any score)."""
+    return max((plane_on(mask, axis) for axis in AXES), key=lambda p: p.score)
+
+
 def mirror_plane(mask: np.ndarray, min_score: float = MIN_SCORE) -> Plane | None:
     """The best of the two vertical planes, or None if neither covers ``min_score`` of the mask."""
     if not mask.any():
         return None
-    best = max((plane_on(mask, axis) for axis in AXES), key=lambda p: p.score)
+    best = best_plane(mask)
     return best if best.score >= min_score else None
 
 
