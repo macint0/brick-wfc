@@ -4,6 +4,7 @@ import json
 
 import numpy as np
 import pytest
+from scipy import ndimage
 
 from brickwfc.alt.inputs import load_source
 from brickwfc.alt.pipeline import AltConfig, main, make_target
@@ -31,6 +32,22 @@ def test_supports_only_under_far_overhangs() -> None:
     assert columns[0, 0] and not columns[6, 6]  # under the far corner, not next to the stem
     assert extra[:cap, 0, 0].all()  # each column runs down to the ground
     assert np.array_equal(with_supports(mask, reach=20), mask)  # everything within reach: nothing added
+
+
+def test_columns_cover_every_far_overhang_cell() -> None:
+    for side in (14, 15, 17):  # the guarantee does not depend on the scale
+        mask = mushroom(6, side, side, stem=2, cap_layers=1)
+        supported = with_supports(mask, reach=3)
+        extra = supported & ~mask
+        cap = mask.shape[0] - 1
+        held = supported[cap] & supported[cap - 1]  # cap cells over the stem or a column
+        assert (ndimage.distance_transform_cdt(~held, metric="chessboard")[mask[cap]] <= 3).all()
+        assert not extra[cap].any() and (extra[:cap] == extra[0]).all()  # straight down to the ground
+    arms = np.zeros((4, 3, 13), dtype=bool)  # a bar on two feet far apart: one column under its middle
+    arms[:3, :, :2] = arms[:3, :, 11:] = True
+    arms[3] = True
+    extra = with_supports(arms, reach=3) & ~arms
+    assert extra[:3].any() and set(np.nonzero(extra[0])[1]) <= {5, 6, 7}
 
 
 def test_support_height_keeps_only_short_columns() -> None:

@@ -64,7 +64,7 @@ from brickwfc.alt.target import BRICKGPT_PREFIX, Target, load_target
 from brickwfc.bricks import brickgpt
 from brickwfc.bricks.balance import clusters
 from brickwfc.bricks.colors import color_for_code
-from brickwfc.bricks.inventory import inventory_cells, utilization
+from brickwfc.bricks.inventory import target_volume, utilization
 from brickwfc.bricks.physics import table_clutch
 from brickwfc.bricks.parts import CATALOG, PlacedPart, Shape
 from brickwfc.bricks.physics import required_clutch
@@ -156,12 +156,14 @@ def supported(variant: str) -> bool:
     return variant in ("supports", "default")
 
 
-def target_for(set_number: str, structure: brickgpt.Structure, variant: str) -> Target:
+def target_for(set_number: str, structure: brickgpt.Structure, variant: str, sizing: str = "fillable") -> Target:
+    """The target a run of ``variant`` built; ``sizing`` as the run's (runs before M12b sizing: "box")."""
     source = load_source(set_number)
     hollow = int(variant.removeprefix("hollow")) if variant.startswith("hollow") else 0  # opentops: as exact
-    return load_target(BRICKGPT_PREFIX + structure.structure_id, inventory_cells(source.inventory),
+    return load_target(BRICKGPT_PREFIX + structure.structure_id, target_volume(source.inventory, sizing),
                        source.colors, columns=variant == "columns", hollow=hollow, supports=supported(variant),
-                       support_height=AltConfig().support_height if variant == "default" else 0)
+                       support_height=AltConfig().support_height if variant == "default" else 0,
+                       keep_sections=sizing == "fillable")
 
 
 def run_ours(set_number: str, structure: brickgpt.Structure, out: Path, n: int, workers: int | None,
@@ -177,7 +179,8 @@ def run_ours(set_number: str, structure: brickgpt.Structure, out: Path, n: int, 
 def ours(set_number: str, structure: brickgpt.Structure, directory: Path, variant: str = "exact") -> dict:
     candidates, stats = load_run(directory)
     source = load_source(set_number)
-    target = target_for(set_number, structure, variant)
+    sizing = stats["config"].get("sizing", "box")
+    target = target_for(set_number, structure, variant, sizing)
     outer = surface(target.mask)
     built = [c for c in candidates if "generate" not in c.failed]
     valid = [c for c in candidates if c.valid]
@@ -187,7 +190,7 @@ def ours(set_number: str, structure: brickgpt.Structure, directory: Path, varian
     best_filled = next((f for f, c in zip(filled, valid) if best and c.seed == best["seed"]), None)
     max_clutch = stats["config"]["max_clutch"]
     # The object itself (without support columns), on the same grid, for the overhang measures.
-    obj = target_for(set_number, structure, "exact").mask if supported(variant) else target.mask
+    obj = target_for(set_number, structure, "exact", sizing).mask if supported(variant) else target.mask
     extra = {}
     if variant in ("exact", "supports", "opentops", "default"):
         extra = {
@@ -260,8 +263,14 @@ def tables(objects: list[dict], rows: list[dict], figure: list[dict]) -> str:
                      f"{f(their_clutch[r['structure_id']], '{:.1f}')} | {r['best_clusters']} | "
                      f"{r['seconds_per_candidate']:.2f} |")
     lines += ["", "### Before / after on the demo sets (chair; before: solid columns, after: exact cells, pipeline defaults)",
-              "", "| set | target | grid (WxDxH) | target cells | valid % | cap rejected | fill % | IoU | best: parts "
-              "| best: fill % | best: clutch | s/candidate |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+              "", figure_table(figure)]
+    return "\n".join(lines)
+
+
+def figure_table(figure: list[dict]) -> str:
+    """The chair figure's runs: solid columns and exact cells with the pipeline defaults, per set."""
+    lines = ["| set | target | grid (WxDxH) | target cells | valid % | cap rejected | fill % | IoU | best: parts "
+             "| best: fill % | best: clutch | s/candidate |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in figure:
         y, z, x = r["grid_YZX"]
         lines.append(f"| {r['set']} | {'columns' if r['columns'] else 'exact, defaults'} | {x}x{z}x{y} | {r['target_cells']} | "
@@ -367,13 +376,23 @@ def before_after(structure: brickgpt.Structure, runs: list[dict], variants: tupl
     labeled_sheet(images, labels, path, columns=2)
 
 
+def chair_figure(picked: list[brickgpt.Structure], args: argparse.Namespace) -> tuple[brickgpt.Structure, list[dict]]:
+    """The chair's runs on the demo sets, solid columns then the pipeline defaults, and ``before_after.png``."""
+    chair = next((s for s in picked if s.category_id == FIGURE_CATEGORY), picked[0])
+    figure = [ours(set_number, chair, run_ours(set_number, chair, args.out, args.n, args.workers, variant), variant)
+              for set_number in args.figure_sets for variant in ("columns", "default")]
+    before_after(chair, figure, ("columns", "default"),
+                 ("before: target as solid columns\n(heightfield, scaled to each set)",
+                  "after: target as exact 3D cells\n(open tops, short supports, real clutch)"),
+                 args.figure_sets[-1], args.out, args.out / "before_after.png")
+    return chair, figure
+
+
 def step_1a(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
     objects = [theirs(s, args.out / "brickgpt") for s in picked]
     rows = [ours(set_number, s, run_ours(set_number, s, args.out, args.n, args.workers, "default"), "default")
             for s in picked for set_number in args.sets]
-    chair = next((s for s in picked if s.category_id == FIGURE_CATEGORY), picked[0])
-    figure = [ours(set_number, chair, run_ours(set_number, chair, args.out, args.n, args.workers, variant), variant)
-              for set_number in args.figure_sets for variant in ("columns", "default")]
+    _, figure = chair_figure(picked, args)
 
     (args.out / "summary.json").write_text(json.dumps({"objects": objects, "ours": rows, "before_after": figure},
                                                       indent=2), encoding="utf-8")
@@ -390,10 +409,16 @@ def step_1a(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
                 images.append(Path(r["best_png"]))
                 labels.append(build_label(r))
     labeled_sheet(images, labels, args.out / "objects.png", columns=1 + len(args.sets))
-    before_after(chair, figure, ("columns", "default"),
-                 ("before: target as solid columns\n(heightfield, scaled to each set)",
-                  "after: target as exact 3D cells\n(open tops, short supports, real clutch)"),
-                 args.figure_sets[-1], args.out, args.out / "before_after.png")
+
+
+def step_1a_figure(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
+    """Only the chair figure of step 1a, without the head-to-head."""
+    chair, figure = chair_figure(picked, args)
+    (args.out / "chair_figure_summary.json").write_text(json.dumps({"before_after": figure}, indent=2),
+                                                       encoding="utf-8")
+    text = f"### Figure runs ({category(chair)})\n\n{figure_table(figure)}\n"
+    (args.out / "chair_figure.md").write_text(text, encoding="utf-8")
+    print(text)
 
 
 def step_1c(picked: list[brickgpt.Structure], args: argparse.Namespace) -> None:
@@ -450,7 +475,7 @@ def step_1d_figure(picked: list[brickgpt.Structure], args: argparse.Namespace) -
                  args.figure_sets[-1], args.out, args.out / "overhangs_before_after.png")
 
 
-STEPS = {"1a": step_1a, "1c": step_1c, "1d": step_1d, "1d-figure": step_1d_figure}
+STEPS = {"1a": step_1a, "1a-figure": step_1a_figure, "1c": step_1c, "1d": step_1d, "1d-figure": step_1d_figure}
 
 
 def main(argv: Sequence[str] | None = None) -> int:

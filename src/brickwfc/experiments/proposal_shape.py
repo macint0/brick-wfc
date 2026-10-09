@@ -29,7 +29,7 @@ from brickwfc.alt.features import occupancy
 from brickwfc.alt.inputs import SETS_FILE, STYLE_DIR, learned_style, load_source
 from brickwfc.alt.target import load_target
 from brickwfc.bricks.build import save_preview
-from brickwfc.bricks.inventory import inventory_cells, utilization
+from brickwfc.bricks.inventory import target_volume, utilization
 from brickwfc.bricks.shapes import fill, iou
 from brickwfc.bricks.style import StyleStats, distance, events, judge, size_matched
 from brickwfc.bricks.tokens import Vocab
@@ -49,7 +49,9 @@ def summarize(set_number: str, arm: str, directory: Path, vocab: Vocab, style_di
     candidates, stats = load_run(directory)
     source = load_source(set_number)
     style, _ = learned_style(source.name, style_dir, sets_file)
-    target = load_target(stats["config"]["shape"], inventory_cells(source.inventory), source.colors)
+    sizing = stats["config"].get("sizing", "box")
+    target = load_target(stats["config"]["shape"], target_volume(source.inventory, sizing), source.colors,
+                         keep_sections=sizing == "fillable")
     if int(target.mask.sum()) != stats["shape_cells"]:
         raise ValueError(f"{directory}: target has {int(target.mask.sum())} cells, the run had {stats['shape_cells']}")
     real_parts = voxelize(flatten(source.model))[0]

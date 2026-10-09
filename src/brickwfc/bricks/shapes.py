@@ -156,12 +156,35 @@ def bounds(mask: Mask) -> tuple[slice, slice, slice]:
     return slice(0, ys.max() + 1), slice(zs.min(), zs.max() + 1), slice(xs.min(), xs.max() + 1)
 
 
-def fit_scale(volume: Callable[[float], int], cells: float, dims: int, steps: int = 121) -> float:
-    """The factor ``f`` near (cells / volume(1)) ** (1 / dims) whose ``volume(f)`` is closest to ``cells``."""
+SECTION_BAND = 0.05  # thin-aware scaling: volumes within 5% of the target count as fitting
+
+
+def thinnest_section(mask: Mask) -> int:
+    """The smallest 4-connected region of any layer of ``mask``, in cells (0 if the mask is empty)."""
+    sizes = []
+    for layer in mask:
+        labels, regions = ndimage.label(layer)
+        if regions:
+            sizes.append(int(np.bincount(labels.ravel())[1:].min()))
+    return min(sizes, default=0)
+
+
+def fit_scale(volume: Callable[[float], int], cells: float, dims: int, steps: int = 121,
+              section: Callable[[float], int] | None = None, band: float = SECTION_BAND) -> float:
+    """The factor ``f`` near (cells / volume(1)) ** (1 / dims) whose ``volume(f)`` is closest to ``cells``. With
+    ``section`` (f -> the thinnest horizontal section of the scaled shape, ``thinnest_section``), among the factors
+    whose volume is within ``band`` of ``cells`` (relative), the one with the thickest thinnest section, ties by
+    the closest volume (M12b sizing: nearest-neighbour resampling thins a part unevenly, e.g. a chair's post from
+    8 cells to 3 between factors 2% apart). Without a factor in the band, the closest volume."""
     estimate = (cells / volume(1.0)) ** (1 / dims)
-    factors = estimate * np.exp(np.linspace(-0.3, 0.3, steps))
-    errors = [abs(volume(float(f)) - cells) for f in factors]
-    return float(factors[int(np.argmin(errors))])
+    factors = [float(f) for f in estimate * np.exp(np.linspace(-0.3, 0.3, steps))]
+    errors = [abs(volume(f) - cells) for f in factors]
+    best = int(np.argmin(errors))
+    if section is not None:
+        fitting = [i for i, error in enumerate(errors) if error <= band * cells]
+        if fitting:
+            best = max(fitting, key=lambda i: (section(factors[i]), -errors[i], -i))
+    return factors[best]
 
 
 def from_heights(heights: np.ndarray, cells: float, scale_height: bool) -> tuple[Mask, float]:
@@ -176,7 +199,8 @@ def from_heights(heights: np.ndarray, cells: float, scale_height: bool) -> tuple
     return extrude(scaled_heights(f)), f
 
 
-def from_model(placed: Sequence[PlacedPart], cells: float, solid_columns: bool = True, shell: int = 0) -> Mask:
+def from_model(placed: Sequence[PlacedPart], cells: float, solid_columns: bool = True, shell: int = 0,
+               keep_sections: bool = False) -> Mask:
     """The cells of a (voxelized) model, scaled uniformly so the volume is about ``cells``. With
     ``solid_columns``, each column is filled from the ground to its top cell first: the model's massing
     rather than its exact cells (a voxelized model keeps only the catalog parts on the stud grid, so its
@@ -186,13 +210,16 @@ def from_model(placed: Sequence[PlacedPart], cells: float, solid_columns: bool =
     for part in placed:
         for cell in part.cells():
             occupied[cell] = True
-    return scaled_to(occupied, cells, solid_columns, shell)
+    return scaled_to(occupied, cells, solid_columns, shell, keep_sections)
 
 
-def scaled_to(occupied: Mask, cells: float, solid_columns: bool = False, shell: int = 0) -> Mask:
+def scaled_to(occupied: Mask, cells: float, solid_columns: bool = False, shell: int = 0,
+              keep_sections: bool = False) -> Mask:
     """A 3D mask in cells (1 stud x 1 stud x 1 plate), scaled uniformly so the volume is about ``cells``
     and cut to its bounds; with ``solid_columns``, each column filled from the ground to its top cell first;
-    with ``shell`` > 0, hollowed after scaling (``hollow``), so the same volume makes a larger object."""
+    with ``shell`` > 0, hollowed after scaling (``hollow``), so the same volume makes a larger object. With
+    ``keep_sections``, the scale keeps thin parts thick (``fit_scale`` with ``thinnest_section`` of the unhollowed
+    shape)."""
     if solid_columns:
         occupied = extrude(np.round(height_map_of(occupied)).astype(np.int64))
 
@@ -201,7 +228,8 @@ def scaled_to(occupied: Mask, cells: float, solid_columns: bool = False, shell: 
         return hollow(mask, shell) if shell else mask
 
     # A shell's volume grows with its surface, about f ** 2.
-    f = fit_scale(lambda f: int(at(f).sum()), cells, 2 if shell else 3)
+    section = (lambda f: thinnest_section(resample(occupied, (f, f, f)))) if keep_sections else None
+    f = fit_scale(lambda f: int(at(f).sum()), cells, 2 if shell else 3, section=section)
     mask = at(f)
     return mask[bounds(mask)]
 
@@ -235,25 +263,43 @@ def preferred_colors(image: Image.Image, colors: Sequence[BrickColor]) -> np.nda
 SUPPORT_REACH = 3  # supports: overhang cells farther than this from a held cell get a column under them
 
 
-def with_supports(mask: Mask, reach: int = SUPPORT_REACH, period: int = SUPPORT_PERIOD,
-                  width: int = SUPPORT_WIDTH, max_height: int = 0) -> Mask:
+def with_supports(mask: Mask, reach: int = SUPPORT_REACH, width: int = SUPPORT_WIDTH, max_height: int = 0) -> Mask:
     """``mask`` plus support columns outside it (M12b step 1d). On each layer, an overhang cell (nothing of
     the mask below it) more than ``reach`` studs (chessboard distance) from every held cell (mask below) is
-    out of reach of a part cantilevered from the held cells; under those cells on the pillar lattice
-    (``width`` x ``width`` every ``period`` studs, as in ``hollow``), a column goes down to the next mask
-    cell or the ground. The columns are extra cells, not part of the object: measure fill and IoU against
-    ``mask``. With ``max_height`` > 0, only columns at most that many cells tall are added: short legs under
-    low overhangs (a caster base's hub), not towers under a table top that would use up the inventory."""
+    out of reach of a part cantilevered from the held cells. Columns cover them one at a time: while such a far
+    cell is left, a ``width`` x ``width`` column goes under the farthest one (ties: the first in row-major order;
+    clipped to the layer's overhang cells), and counts as held for the next. Each column goes down to the next
+    mask cell or the ground. A small overhang (a chair's hub) gets one column under its middle, a long one (a
+    large chair's caster arms, a car's floor) as many as it needs, at every scale (M12b sizing; a fixed lattice
+    put 1 to 72 cells under the same chair depending on its scale). The columns are extra cells, not part of the
+    object: measure fill and IoU against ``mask``. With ``max_height`` > 0, only cells with a drop of at most
+    that many cells get columns: short legs under low overhangs, not towers under a table top that would use
+    up the inventory."""
     result = mask.copy()
     _, nz, nx = mask.shape
-    lattice = (np.arange(nz)[:, None] % period < width) & (np.arange(nx)[None, :] % period < width)
     for y in range(1, mask.shape[0]):
         over = mask[y] & ~mask[y - 1]
         if not over.any():
             continue
         held = mask[y] & mask[y - 1]
-        far = over if not held.any() else over & (ndimage.distance_transform_cdt(~held, metric="chessboard") > reach)
-        column = far & lattice
+        eligible = over.copy()
+        if max_height:
+            empty = np.cumprod(~mask[y - 1::-1], axis=0)  # cells straight below, until the mask
+            eligible &= empty.sum(axis=0) <= max_height
+        column = np.zeros_like(over)
+        while True:
+            distance = (np.full(over.shape, nz + nx) if not held.any()
+                        else ndimage.distance_transform_cdt(~held, metric="chessboard"))
+            far = eligible & (distance > reach)
+            if not far.any():
+                break
+            z, x = np.unravel_index(int(np.argmax(np.where(far, distance, -1))), over.shape)
+            z0, x0 = min(max(z - (width - 1) // 2, 0), nz - width), min(max(x - (width - 1) // 2, 0), nx - width)
+            block = np.zeros_like(over)
+            block[z0:z0 + width, x0:x0 + width] = True
+            block &= over
+            column |= block
+            held = held | block
         if max_height:
             empty = np.cumprod(~mask[y - 1::-1], axis=0)  # cells straight below, until the mask
             column &= empty.sum(axis=0) <= max_height

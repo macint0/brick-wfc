@@ -318,9 +318,10 @@ python -m brickwfc.experiments.rebrickable_check --omr data/omr --out out/m12c/r
 - The write-up used the 63-part catalog (run before the 88-part catalog merged, at 056cff2). A rerun on main reads
   both inventories with corners and slopes, so the part counts and agreements change.
 
-### `results/m12b_brickgpt.md` (M12b steps 1a and 1c), with `m12b_brickgpt_summary.json`, `m12b_overhangs_figure_summary.json`, `m12b_hollow_summary.json`, `m12b_before_after.png`, `m12b_opentops_before_after.png`, `m12b_hollow_before_after.png`
+### `results/m12b_brickgpt.md` (M12b steps 1a and 1c), with `m12b_brickgpt_summary.json`, `m12b_hollow_summary.json`, `m12b_hollow_before_after.png`
 
-The 88-part rerun with the pipeline defaults (1a, Table 1a, the chair and table figures):
+The 88-part rerun with the pipeline defaults of fd9015b (box sizing, lattice support columns; 1a and Table 1a; its
+two figures are redrawn under `results/m12b_sizing.md`), at fd9015b:
 
 ```
 python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt_v2 --steps 1a 1d-figure --workers 10
@@ -336,6 +337,36 @@ python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt_v2 --steps 1a 1d
 Step 1c (hollow) is from commit 9c4a108, on the 63-part catalog with open tops only:
 `python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt --steps 1d 1c --workers 6` at that commit. The 21
 hollow runs take 6.3 CPU-hours.
+
+### `results/m12b_sizing.md` (M12b sizing: slopes, thin parts, support columns), with `m12b_sizing.json`, `m12b_sizing_before_after.png`, `m12b_before_after.png`, `m12b_opentops_before_after.png`, `m12b_chair_figure_summary.json`, `m12b_overhangs_figure_summary.json`
+
+The two figures, with the current defaults (fillable sizing, covering support columns, thin-aware scale):
+
+```
+python -m brickwfc.experiments.brickgpt --out out/m12b_sizing_fig --steps 1d-figure 1a-figure --workers 5
+```
+
+- Writes `overhangs_figure.md`, `overhangs_figure_summary.json`, `overhangs_before_after.png` (the table; copied to
+  `results/m12b_opentops_before_after.png`) and `chair_figure.md`, `chair_figure_summary.json`, `before_after.png`
+  (the chair; copied to `results/m12b_before_after.png`).
+- 24 runs, 50 candidates each: 17 CPU-hours, 3.8 hours wall time on 5 workers (the 10182-1 runs take 90–230 s per
+  candidate).
+- Their default-side runs are also the write-up's "after" runs for the tables and the chairs.
+
+The other runs of the write-up (`results/m12b_sizing.json` lists every run folder), one pipeline run each:
+
+```
+T=brickgpt:858f0955-846e-4138-84d9-df66b66eddc2; C=brickgpt:a712684f-8e79-4ecd-81de-11aef42b50d4
+K=brickgpt:4b15b71c-f400-4e54-a118-f0c2afba6e17
+python -m brickwfc.alt 5891-1 --shape $K --n 50 --k 1 --workers 5 --out out/m12b_sizing/5891-1/car_cover  # and 6378-1, 4956-1
+python -m brickwfc.alt 10182-1 --shape $K --n 20 --k 1 --workers 5 --out out/m12b_sizing/10182-1/car_cover
+```
+
+- At a0ec36c these are the "after" and "cover" arms. The lattice, centre-column, reserve and thin-first arms ran at
+  838ee58 (`--reserve-thin 9`, `--order thin`; lattice and centre column: `shapes.with_supports` at that commit and
+  a patched copy), the "v2" arm is `results/m12b_brickgpt.md` at fd9015b.
+- Two runs are the same run when their cache keys are equal (the key includes the target mask); the write-up's
+  carry-over checks compare the keys and every candidate of two run folders.
 
 ### `results/m12b_overhangs_tables.md` (M12b step 1d), with `m12b_overhangs_summary.json`
 
@@ -371,6 +402,8 @@ python -m brickwfc.experiments.skins --steps compare --sets 6378-1 5891-1 10182-
 ```
 
 - About 4 CPU-hours at 5 workers, most of it the 10182-1 arms and the symmetric arms (mirrored placement).
+- The step-3 write-ups are at 3c7ef1e: box sizing and lattice support columns. On main since M12b sizing
+  (`results/m12b_sizing.md`) the same commands build with fillable sizing and covering support columns.
 
 ### `results/m12b_skins_soft_sweep.md` (M12b step 3: soft skin preference, sweep of a), with `m12b_skins_soft_sweep.json`
 

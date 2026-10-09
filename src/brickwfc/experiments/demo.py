@@ -32,7 +32,7 @@ from brickwfc.alt.inputs import SETS_FILE, load_source
 from brickwfc.alt.pipeline import main as alt_main
 from brickwfc.alt.target import Target, load_target
 from brickwfc.bricks.colors import BrickColor
-from brickwfc.bricks.inventory import inventory_cells, utilization
+from brickwfc.bricks.inventory import target_volume, utilization
 from brickwfc.bricks.shapes import fill, iou
 from brickwfc.render3d import save_voxels_png
 
@@ -80,7 +80,9 @@ def summarize(set_number: str, generator: str, directory: Path, shape: tuple[Pat
               catalog: str = "m8") -> dict:
     candidates, stats = load_run(directory)
     source = load_source(set_number, catalog=catalog)
-    target = load_target(str(shape[0]), inventory_cells(source.inventory), source.colors, shape[1], shape[2])
+    sizing = stats["config"].get("sizing", "box")
+    target = load_target(str(shape[0]), target_volume(source.inventory, sizing), source.colors, shape[1], shape[2],
+                         keep_sections=sizing == "fillable")
     built = [c for c in candidates if "generate" not in c.failed]
     valid = [c for c in candidates if c.valid]
     # Shape metrics over builds that pass every check but connectivity, so the rows without the
@@ -171,7 +173,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     shape = write_spaceship()
     common = ["--shape", str(shape[0]), "--height-map", str(shape[1]), "--color-map", str(shape[2])]
     common += ["--catalog", args.catalog, "--style-version", args.style_version]
-    common += ["--max-clutch", "inf"]  # the M12 tables predate the real-clutch default
+    common += ["--max-clutch", "inf", "--sizing", "box"]  # the M12 tables predate these defaults
     common += ["--workers", str(args.workers)] if args.workers else []
     runs = [("d2", ["--n", str(args.n), "--k", "4"]),
             ("d2_no_connect", ["--n", str(args.n), "--k", "1", "--no-connect"])]
@@ -194,7 +196,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if best:
         years = {c["set"]: c["year"] for c in json.loads(SETS_FILE.read_text(encoding="utf-8"))["candidates"]}
         source = load_source(best[0]["set"], catalog=args.catalog)
-        target = load_target(str(shape[0]), inventory_cells(source.inventory), source.colors, shape[1], shape[2])
+        target = load_target(str(shape[0]), target_volume(source.inventory, "box"), source.colors, shape[1], shape[2])
         colors = [c for r in best for c in load_source(r["set"], catalog=args.catalog).colors]
         target_preview(target, colors, args.out / "target.png")
         labels = ["target: spaceship\nsilhouette + heights + colors\n(scaled to each set)"]

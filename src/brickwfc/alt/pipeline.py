@@ -54,7 +54,7 @@ from brickwfc.alt.inputs import (CATALOGS, DATA_DIR, SETS_FILE, STYLE_DIR, STYLE
                                  learned_style, load_source)
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
 from brickwfc.alt.target import Target, load_target, takes_supports
-from brickwfc.bricks.inventory import inventory_cells, utilization
+from brickwfc.bricks.inventory import SIZINGS, inventory_cells, target_volume, utilization
 from brickwfc.bricks.shapes import SHAPES, fill, iou
 from brickwfc.bricks.style import StyleStats, events, matched_divergence
 from brickwfc.bricks.voxelize import voxelize
@@ -97,6 +97,8 @@ class AltConfig:
     # chair's caster hub without towers under a table top (results/m12b_brickgpt.md)
     open_tops: bool = True  # with a target shape: studless top cells only under empty target cells
     order: str = "random"  # d2: cells of a layer visited in random or raster order
+    sizing: str = "fillable"  # target volume: slopes count their stud cells x 1 layer, and the scale keeps thin parts
+    # thick ("box": both as before M12b sizing)
     proposal: str | None = None  # d2: learned proposal model (.npz from training/, vocab.json next to it)
     skin: bool = False  # d2 with a target: largest parts first on the target's skin (M12b step 3)
     skin_power: float | None = None  # with skin: soft preference, choice weights x cells ** this (None: hard sort)
@@ -141,12 +143,13 @@ def cube_grid(cells: float, room: float) -> tuple[int, int, int]:
 def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -> Target | None:
     if config.shape is None:
         return None
-    return load_target(config.shape, inventory_cells(source.inventory), source.colors,
+    return load_target(config.shape, target_volume(source.inventory, config.sizing), source.colors,
                        Path(config.height_map) if config.height_map else None,
                        Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
                        config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
                        hollow=config.hollow, supports=config.supports and takes_supports(config.shape),
-                       support_height=config.support_height, symmetric=config.symmetric)
+                       support_height=config.support_height, symmetric=config.symmetric,
+                       keep_sections=config.sizing == "fillable")
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
@@ -360,6 +363,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         f"(default {defaults.support_height})")
     parser.add_argument("--order", choices=("random", "raster"), default=defaults.order,
                         help="d2: order the cells of a layer are visited in")
+    parser.add_argument("--sizing", choices=SIZINGS, default=defaults.sizing,
+                        help="target sizing: fillable (a slope counts its stud cells x 1 layer toward the volume, and "
+                        "the scale keeps thin parts thick) or box (as before)")
     parser.add_argument("--proposal", help="d2: learned proposal model (.npz, vocab.json next to it; see training/)")
     parser.add_argument("--skin", action="store_true",
                         help="d2 with a target shape: try the largest parts first on the target's outer surface")
@@ -418,7 +424,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         shape_exact=args.shape_exact, shape_columns=args.shape_columns, voxels=args.voxels, mesh_up=args.mesh_up,
         hollow=args.hollow, supports=args.supports, support_height=args.support_height, open_tops=not args.no_open_tops,
         order=args.order, proposal=args.proposal, skin=args.skin, skin_power=args.skin_power,
-        symmetric=args.symmetric,
+        symmetric=args.symmetric, sizing=args.sizing,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,

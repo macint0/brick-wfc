@@ -122,8 +122,9 @@ def mean_rows(rows: Sequence[dict]) -> dict:
 def measure_run(set_number: str, name: str, structure: brickgpt.Structure, runs: Path) -> dict:
     directory = runs / set_number / f"{structure.structure_id[:8]}_default"
     candidates, stats = load_run(directory)
-    mask = target_for(set_number, structure, "default").mask
-    obj = target_for(set_number, structure, "exact").mask
+    sizing = stats["config"].get("sizing", "box")  # the step-1a runs predate M12b sizing
+    mask = target_for(set_number, structure, "default", sizing).mask
+    obj = target_for(set_number, structure, "exact", sizing).mask
     plane = best_plane(obj)
     valid = [c for c in candidates if c.valid]
     chosen: Candidate | None = next((c for c in valid if stats["selected"] and c.seed == stats["selected"][0]["seed"]), None)
@@ -267,13 +268,15 @@ def run_arm(set_number: str, structure: brickgpt.Structure, arm: str, args: argp
     return directory
 
 
-def arm_masks(set_number: str, structure: brickgpt.Structure, arm: str) -> tuple[np.ndarray, np.ndarray]:
-    """(the arm's target, as built in; its object without support columns)."""
+def arm_masks(set_number: str, structure: brickgpt.Structure, arm: str,
+              sizing: str = "fillable") -> tuple[np.ndarray, np.ndarray]:
+    """(the arm's target, as built in; its object without support columns). ``sizing`` as the run's (runs before
+    M12b sizing: "box")."""
     source = load_source(set_number)
     symmetric = "--symmetric" in arm_flags(arm)
     shape = BRICKGPT_PREFIX + structure.structure_id
-    full = make_target(source, AltConfig(shape=shape, symmetric=symmetric)).mask
-    obj = make_target(source, AltConfig(shape=shape, symmetric=symmetric, supports=False)).mask
+    full = make_target(source, AltConfig(shape=shape, symmetric=symmetric, sizing=sizing)).mask
+    obj = make_target(source, AltConfig(shape=shape, symmetric=symmetric, supports=False, sizing=sizing)).mask
     return full, obj
 
 
@@ -287,9 +290,10 @@ def compare_cell(set_number: str, name: str, structure: brickgpt.Structure, args
     found = {(arm, c.seed): events(c.placed) for arm, (_, cands, _) in loaded.items() for c in cands if c.valid}
     size = min((e.count for e in found.values()), default=0)
     arms = {}
-    _, base_obj = arm_masks(set_number, structure, "base")
+    base_sizing = loaded["base"][2]["config"].get("sizing", "box") if "base" in loaded else "fillable"
+    _, base_obj = arm_masks(set_number, structure, "base", base_sizing)
     for arm, (directory, candidates, run_stats) in loaded.items():
-        full, obj = arm_masks(set_number, structure, arm)
+        full, obj = arm_masks(set_number, structure, arm, run_stats["config"].get("sizing", "box"))
         plane = best_plane(obj)
         valid = [c for c in candidates if c.valid]
         per = []
