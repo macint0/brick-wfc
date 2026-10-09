@@ -169,8 +169,8 @@ brick-wfc/
 ### M12b — 3D targets, learned proposal, looks (Mac, 2026-10-08)
 Mac's framing: BrickGPT-style generation from a real inventory with a bigger catalog, constraints guaranteed at
 decode time. The bottom-up builder is the decoder; the *proposal* in it is pluggable (today: M10 statistics).
-**Status (2026-10-09, 05:00):** steps 1, 2 and 4 done; the "Done when" below holds. Step 3 is open and conditional.
-**Three decisions for Mac** at the end of this entry.
+**Status (2026-10-09, 22:30):** steps 1–4 done and merged; the "Done when" below holds. **One decision for Mac**
+at the end of this entry (defaults for `--skin` / `--symmetric`).
 1. **True 3D targets — done** (`results/m12b_brickgpt.md`, `m12b_overhangs_tables.md`, figures
    `m12b_before_after.png`, `m12b_opentops_before_after.png`, `m12b_hollow_before_after.png`).
    `--shape brickgpt:<id>` loads a StableText2Brick structure (`bricks/brickgpt.py`; their data, not their model;
@@ -206,8 +206,21 @@ decode time. The bottom-up builder is the decoder; the *proposal* in it is plugg
    proposal is not a clear win over statistics at this size (5M params, 1500 steps); the statistics stay the
    no-training baseline and the pipeline default. Step 3 (symmetry, clean skins) is therefore still open:
    measure whether either arm produces them before building anything.
-3. **Mirror symmetry** and **clean skins** (largest fitting part on exposed surfaces): only if step 2 does not
-   already produce them; measure first.
+3. **Clean skins and mirror symmetry — done, measured first** (`results/m12b_skins_measure.md`: our skins show 3.6–8.4
+   distinct parts per all-skin 4×4 window where real sets show 1.5–4; 7–22% of mirrorable parts have their twin placed,
+   real sets 80–100%). `--skin` (`bricks/skin.py`: largest fitting part first on the target's surface) and
+   `--symmetric` (`bricks/symmetry.py`: the target's best vertical mirror plane; a car or table ≥ 0.8 symmetric after
+   scaling is made exactly symmetric, a chair at 0.71–0.77 is not; parts placed with their mirror image when it fits),
+   both **off by default**. 9 set × object pairs × 4 arms, 50 candidates each (`experiments/skins.py --steps compare`,
+   `results/m12b_skins.md`, sheet `m12b_skins_sheet.png`): skin +2.4 fill points, −0.7/−0.8 parts per window, judge
+   −0.017 (worse on 9/9, the judge sees contact statistics only); symmetric +35 points mirrored, fill −2, judge within
+   noise; both: cleanest skins, +31 mirrored, judge −0.021. The 6378-1 table/car under both flags are the first builds
+   that look like the object (table 66 → 81% fill, 4.2 → 2.4 parts per top window, 68% mirrored). Cost: on the 5891-1
+   chair `--skin` halves the valid builds (big parts cantilevered off the seat fail the clutch cap). A soft preference
+   `--skin-power a` (choice weight × cells^a on skin cells; `results/m12b_skins_soft_sweep.md`, `m12b_skins_soft.md`)
+   at a=1 gives about half the cleanup at a flat judge but gives back most of the visible gain; the hard sort stays
+   what `--skin` does (cf, 2026-10-09: the judge is not the arbiter of looks). Skins numbers are at 3c7ef1e (box sizing,
+   lattice supports); the symmetry threshold is being rechecked on the new masks.
 4. **Slopes and corner parts — done** (`results/m12b_catalog.md`): catalog 63 → 88 parts (corner plates/bricks,
    slopes, inverted, corner and ridge slopes, cheese slopes) with per-cell geometry (footprint, stud cells, seated
    cells; a slope is its bounding box, the sloped face accepts nothing). Style statistics v2 relearned. Recognized
@@ -219,10 +232,24 @@ paper skeleton in `paper/`. Not now: style-bias tuning, color logic, WFC.
 **Decisions (Mac, 2026-10-09 morning):** (a) yes: `--supports --support-height 6` is the default with a 3D target;
 (b) yes: `--max-clutch 1111` (real clutch, StableLego calibration) is the pipeline default everywhere; (c) done (fd9015b): 1a/1d rerun on the 88-part catalog
 with these defaults, figures redrawn; every valid build within 1111 by construction, chairs 58–81% fill on every set.
-Two open failures from that rerun: slope-heavy sets lose 15–24 fill points because `sized_for` counts a slope as its
-box (5891-1 car 73% on 63 parts → 61% on 88); narrow stems starve (4956-1 table 45/50 stop in the 3×3 post).
-In progress: `m12b-sizing` (ee) and step 3 skins/symmetry, measured first (`m12b-skins`, 64); (d) close step 2 with the result as is:
-statistics stay the baseline and the default, the comparison is a paper result, no more model training now.
+(d) close step 2 with the result as is: statistics stay the baseline and the default, the comparison is a paper result,
+no more model training now.
+**Sizing and supports (merged 3985e76, `results/m12b_sizing.md`, `m12b_sizing_before_after.png`; figures redrawn):** the
+rerun's two failures (slope-heavy sets lose 15–24 fill points because a slope counted as its box; the 4956-1 table
+starved in its post) and two more found on the way are fixed by construction, as defaults: **fillable sizing**
+(`--sizing fillable`; a slope counts its stud cells × 1 layer, studless slopes 0; `--sizing box` is the old path),
+**thin-aware scale** (among scale factors within ±5% of the target volume, the one whose thinnest horizontal section is
+thickest; nearest-neighbour resampling had thinned the 10182-1 chair's post from 8 cells to 3 and no support column could
+reach its seat), and **progressive support cover** (`shapes.with_supports`: 2×2 columns one at a time under the overhang
+cell farthest from every held cell until all are within 3 studs; replaces the 4-stud lattice, which put 1–72 cells under
+the same chair depending on scale; a single centre column failed at 10182-1 scale). Results, mean fill of valid
+candidates: 5891-1 car 61 → 77%, 4956-1 table 25 → 61% (0 → 100% reach the top), 5891-1 chair 58 → 68%, 4956-1 chair
+58 → 69%, 10182-1 car 83 → 87%; the others within noise. Known cost: 4956-1 car 73.3 → 72.0 (3 SE), valid 47 → 49.
+Measured and not adopted (code removed): parts reserved for thin sections, thin-first order. Support heights 6 and 9 give
+identical targets on all six demo objects. Lattice-era numbers are labelled "lattice at fd9015b" in the write-ups.
+**Decision for Mac:** make `--skin` and `--symmetric` the defaults for 3D targets? 64 recommends symmetric on, skin as a
+flag; cf recommends both on (the eye prefers them, the judge cannot see symmetry), with the 5891-1 chair's stability cost
+as the caveat. Nothing changes until Mac decides.
 **Done when:** the six-set demo re-rendered with a 3D target looks clearly better side by side (yes:
 `m12b_before_after.png`), every build still valid/stable/one piece (yes), the learned proposal is compared to
 statistics under the judge (yes, `m12b_proposal.md`, `m12b_proposal_shape.md`), and the per-set coverage rises (yes).
