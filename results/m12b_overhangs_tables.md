@@ -1,8 +1,9 @@
 # M12b step 1d — overhangs
 
 *History: these tables are from the 63-part catalog, before support columns (up to 6 cells) and the 1111 clutch
-cap became defaults; the 88-part rerun with the defaults and the redrawn table figure are in
-[`m12b_brickgpt.md`](m12b_brickgpt.md).*
+cap became defaults; their support columns are on the 4-stud lattice (replaced at a0ec36c). The 88-part rerun with
+the defaults is in [`m12b_brickgpt.md`](m12b_brickgpt.md) (lattice at fd9015b); the redrawn table figure and the
+current support rule in [`m12b_sizing.md`](m12b_sizing.md).*
 
 Targets are StableText2Brick structures (their data, not their model), each set's whole inventory, D2 + learned
 style, 50 candidates per run. Three ways to handle overhangs on the six objects × 3 sets (6378-1, 5891-1, 10182-1):
@@ -20,7 +21,8 @@ style, 50 candidates per run. Three ways to handle overhangs on the six objects 
   object's cells only. "Built outside object" counts the cells a build places in the columns.
 
 **Figure:** `results/m12b_opentops_before_after.png` showed the table on the six demo sets, exact | open tops, on
-the 63-part catalog; it is now redrawn on the 88-part catalog, exact | the pipeline defaults (see `m12b_brickgpt.md`).
+the 63-part catalog; it is now redrawn on the 88-part catalog at a0ec36c, exact | the pipeline defaults (see
+`m12b_sizing.md`).
 The figure runs below are the 63-part ones. A caption's fill is the pictured (selected) build's fill; the tables
 give the mean over all valid candidates.
 

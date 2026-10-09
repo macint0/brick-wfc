@@ -11,9 +11,12 @@
 
 The generator was already 3D, so the funnel, the guarantees and the judge are unchanged.
 
-**Which runs.** The 1a numbers, Table 1a and both before/after figures (chair, table) are a rerun on 2026-10-09 on
-the 88-part catalog (corners and slopes, M12b step 4, style v2) with the pipeline defaults above. Step 1c (hollow)
-and the 1d tables are from the 63-part catalog with open tops only, before the other two defaults.
+**Which runs.** The 1a numbers and every table here are a rerun on 2026-10-09 on the 88-part catalog (corners and
+slopes, M12b step 4, style v2) with the pipeline defaults above, **at fd9015b: box sizing and lattice support
+columns**. Both before/after figures (chair, table) are redrawn at a0ec36c (fillable sizing, support columns that
+cover every far overhang cell, thin-aware scale): their runs and the before/after numbers are in
+[`m12b_sizing.md`](m12b_sizing.md). Step 1c (hollow) and the 1d tables are from the 63-part catalog with open tops
+only, before the support and clutch defaults.
 
 ## Data: theirs, not their model
 
@@ -104,6 +107,9 @@ These findings led to the support and clutch defaults; numbers from `m12b_overha
 
 ### Before / after: `results/m12b_before_after.png`
 
+Redrawn at a0ec36c; its runs are tabled in `m12b_sizing.md` ("Figure runs (chair)"). The fill ranges below and
+"Table 1a, figure runs" are the lattice runs at fd9015b.
+
 The chair on the six M12 demo sets, both sides on the 88-part catalog and under the clutch cap:
 - **before:** the pipeline as of M12, the target as solid columns (the heightfield input, `--shape-columns`);
 - **after:** step 1 with the pipeline defaults: exact 3D cells, open tops, support columns up to 6 cells.
@@ -118,6 +124,10 @@ physically smaller (e.g. 10 × 8 × 39 vs 13 × 13 × 53 cells on 374-1). Its hi
 fill of an easier, block-shaped target.
 
 ### Before / after: `results/m12b_opentops_before_after.png`
+
+Redrawn at a0ec36c: a full table on every set, the 4956-1 failure below fixed by fillable sizing; its runs are
+tabled in `m12b_sizing.md` ("Figure runs (table)"). The numbers in this section and "Table 1d, figure runs" are the
+lattice runs at fd9015b.
 
 The table on the six demo sets: the exact target (no open tops, no support columns) | the pipeline defaults, both
 under the clutch cap. Mean fill exact → defaults: 374-1 53.0 → 53.6, 6378-1 16.0 → 54.3, 7743-1 28.8 → 63.0,
@@ -186,7 +196,7 @@ cap). \* inflated: a control run shared the CPU for the first 4 minutes.
 | bench | 5891-1 | 323 → 460 | 2517 → 4641 | 3/50 | 74.6 → 60.0 | 4.5 → 25.7 |
 | bench | 10182-1 | 1514 → 1665 | 9300 → 10471 | 0/50 | 83.2 → 80.8 | 29.6 → 72.5 |
 
-### Table 1a, figure runs. Before / after on the demo sets (chair; before: solid columns, after: exact cells, pipeline defaults)
+### Table 1a, figure runs. Before / after on the demo sets (chair; before: solid columns, after: exact cells, pipeline defaults; lattice at fd9015b)
 
 | set | target | grid (WxDxH) | target cells | valid % | cap rejected | fill % | IoU | best: parts | best: fill % | best: clutch | s/candidate |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -203,7 +213,7 @@ cap). \* inflated: a control run shared the CPU for the first 4 minutes.
 | 10182-1 | columns | 17x16x68 | 10570 | 74 | 13/50 | 80.1 | 0.80 | 1479 | 82.1 | 819.4 | 117.23 |
 | 10182-1 | exact, defaults | 23x22x94 | 10728 | 96 | 2/50 | 80.8 | 0.80 | 1266 | 81.4 | 263.4 | 102.47 |
 
-### Table 1d, figure runs. The table on the demo sets (exact | pipeline defaults; 88-part catalog)
+### Table 1d, figure runs. The table on the demo sets (exact | pipeline defaults; 88-part catalog; lattice at fd9015b)
 
 | object | set | target | object cells | support cells (% of object) | valid % | physics % | one piece % | object fill % | object IoU | overhang loss % | built outside object (cells) | best: parts | s/candidate |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -307,16 +317,15 @@ but it does not by itself make the surface more complete: thin 2-cell walls on a
 
 ## Reproduce
 
-The 88-part rerun (1a, Table 1a, both figures):
+The 88-part rerun (1a, Table 1a, the lattice figure runs), at fd9015b:
 
 ```
 python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt_v2 --steps 1a 1d-figure --workers 10
 ```
 
 It writes `results.md`, `summary.json`, `objects.png`, `before_after.png` (1a) and `overhangs_figure.md`,
-`overhangs_figure_summary.json`, `overhangs_before_after.png` (1d-figure). Committed copies:
-`results/m12b_brickgpt_summary.json`, `results/m12b_overhangs_figure_summary.json`, `results/m12b_before_after.png`,
-`results/m12b_opentops_before_after.png`. The 5891-1 catalog control:
+`overhangs_figure_summary.json`, `overhangs_before_after.png` (1d-figure). Committed copy: `results/m12b_brickgpt_summary.json`.
+The two figures are redrawn at a0ec36c (see `m12b_sizing.md`). The 5891-1 catalog control:
 
 ```
 CAR=brickgpt:4b15b71c-f400-4e54-a118-f0c2afba6e17
