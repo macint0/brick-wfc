@@ -49,7 +49,7 @@ from typing import Sequence
 import numpy as np
 
 from brickwfc.alt.candidates import GENERATORS, VERIFY_VERSION, Candidate, Context, generate
-from brickwfc.alt.features import feature_vector, occupancy
+from brickwfc.alt.features import completeness, feature_vector, occupancy
 from brickwfc.alt.inputs import (CATALOGS, DATA_DIR, SETS_FILE, STYLE_DIR, STYLE_FILES, STYLE_VERSION, Source,
                                  learned_style, load_source)
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
@@ -105,6 +105,8 @@ class AltConfig:
     skin_power: float | None = None  # with skin: soft preference, choice weights x cells ** this (None: hard sort)
     symmetric: bool = False  # d2 with a target: mirror-preserving scale + symmetric decoding (M12b step 3)
     symmetrize_min_score: float = SYMMETRIZE_MIN_SCORE  # with symmetric: a plane this good symmetrizes the object
+    holes: bool = False  # d2: hole-filling pass after the main pass and each connect round (M12b holes)
+    hang: bool = False  # d2 with holes: the hole pass may hang parts from parts above by their studs
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = 1111.0  # physics: keep builds needing at most this clutch per stud, in plate-cell weights;
     # 1111 is a real stud (calibrated in results/m12b_overhangs_tables.md); inf: no limit
@@ -167,7 +169,8 @@ def make_context(source: Source, stats: StyleStats, config: AltConfig, target: T
                    config.generator, config.max_clutch, config.wfc_time_limit_s, config.balanced,
                    config.bridge, config.connect, config.connect_rounds, config.open_tops and target is not None,
                    config.order, config.proposal or "", config.skin and target is not None,
-                   target.plane if target is not None and config.symmetric else None, config.skin_power)
+                   target.plane if target is not None and config.symmetric else None, config.skin_power,
+                   config.holes, config.hang)
 
 
 # Generation, resumable ---------------------------------------------------------------------------
@@ -194,6 +197,10 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
             key["skin_power"] = context.skin_power
     if context.plane is not None:  # likewise
         key["plane"] = [context.plane.axis, context.plane.total]
+    if context.holes:  # likewise
+        key["holes"] = True
+    if context.hang:  # likewise
+        key["hang"] = True
     if context.proposal:  # the model by content, so retrained weights are not mixed with old candidates
         key["proposal"] = hashlib.sha256(Path(context.proposal).read_bytes()).hexdigest()[:16]
     return json.loads(json.dumps(key))
@@ -321,7 +328,9 @@ def write_outputs(source: Source, context: Context, report: FunnelReport, out: P
                "seconds": c.seconds, "physics_seconds": c.physics_seconds}
         if context.mask is not None:
             filled = occupancy(c.placed, context.grid)
-            row.update(fill_pct=100 * fill(filled, context.mask), iou=iou(filled, context.mask))
+            done = completeness(filled, context.mask)
+            row.update(fill_pct=100 * fill(filled, context.mask), iou=iou(filled, context.mask), holes=done.holes,
+                       largest_hole=done.largest_hole, surface_pct=100 * done.surface)
         rows.append(row)
     if previews:
         write_sheet(previews, out / "sheet.png")
@@ -329,10 +338,28 @@ def write_outputs(source: Source, context: Context, report: FunnelReport, out: P
 
 
 def format_selected(rows: list[dict]) -> str:
-    lines = ["rank  seed  parts  used%   judge   clutch  steps"]
+    shaped = bool(rows) and "fill_pct" in rows[0]
+    lines = ["rank  seed  parts  used%   judge   clutch  steps" + ("  fill%  holes  largest  surface%" if shaped else "")]
     lines += [f"{r['rank']:4d} {r['seed']:5d} {r['parts']:6d} {r['utilization_pct']:6.1f} {r['judge']:7.3f} "
-              f"{r['clutch']:8.1f} {r['steps']:6d}" for r in rows]
+              f"{r['clutch']:8.1f} {r['steps']:6d}"
+              + (f" {r['fill_pct']:6.1f} {r['holes']:6d} {r['largest_hole']:8d} {r['surface_pct']:9.1f}" if shaped else "")
+              for r in rows]
     return "\n".join(lines)
+
+
+def valid_completeness(candidates: Sequence[Candidate], context: Context) -> dict | None:
+    """Means over the valid candidates of fill, holes, largest hole and surface completeness (with a target)."""
+    valid = [c for c in candidates if c.valid]
+    if context.mask is None or not valid:
+        return None
+    rows = []
+    for c in valid:
+        filled = occupancy(c.placed, context.grid)
+        done = completeness(filled, context.mask)
+        rows.append((100 * fill(filled, context.mask), done.holes, done.largest_hole, 100 * done.surface))
+    means = np.mean(rows, axis=0)
+    return {"valid": len(valid), "fill_pct": means[0], "holes": means[1], "largest_hole": means[2],
+            "surface_pct": means[3]}
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -379,6 +406,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--symmetrize-min-score", type=float, default=defaults.symmetrize_min_score,
                         help="with --symmetric: a mirror plane covering at least this share of the target makes it "
                         "exactly symmetric (adds the mirror image of its cells)")
+    parser.add_argument("--holes", action="store_true",
+                        help="d2: a hole-filling pass after the main pass and each connect round (every free target "
+                        "cell, every remaining part, largest first)")
+    parser.add_argument("--hang", action="store_true",
+                        help="with --holes: the hole pass may also hang a part from a part above by its studs "
+                        "(fills the lowest layer of overhangs)")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -415,8 +448,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, help="output directory (default out/alt/<input name>)")
     parser.add_argument("--fresh", action="store_true", help="discard cached candidates")
     args = parser.parse_args(argv)
-    if args.generator != "d2" and (args.proposal or args.order != "random" or args.skin or args.symmetric):
-        parser.error("--order, --proposal, --skin and --symmetric apply to --generator d2 only")
+    if args.generator != "d2" and (args.proposal or args.order != "random" or args.skin or args.symmetric
+                                   or args.holes or args.hang):
+        parser.error("--order, --proposal, --skin, --symmetric, --holes and --hang apply to --generator d2 only")
+    if args.hang and not args.holes:
+        parser.error("--hang goes with --holes")
     if args.skin_power is not None and not args.skin:
         parser.error("--skin-power goes with --skin")
 
@@ -430,6 +466,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         hollow=args.hollow, supports=args.supports, support_height=args.support_height, open_tops=not args.no_open_tops,
         order=args.order, proposal=args.proposal, skin=args.skin, skin_power=args.skin_power,
         symmetric=args.symmetric, symmetrize_min_score=args.symmetrize_min_score, sizing=args.sizing,
+        holes=args.holes, hang=args.hang,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
@@ -458,6 +495,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     rows = write_outputs(source, context, report, out)
     print(format_stages(report.requested, report.stages, report.check_failures))
     print(format_selected(rows))
+    complete = valid_completeness(candidates, context)
+    if complete is not None:
+        print(f"valid builds ({complete['valid']}), means: fill {complete['fill_pct']:.1f}%, holes {complete['holes']:.1f} "
+              f"(largest {complete['largest_hole']:.0f} cells), surface {complete['surface_pct']:.1f}%")
 
     clutches = [c.clutch for c in candidates if not math.isnan(c.clutch)]
     stats_json = {
@@ -476,6 +517,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "physics_checked": len(clutches), "physics_stable": sum(math.isfinite(v) for v in clutches),
         "clusters_per_build_median": float(np.median([c.clusters for c in candidates])),
         "connected": sum(c.clusters == 1 for c in candidates),
+        "valid_completeness": complete,
         "wall_time_s": time.perf_counter() - start,
         "selected": rows,
     }

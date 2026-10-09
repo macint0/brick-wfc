@@ -8,7 +8,7 @@ cap (a compared method, see CLAUDE.md). Both use the same styled tileset, and bo
 column's preferred color (from a color image, ``target.py``) first.
 
 Checks, in order: ``integrity`` (every part whole, nothing on a tile), ``inventory`` (no part overused),
-``support`` (every part rests on a stud), ``shape`` (nothing outside the target shape), and, only for
+``support`` (every part rests on a stud; with ``hang``, is joined to the ground through stud joints), ``shape`` (nothing outside the target shape), and, only for
 builds that pass those, ``physics`` (finite required clutch per stud on a table, at most ``max_clutch``),
 and ``disconnected`` (the build is more than one cluster of stud-connected parts, so it falls apart when
 lifted; ``balance.clusters``).
@@ -75,6 +75,8 @@ class Context:
     skin: bool = False  # d2: largest parts first on the target's skin (M12b step 3, see bottomup)
     plane: Plane | None = None  # d2: symmetric decoding across this mirror plane (M12b step 3)
     skin_power: float | None = None  # d2 with skin: soft preference, weights x cells ** this (None: hard sort)
+    holes: bool = False  # d2: hole-filling pass after the main pass and each connect round (M12b, see bottomup)
+    hang: bool = False  # d2 with holes: the hole pass may hang parts from parts above (support then hanging=True)
 
 
 @dataclass(frozen=True)
@@ -119,7 +121,8 @@ def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.nd
                                   connect_rounds=context.connect_rounds, open_tops=context.open_tops,
                                   order=context.order,
                                   proposal=load_proposal(context.proposal) if context.proposal else None,
-                                  skin=context.skin, skin_power=context.skin_power)
+                                  skin=context.skin, skin_power=context.skin_power, holes=context.holes,
+                                  hang=context.hang)
         return builder.build(context.grid, np.random.default_rng(seed), context.inventory, context.mask,
                              context.preferred, context.plane)
     constraints = [SupportConstraint(parts), InventoryConstraint(parts, context.inventory)]
@@ -153,7 +156,7 @@ def verify(context: Context, parts: PartSet, grid: np.ndarray) -> tuple[list[Pla
         failed.append("integrity")
     if overuse(placed, context.inventory):
         failed.append("inventory")
-    if not is_stable(placed, filled):
+    if not is_stable(placed, filled, hanging=context.hang):
         failed.append("support")
     if context.mask is not None and outside(filled, context.mask):
         failed.append("shape")
