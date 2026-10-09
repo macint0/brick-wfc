@@ -59,3 +59,111 @@ build's own colors would hide the red.
 - **Cars:** scattered surface patches, and more of the unfilled cells inside (35–51% of them).
 
 What goes missing is mostly overhang undersides and tips, not an interior shortfall.
+
+
+## Why cells stay empty: traced replay
+
+**Builds.** 10 builds per pair, 160 in all: the selected build and the 9 lowest-seed other valid candidates. Each
+is replayed from its cached run with a trace on the builder (`BottomUpBuilder.trace`). The trace draws nothing from
+the generator, and every replay was checked to be identical to the cached build (160/160). The run context is
+rebuilt from the run's stats.json, and its cache key must equal the cached one.
+
+**Causes.** Every unfilled target cell gets the cause of its last visit, as the builder saw it then:
+
+- **support**: no stud within a part's reach below, or no placement that fits the free space has a stud under it;
+- **repair**: the cell was filled before a connect repair returned its part to the inventory (the cause of the
+  refill's miss is in the last column);
+- **inventory**: a placement fits and balances, but only with a part that is used up;
+- **skipped**: the solid-share draw passed the cell over (about 5% of visits), and no later part covered it;
+- **balance**: placements fit, but each one would tip its cluster over;
+- **geometry**: no part fits the free space (target too narrow there, or the open-top or tile rules);
+- **missed**: a remaining part fits and balances, yet the builder placed nothing (the `_fit_key` bug below).
+
+Shares are of all unfilled cells of the pair's 10 builds; the mean row weighs each pair the same.
+
+| object | set | builds | unfilled / build | support % | repair % | inventory % | skipped % | balance % | geometry % | missed % | on surface % | repair refill: support / inventory / skipped % |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| chair | 6378-1 | 10 | 657 | 65 | 25 | 4 | 4 | 1 | 0 | 0 | 82 | 87 / 0 / 7 |
+| chair | 5891-1 | 10 | 846 | 61 | 26 | 5 | 4 | 3 | 2 | 0 | 82 | 88 / 0 / 6 |
+| chair | 4956-1 | 10 | 1343 | 70 | 17 | 6 | 4 | 2 | 0 | 1 | 74 | 89 / 0 / 6 |
+| chair | 374-1 | 10 | 583 | 61 | 21 | 12 | 4 | 1 | 0 | 0 | 85 | 86 / 1 / 7 |
+| chair | 7743-1 | 10 | 638 | 65 | 24 | 5 | 4 | 1 | 0 | 1 | 83 | 87 / 0 / 8 |
+| chair | 10182-1 | 10 | 1660 | 59 | 21 | 14 | 4 | 0 | 2 | 0 | 72 | 91 / 0 / 5 |
+| table | 6378-1 | 10 | 853 | 67 | 26 | 4 | 3 | 0 | 0 | 0 | 70 | 82 / 0 / 6 |
+| table | 5891-1 | 10 | 1308 | 73 | 21 | 3 | 4 | 0 | 0 | 0 | 61 | 84 / 0 / 7 |
+| table | 4956-1 | 10 | 1729 | 76 | 11 | 8 | 4 | 0 | 0 | 0 | 55 | 82 / 3 / 7 |
+| table | 374-1 | 10 | 942 | 62 | 27 | 6 | 3 | 0 | 0 | 0 | 72 | 81 / 0 / 7 |
+| table | 7743-1 | 10 | 796 | 63 | 31 | 1 | 3 | 1 | 0 | 0 | 73 | 82 / 0 / 6 |
+| table | 10182-1 | 10 | 2024 | 76 | 6 | 12 | 4 | 0 | 1 | 0 | 55 | 87 / 1 / 6 |
+| car | 6378-1 | 10 | 499 | 67 | 0 | 23 | 6 | 1 | 0 | 2 | 59 | 62 / 19 / 12 |
+| car | 5891-1 | 10 | 642 | 75 | 0 | 16 | 6 | 1 | 1 | 1 | 54 | 73 / 13 / 10 |
+| car | 4956-1 | 10 | 1286 | 63 | 3 | 25 | 5 | 0 | 0 | 4 | 46 | 80 / 8 / 7 |
+| car | 10182-1 | 10 | 1215 | 55 | 1 | 29 | 5 | 0 | 2 | 8 | 46 | 78 / 10 / 7 |
+| **mean of pairs** | | | | 66 | 16 | 11 | 4 | 1 | 1 | 1 | | |
+
+Per cause, the share of its cells on the target's outer surface (all pairs pooled):
+
+| cause | cells | on surface % |
+|---|---:|---:|
+| inventory | 18892 | 48 |
+| support | 113819 | 61 |
+| balance | 1012 | 58 |
+| repair | 26172 | 95 |
+| skipped | 7188 | 60 |
+| geometry | 1363 | 50 |
+| missed | 1768 | 37 |
+
+**The three biggest causes:**
+
+1. **Support, 66% of unfilled cells** (55–76% per pair). This is the underside of everything that overhangs: the
+   seat, the table top, the car's body over its wheels, the backrest's lower rim. Bottom-up, a part needs a stud
+   below it within reach, and the lowest layer of an overhang never has one.
+2. **Connect repair, 16%** (0–31%; 17–31% on chairs and tables, 0–3% on cars). These are the chair's caster arm
+   tips and the table's foot ends: they start as separate stacks, lose to the largest cluster, and go back to the
+   inventory. The last repair round refills only above the ground, so the tips are not rebuilt. 95% of these cells
+   are on the surface.
+3. **Inventory, 11%** (1–14% on chairs and tables, 16–29% on cars). Parts that would fit are used up. On the cars
+   this is the second cause: the car's body is a large volume of small cells.
+
+Skipped (4%), balance (1%), geometry (1%) and missed (1%) are small.
+
+### What a hanging rule can reach
+
+Support-blocked cells with a placed part directly above them (1 cell up) or within 2 cells up, in the final build.
+A part hanging by its studs from the part above reaches the first group directly; the second needs a second hung
+part below it. Repair cells are listed for contrast: nothing is above a caster arm tip.
+
+| object | set | support cells | part 1 up % | part 1-2 up % | repair cells | part 1 up % | part 1-2 up % |
+|---|---|---:|---:|---:|---:|---:|---:|
+| chair | 6378-1 | 4296 | 24 | 42 | 1635 | 0 | 1 |
+| chair | 5891-1 | 5121 | 30 | 51 | 2165 | 0 | 1 |
+| chair | 4956-1 | 9348 | 27 | 48 | 2296 | 1 | 2 |
+| chair | 374-1 | 3539 | 32 | 54 | 1249 | 1 | 1 |
+| chair | 7743-1 | 4141 | 32 | 52 | 1512 | 0 | 0 |
+| chair | 10182-1 | 9713 | 38 | 62 | 3562 | 1 | 1 |
+| table | 6378-1 | 5704 | 24 | 39 | 2194 | 0 | 0 |
+| table | 5891-1 | 9490 | 25 | 47 | 2725 | 0 | 0 |
+| table | 4956-1 | 13198 | 25 | 47 | 1934 | 1 | 2 |
+| table | 374-1 | 5867 | 31 | 55 | 2555 | 0 | 0 |
+| table | 7743-1 | 4990 | 32 | 53 | 2474 | 0 | 0 |
+| table | 10182-1 | 15436 | 38 | 63 | 1289 | 1 | 2 |
+| car | 6378-1 | 3358 | 29 | 53 | 16 | 6 | 31 |
+| car | 5891-1 | 4828 | 34 | 62 | 30 | 0 | 3 |
+| car | 4956-1 | 8133 | 32 | 52 | 381 | 6 | 14 |
+| car | 10182-1 | 6657 | 39 | 59 | 155 | 8 | 17 |
+
+24–39% of support-blocked cells have a part directly above, 39–63% within 2 cells. The rest have empty target above
+them too: they lie under other unfilled cells (an overhang's lower layers, whose upper layers are themselves
+missing). Repair cells have almost nothing above them (0–8%, the car's 31% is 16 cells). A hanging rule cannot reach
+them; keeping the tips needs a different repair.
+
+### Builder bug: `_fit_key` ignores studs
+
+The probe of the "missed" cells (the 4956-1 chair, seed 4: 68 of them) found one cause. In `_fill`, a part that
+fails at a cell puts its box (`_fit_key`: size_y, size_z, size_x for a rectangular part) in a `failed` set, and
+every other part with that box is then skipped at that cell. Since open tops (M12b step 1d), whether a part fits
+also depends on its studs: a tile's studless top may not sit under a target cell, a plate's may. So a tile that fails
+there blocks the studded plate of the same box. In that build every missed visit is a round 1x1 plate (6141) skipped
+after a 1x1 tile failed, the plain 1x1 plate being used up. 1768 of 170,214 unfilled cells (1%) are missed; cars
+show the most (2–8%). Fixed on this branch (below); every number before the fix, `m12b_brickgpt`, `m12b_sizing`,
+`m12b_skins` included, was produced with the bug.

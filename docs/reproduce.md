@@ -448,7 +448,7 @@ python -m brickwfc.experiments.skins --steps compare --sets 5891-1 --objects cha
 - `chair_5891-1.json` and `_sheet.png` are copied to `results/m12b_symmetry_threshold_chair.json` and `.png`.
 - The chair section and the notes at the end of the write-up are written by hand (from `chair_5891-1.md`); the threshold step rewrites the file, so copy them back.
 
-### `results/m12b_complete.md` (M12b completeness: fill, holes, surface, missing maps), with `m12b_complete_final.json`, `m12b_complete_missing.png`
+### `results/m12b_complete.md` (M12b completeness: fill, holes, surface, missing maps, causes), with `m12b_complete_final.json`, `m12b_complete_missing.png`, `m12b_complete_trace.json`
 
 The final-state pass reads the sizing runs (`out/m12b_sizing_fig`, `out/m12b_sizing`; see `m12b_sizing.md`). It runs no
 generation and takes about a minute:
@@ -459,6 +459,19 @@ python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --ste
 
 It writes `final.md`, `final.json` (copied to `results/m12b_complete_final.json`) and `missing_sheet.png` (copied to
 `results/m12b_complete_missing.png`), plus one missing map per pair under `missing/`.
+
+The traced replay (10 builds per pair, the selected one first) and its report, at 6095e48 (before the `_fit_key`
+fix, which changes builds; the replay must match the cached candidates):
+
+```
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps trace --per-pair 10 --workers 5
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps report
+```
+
+- The trace step replays 160 builds, about 35 minutes on 5 workers. It writes `traces/<object>_<set>.jsonl` (resumable)
+  and stops if a replay differs from its cached build.
+- The report step writes `trace.md` and `trace.json` (copied to `results/m12b_complete_trace.json`); the trace section
+  of the write-up holds its tables.
 
 ## Not run yet
 

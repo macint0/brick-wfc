@@ -362,11 +362,106 @@ def step_trace(args: argparse.Namespace) -> None:
             print(f"  {i}/{len(futures)} {path.stem} seed {row['seed']}: {row['causes']}", flush=True)
 
 
+# Trace report ---------------------------------------------------------------------------------------------
+
+
+def trace_rows(args: argparse.Namespace) -> list[dict]:
+    """Per pair: the traced builds' causes, pooled, and the selected build's."""
+    rows = []
+    for set_number, obj, directory in pairs(args.runs):
+        path = args.out / "traces" / f"{obj}_{set_number}.jsonl"
+        if not path.exists():
+            continue
+        builds = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        key, stats, candidates = load_run(directory)
+        selected = stats["selected"][0]["seed"] if stats["selected"] else None
+        pooled = {k: {c: sum(b[k][c] for b in builds) for c in CAUSES} for k in ("causes", "on_surface", "repair_refill")}
+        rows.append({"set": set_number, "object": obj, "builds": len(builds),
+                     "unfilled": sum(b["unfilled"] for b in builds), **pooled,
+                     "above": above_counts(builds, {c.seed: c for c in candidates}, key_mask(key).shape),
+                     "selected": next((b for b in builds if b["seed"] == selected), None)})
+    return rows
+
+
+def above_counts(builds: list[dict], candidates: dict[int, Candidate], shape: tuple[int, int, int]) -> dict:
+    """Per cause (support, repair): [cells, with a placed part 1 cell up, with one 1 or 2 cells up] in the final
+    build: what a part hanging from the part above could reach."""
+    counts = {c: [0, 0, 0] for c in ("support", "repair")}
+    for b in builds:
+        filled = occupancy(candidates[b["seed"]].placed, shape)
+        up1 = np.zeros_like(filled)
+        up1[:-1] = filled[1:]
+        up2 = up1.copy()
+        up2[:-2] |= filled[2:]
+        for y, z, x, cause in b["cells"]:
+            if CAUSES[cause] in counts:
+                t = counts[CAUSES[cause]]
+                t[0] += 1
+                t[1] += bool(up1[y, z, x])
+                t[2] += bool(up2[y, z, x])
+    return counts
+
+
+def above_report(rows: list[dict]) -> str:
+    lines = ["| object | set | support cells | part 1 up % | part 1-2 up % | repair cells | part 1 up % | part 1-2 up % |",
+             "|---|---|---:|---:|---:|---:|---:|---:|"]
+    for r in rows:
+        s, p = r["above"]["support"], r["above"]["repair"]
+        lines.append(f"| {r['object']} | {r['set']} | {s[0]} | {pct(s[1], s[0])} | {pct(s[2], s[0])} | {p[0]} | "
+                     f"{pct(p[1], p[0])} | {pct(p[2], p[0])} |")
+    return "\n".join(lines)
+
+
+SHOWN = ("support", "repair", "inventory", "skipped", "balance", "geometry", "missed")
+
+
+def pct(part: float, whole: float) -> str:
+    return f"{100 * part / whole:.0f}" if whole else "-"
+
+
+def trace_report(rows: list[dict]) -> str:
+    head = " | ".join(f"{c} %" for c in SHOWN)
+    lines = [f"| object | set | builds | unfilled / build | {head} | on surface % | repair refill: support / inventory / skipped % |",
+             "|---|---|---:|---:|" + "---:|" * len(SHOWN) + "---:|---:|"]
+    total = {c: 0 for c in CAUSES}
+    for r in rows:
+        u = r["unfilled"]
+        for c in CAUSES:
+            total[c] += r["causes"][c] / u if u else 0  # each pair weighs the same
+        refill, rep = r["repair_refill"], r["causes"]["repair"]
+        lines.append(f"| {r['object']} | {r['set']} | {r['builds']} | {u / r['builds']:.0f} | "
+                     + " | ".join(pct(r["causes"][c], u) for c in SHOWN)
+                     + f" | {pct(sum(r['on_surface'].values()), u)} | "
+                     f"{pct(refill['support'], rep)} / {pct(refill['inventory'], rep)} / {pct(refill['skipped'], rep)} |")
+    n = len(rows)
+    lines.append("| **mean of pairs** | | | | " + " | ".join(f"{100 * total[c] / n:.0f}" for c in SHOWN) + " | | |")
+    return "\n".join(lines)
+
+
+def surface_split(rows: list[dict]) -> str:
+    """Per cause, the share of its cells on the target's surface (pooled over every pair)."""
+    lines = ["| cause | cells | on surface % |", "|---|---:|---:|"]
+    for c in CAUSES:
+        cells = sum(r["causes"][c] for r in rows)
+        if cells:
+            lines.append(f"| {c} | {cells} | {pct(sum(r['on_surface'][c] for r in rows), cells)} |")
+    return "\n".join(lines)
+
+
+def step_report(args: argparse.Namespace) -> None:
+    rows = trace_rows(args)
+    (args.out / "trace.json").write_text(json.dumps([{k: v for k, v in r.items() if k != "selected"} for r in rows],
+                                                    indent=2), encoding="utf-8")
+    text = trace_report(rows) + "\n\n" + surface_split(rows) + "\n\n" + above_report(rows) + "\n"
+    (args.out / "trace.md").write_text(text, encoding="utf-8")
+    print(text)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.complete", description=__doc__.splitlines()[0])
     parser.add_argument("--runs", type=Path, default=Path("out"), help="folder holding m12b_sizing_fig and m12b_sizing")
     parser.add_argument("--out", type=Path, default=Path("out/m12b_complete"))
-    parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace"])
+    parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report"])
     parser.add_argument("--per-pair", type=int, default=10, help="trace: builds replayed per pair (selected first)")
     parser.add_argument("--workers", type=int, default=5)
     args = parser.parse_args(argv)
@@ -375,6 +470,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         step_final(args)
     if "trace" in args.steps:
         step_trace(args)
+    if "report" in args.steps:
+        step_report(args)
     return 0
 
 
