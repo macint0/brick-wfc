@@ -62,6 +62,26 @@ style still decides among them (a -> infinity is the hard sort). With a mirror
 fits there (every rule as for any part, balance included) and the inventory has it: in the part's color, else
 in the first color of that part left (in the choices' fixed order). Both only reorder or add placements that
 pass the same checks, so every guarantee stays.
+
+Completeness (M12b holes), off by default (builds as before). With ``holes=True`` (needs ``any_offset``), a
+hole-filling pass follows the main pass and each connect round, over the same layers as that pass (the last
+connect round's: above the ground only, so the build stays one piece). It visits every free cell of
+``allowed``, bottom layer first, and tries every part the inventory still has at every offset that covers the
+cell, with no empty draw: the largest footprint first (then the most cells), so 1 x 1 plates and bricks are
+left to finish holes rather than spent early; among parts of the same size, the sampled order (style,
+preferred color, proposal, skin weights) decides. A part is placed if any fits, under every rule of the main
+pass (inventory, support, balance, shape, open tops; mirror images with a ``plane``). Sweeps repeat until one
+places nothing (a part can make another fit: a stud to rest on, a cluster that now balances), so when the pass
+ends no remaining part fits at any free cell it visits.
+
+With ``hang=True`` as well (needs ``holes``), the hole pass has a second support mode: a part is also supported
+if one of its stud cells sits directly under a placed part's seated cell (a flat underside that takes a stud;
+not a slope's open bottom), i.e. it hangs from the part above by the same stud joint as a part resting on it.
+The main pass stays bottom-up; by the time the hole pass runs the parts above exist, so it reaches the lowest
+layer of an overhang, which bottom-up cantilevering never does (it has no stud below), and its sweeps let a hung
+part carry another under it. A hung part joins the cluster of the parts it hangs from for the balance check, and
+the build is then supported in the sense of ``support.is_stable(hanging=True)``: every part is joined to the
+ground through stud joints. Physics needs no change: the LP already lets a stud joint hold a part up (clutch).
 """
 
 from __future__ import annotations
@@ -90,14 +110,20 @@ class BottomUpBuilder:
                  balanced: bool = False, bridge: bool = False, connect: bool = False,
                  connect_rounds: int = 1, open_tops: bool = False, order: str = "random",
                  proposal: Proposal | None = None, proposal_strength: float = 1.0, skin: bool = False,
-                 skin_power: float | None = None) -> None:
+                 skin_power: float | None = None, holes: bool = False, hang: bool = False) -> None:
         if bridge and not (balanced and any_offset):
             raise ValueError("bridge needs balanced=True and any_offset=True")
+        if holes and not any_offset:
+            raise ValueError("holes needs any_offset=True")
+        if hang and not holes:
+            raise ValueError("hang needs holes=True")
         if order not in ("random", "raster"):
             raise ValueError(f"order must be 'random' or 'raster', not {order!r}")
         self.order = order
         self.skin = skin
         self.skin_power = skin_power  # None: hard largest-first sort on the skin; a: weights x cells ** a
+        self.holes = holes
+        self.hang = hang  # holes: parts may also hang from a part above by their studs
         self.proposal = proposal
         self.proposal_strength = proposal_strength
         self.parts = parts
@@ -115,6 +141,7 @@ class BottomUpBuilder:
         shapes = {info.shape for info in parts.infos if info.solid}
         self.cell_masks = {shape: _CellMasks(shape) for shape in shapes if not shape.rectangular}
         self.open_bottoms = any(len(shape.geometry.seated) < len(shape.footprint) for shape in shapes)
+        self.heights = sorted({shape.size_y for shape in shapes})
         # Same priors as WFC: a cell's chance of holding (shape, color) is the summed weight of
         # that pair's tiles; the solid share is the solid tiles' share of all weight.
         totals: dict[tuple, float] = {}
@@ -128,6 +155,8 @@ class BottomUpBuilder:
         self.choice_color_names = np.array([color.name for _, color in self.choices])
         self.choice_cells = np.array([shape.cells for shape, _ in self.choices])
         self.skin_weights = None if skin_power is None else self.choice_cells.astype(float) ** skin_power
+        # Hole pass order: largest footprint first, then most cells (a 1 x 1 brick before a 1 x 1 plate).
+        self.choice_size = np.array([len(shape.footprint) * 1000 + shape.cells for shape, _ in self.choices])
         self.shape_colors: dict[Shape, list[BrickColor]] = {}  # colors each shape has tiles in, in choice order
         for shape, color in self.choices:
             self.shape_colors.setdefault(shape, []).append(color)
@@ -158,6 +187,8 @@ class BottomUpBuilder:
         skin = surface(target) if self.skin and target is not None else None
         state = self._new_state(shape, inventory, target, skin, plane)
         self._fill(state, range(shape[0]), rng, allowed, preferred)
+        if self.holes:
+            self._fill_holes(state, range(shape[0]), rng, allowed, preferred)
         for round_ in range(self.connect_rounds if self.connect else 0):
             found = clusters(state.placed)
             if len(found) <= 1:
@@ -174,7 +205,10 @@ class BottomUpBuilder:
                 self._put(state, part)
             state.remaining = remaining
             last = round_ == self.connect_rounds - 1
-            self._fill(state, range(1 if last else 0, shape[0]), rng, allowed, preferred)
+            layers = range(1 if last else 0, shape[0])
+            self._fill(state, layers, rng, allowed, preferred)
+            if self.holes:
+                self._fill_holes(state, layers, rng, allowed, preferred)
         return state.grid
 
     def _new_state(self, shape: tuple[int, int, int], inventory: Mapping[tuple[str, str], int] | None,
@@ -202,16 +236,8 @@ class BottomUpBuilder:
                 # Try parts in weighted-random order until one fits here. Whether a part fits depends
                 # only on its box, so once a box size fails here, other parts of that size are skipped.
                 failed: set[tuple[int, int, int]] = set()
-                p = self.choice_p if self.style is None else self._styled_p(state.owner, state.placed, y, z, x)
-                if preferred is not None and preferred[z, x]:
-                    p = p * np.where(self.choice_color_names == preferred[z, x], PREFERRED_BOOST, 1.0)
-                    p = p / p.sum()
-                if state.session is not None and reachable[z, x]:
-                    p = self._proposed_p(p, state.session, y, z, x)
+                p = self._cell_p(state, y, z, x, preferred, bool(reachable[z, x]))
                 on_skin = state.skin is not None and bool(state.skin[y, z, x])
-                if on_skin and self.skin_weights is not None:  # soft: larger parts weigh more on the skin
-                    p = p * self.skin_weights
-                    p = p / p.sum()
                 order = rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p)
                 if on_skin and self.skin_weights is None:  # hard: largest first on the skin
                     order = order[np.argsort(-self.choice_cells[order], kind="stable")]
@@ -236,8 +262,93 @@ class BottomUpBuilder:
                         fit_map.reset()
                         break
 
-    def _put(self, state: "_State", part: PlacedPart) -> None:
-        """Record a placed part in every structure of ``state``."""
+    def _cell_p(self, state: "_State", y: int, z: int, x: int, preferred: np.ndarray | None,
+                reachable: bool) -> np.ndarray:
+        """Choice probabilities at cell (y, z, x): base weights, times the style's ratios, the preferred color's
+        boost, the proposal's weights (where some part can rest) and the soft skin weights."""
+        p = self.choice_p if self.style is None else self._styled_p(state.owner, state.placed, y, z, x)
+        if preferred is not None and preferred[z, x]:
+            p = p * np.where(self.choice_color_names == preferred[z, x], PREFERRED_BOOST, 1.0)
+            p = p / p.sum()
+        if state.session is not None and reachable:
+            p = self._proposed_p(p, state.session, y, z, x)
+        if state.skin is not None and state.skin[y, z, x] and self.skin_weights is not None:
+            p = p * self.skin_weights  # soft: larger parts weigh more on the skin
+            p = p / p.sum()
+        return p
+
+    def _fill_holes(self, state: "_State", layers: range, rng: np.random.Generator, allowed: np.ndarray,
+                    preferred: np.ndarray | None) -> None:
+        """The hole-filling pass (see the module docstring): sweeps over ``layers`` until one places nothing."""
+        _, nz, nx = state.filled.shape
+        changed = True
+        while changed:
+            changed = False
+            for y in layers:
+                if state.remaining is not None and not any(n > 0 for n in state.remaining.values()):
+                    return
+                reachable = self._reachable(state.studs, y)
+                if self.hang:
+                    reachable = reachable | self._hang_reachable(state, y)
+                cells = np.argwhere(allowed[y] & ~state.filled[y] & reachable)
+                if not len(cells):
+                    continue
+                if self.order == "random":
+                    cells = cells[rng.permutation(len(cells))]
+                open_bottom = state.open_bottom if self.open_bottoms else None
+                fit_map = _FitMap(state.filled, state.studs, allowed, y, self._studless_top if self.open_tops else None,
+                                  open_bottom, state.open_bottom if self.hang else None)
+                for z, x in cells.tolist():
+                    if state.filled[y, z, x]:  # taken by a part placed at a cell visited earlier
+                        continue
+                    if self._fill_hole(state, y, z, x, rng, allowed, preferred, fit_map):
+                        changed = True
+
+    def _fill_hole(self, state: "_State", y: int, z: int, x: int, rng: np.random.Generator, allowed: np.ndarray,
+                   preferred: np.ndarray | None, fit_map: "_FitMap") -> bool:
+        """Place the first part that fits covering free cell (y, z, x), largest first; whether one was placed."""
+        p = self._cell_p(state, y, z, x, preferred, True)
+        order = rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p)
+        order = order[np.argsort(-self.choice_size[order], kind="stable")]
+        failed: set = set()
+        for choice in order:
+            part_shape, color = self.choices[choice]
+            if state.remaining is not None and state.remaining.get((part_shape.part.name, color.name), 0) <= 0:
+                continue
+            box = _fit_key(part_shape)
+            if box in failed:
+                continue
+            part = self._place(part_shape, color, y, z, x, state.filled, state.studs, allowed, rng,
+                               state.owner, state.balance, fit_map, state.open_bottom,
+                               state.open_bottom if self.hang else None)
+            if part is None:
+                failed.add(box)
+                continue
+            self._put(state, part, self._links(part, state.owner) if self.hang else None)
+            if state.plane is not None:
+                self._put_mirror(state, part, allowed, self.hang)
+            fit_map.reset()
+            return True
+        return False
+
+    def _hang_reachable(self, state: "_State", y: int) -> np.ndarray:
+        """(Z, X): cells of layer ``y`` that some part covering them could hang from a part above from."""
+        ny = state.filled.shape[0]
+        takes = np.zeros(state.filled.shape[1:], dtype=bool)
+        for height in self.heights:
+            if y + height < ny:
+                takes |= state.filled[y + height] & ~state.open_bottom[y + height]
+        return ndimage.maximum_filter(takes, size=2 * self.reach - 1, mode="constant", cval=False)
+
+    def _links(self, part: PlacedPart, owner: np.ndarray) -> set[int]:
+        """Indices of the parts ``part`` is joined to by studs: the ones below it and the ones above its studs."""
+        ny = owner.shape[0]
+        above = {int(owner[y + 1, z, x]) for y, z, x in part.stud_cells() if y + 1 < ny} - {-1}
+        return self._below(part, owner) | above
+
+    def _put(self, state: "_State", part: PlacedPart, links: set[int] | None = None) -> None:
+        """Record a placed part in every structure of ``state``; ``links``: the parts it joins for the balance
+        check (default: the ones below it)."""
         key = (part.shape.part.name, part.color.name)
         if state.remaining is not None:
             state.remaining[key] -= 1
@@ -250,12 +361,12 @@ class BottomUpBuilder:
         for cell in set(part.bottom_cells()) - set(part.seated_cells()):
             state.open_bottom[cell] = True
         if state.balance is not None:
-            state.balance.add(part, self._below(part, state.owner))
+            state.balance.add(part, self._below(part, state.owner) if links is None else links)
         state.placed.append(part)
         if state.session is not None:
             state.session.add(part)
 
-    def _put_mirror(self, state: "_State", part: PlacedPart, allowed: np.ndarray) -> None:
+    def _put_mirror(self, state: "_State", part: PlacedPart, allowed: np.ndarray, hang: bool = False) -> None:
         """Place ``part``'s mirror image across ``state.plane`` if it fits and the inventory has it."""
         image = mirror_part(part, state.plane)
         if image is None or image == part:
@@ -266,19 +377,23 @@ class BottomUpBuilder:
         if not left:
             return
         image = PlacedPart(image.shape, left[0], image.layer, image.x, image.z)
-        if self._fits_now(image, state, allowed):  # whether a part fits does not depend on its color
-            self._put(state, image)
+        if self._fits_now(image, state, allowed, hang):  # whether a part fits does not depend on its color
+            self._put(state, image, self._links(image, state.owner) if hang else None)
 
-    def _fits_now(self, part: PlacedPart, state: "_State", allowed: np.ndarray) -> bool:
-        """Every check ``_place`` makes, for this exact placement."""
+    def _fits_now(self, part: PlacedPart, state: "_State", allowed: np.ndarray, hang: bool = False) -> bool:
+        """Every check ``_place`` makes, for this exact placement (``hang``: as in the hole pass with ``hang``)."""
         open_bottom = state.open_bottom if self.open_bottoms else None
+        hang_bottom = state.open_bottom if hang else None
         cells = self.cell_masks.get(part.shape)
         if cells is not None:
-            fits = self._fits_cells(part, cells, state.filled, state.studs, allowed, open_bottom, self.open_tops)
+            fits = self._fits_cells(part, cells, state.filled, state.studs, allowed, open_bottom, self.open_tops,
+                                    hang_bottom)
         else:
             studless = self._studless_top(part.shape) if self.open_tops else None
-            fits = self._fits(part, state.filled, state.studs, allowed, studless, open_bottom)
-        return fits and (state.balance is None or state.balance.can_add(part, self._below(part, state.owner)))
+            fits = self._fits(part, state.filled, state.studs, allowed, studless, open_bottom, hang_bottom)
+        if not fits or state.balance is None:
+            return fits
+        return state.balance.can_add(part, self._links(part, state.owner) if hang else self._below(part, state.owner))
 
     def _proposed_p(self, p: np.ndarray, session: Session, y: int, z: int, x: int) -> np.ndarray:
         """Choice probabilities ``p`` times the proposal's weights (normalized, floored so that every choice
@@ -307,24 +422,28 @@ class BottomUpBuilder:
         self, part_shape: Shape, color: BrickColor, y: int, z: int, x: int,
         filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray, rng: np.random.Generator,
         owner: np.ndarray | None = None, balance: Balance | None = None, fit_map: "_FitMap | None" = None,
-        open_bottom: np.ndarray | None = None,
+        open_bottom: np.ndarray | None = None, hang_bottom: np.ndarray | None = None,
     ) -> PlacedPart | None:
         """A fitting placement of the part with its bottom layer covering cell (y, z, x), or None.
         ``fit_map`` (the current layer's, up to date) answers ``_fits`` by lookup for rectangular parts;
-        other parts are checked cell by cell (``_fits_cells``)."""
+        other parts are checked cell by cell (``_fits_cells``). ``hang_bottom`` (the build's open bottoms): the
+        part may also hang from a part above (see the module docstring)."""
         open_bottom = open_bottom if self.open_bottoms else None
         cells = self.cell_masks.get(part_shape)
         valid = None if fit_map is None or cells is not None else fit_map.corners(part_shape)
 
+        def links(part: PlacedPart) -> set[int]:
+            return self._below(part, owner) if hang_bottom is None else self._links(part, owner)
+
         def ok(part: PlacedPart) -> bool:
             if cells is not None:
-                fits = self._fits_cells(part, cells, filled, studs, allowed, open_bottom, self.open_tops)
+                fits = self._fits_cells(part, cells, filled, studs, allowed, open_bottom, self.open_tops, hang_bottom)
             elif valid is None:
                 studless = self._studless_top(part.shape) if self.open_tops else None
-                fits = self._fits(part, filled, studs, allowed, studless, open_bottom)
+                fits = self._fits(part, filled, studs, allowed, studless, open_bottom, hang_bottom)
             else:
                 fits = 0 <= part.z < valid.shape[0] and 0 <= part.x < valid.shape[1] and bool(valid[part.z, part.x])
-            return fits and (balance is None or balance.can_add(part, self._below(part, owner)))
+            return fits and (balance is None or balance.can_add(part, links(part)))
 
         if not self.any_offset:
             part = PlacedPart(part_shape, color, y, x, z)
@@ -344,7 +463,7 @@ class BottomUpBuilder:
                 continue
             if not self.bridge:
                 return part
-            joined = len({balance.root(i) for i in self._below(part, owner)})
+            joined = len({balance.root(i) for i in links(part)})
             if joined > best_joined:
                 best, best_joined = part, joined
         return best
@@ -379,10 +498,12 @@ class BottomUpBuilder:
 
     @staticmethod
     def _fits(part: PlacedPart, filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray,
-              studless: np.ndarray | None = None, open_bottom: np.ndarray | None = None) -> bool:
+              studless: np.ndarray | None = None, open_bottom: np.ndarray | None = None,
+              hang_bottom: np.ndarray | None = None) -> bool:
         """Whether the part can go here; with ``studless`` (its studless top cells, ``open_tops``), those
         cells must also have no allowed cell directly above; with ``open_bottom`` (the build's inverted-slope
-        undersides), no top cell may be right under one."""
+        undersides), no top cell may be right under one; with ``hang_bottom`` (the build's open bottoms, always
+        given), a studded part with no stud below may hang from a part's flat underside right above its top."""
         y, z, x = part.layer, part.z, part.x
         sy, sz, sx = part.shape.size_y, part.shape.size_z, part.shape.size_x
         ny, nz, nx = filled.shape
@@ -403,13 +524,19 @@ class BottomUpBuilder:
             return True
         below_filled, below_studs = filled[y - 1, z : z + sz, x : x + sx], studs[y - 1, z : z + sz, x : x + sx]
         # A filled cell below without a stud is a tile's top: nothing may rest on it.
-        return bool(below_studs.any()) and not (below_filled & ~below_studs).any()
+        if (below_filled & ~below_studs).any():
+            return False
+        if below_studs.any():
+            return True
+        return (hang_bottom is not None and part.shape.part.studs and y + sy < ny
+                and bool((filled[y + sy, z : z + sz, x : x + sx] & ~hang_bottom[y + sy, z : z + sz, x : x + sx]).any()))
 
     @staticmethod
     def _fits_cells(part: PlacedPart, masks: "_CellMasks", filled: np.ndarray, studs: np.ndarray,
-                    allowed: np.ndarray, open_bottom: np.ndarray | None, open_tops: bool = False) -> bool:
+                    allowed: np.ndarray, open_bottom: np.ndarray | None, open_tops: bool = False,
+                    hang_bottom: np.ndarray | None = None) -> bool:
         """``_fits`` cell by cell, for a part that is not a full box with uniform faces (corners, slopes);
-        ``open_tops`` as in ``_fits``."""
+        ``open_tops`` and ``hang_bottom`` as in ``_fits`` (it hangs by its studded top cells)."""
         y, z, x = part.layer, part.z, part.x
         sy = part.shape.size_y
         ny, nz, nx = filled.shape
@@ -430,7 +557,12 @@ class BottomUpBuilder:
         if (below_filled & ~masks.seated).any():  # nothing under an open bottom
             return False
         # Seated cells rest on studs (at least one) or on nothing, never on a studless top.
-        return bool((below_studs & masks.seated).any()) and not (below_filled & ~below_studs).any()
+        if (below_filled & ~below_studs).any():
+            return False
+        if (below_studs & masks.seated).any():
+            return True
+        return (hang_bottom is not None and y + sy < ny
+                and bool((filled[y + sy, zz, xx] & ~hang_bottom[y + sy, zz, xx] & masks.studded).any()))
 
 
 def _window_sums(cells: np.ndarray, sz: int, sx: int) -> np.ndarray:
@@ -447,10 +579,11 @@ class _FitMap:
 
     def __init__(self, filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray, y: int,
                  studless_top: Callable[[Shape], np.ndarray] | None = None,
-                 open_bottom: np.ndarray | None = None) -> None:
+                 open_bottom: np.ndarray | None = None, hang_bottom: np.ndarray | None = None) -> None:
         self.filled, self.studs, self.allowed, self.y = filled, studs, allowed, y
         self.studless_top = studless_top  # open_tops: a shape's studless top cells
         self.open_bottom = open_bottom  # M12b: inverted slopes' open bottoms (None: no such parts)
+        self.hang_bottom = hang_bottom  # hole pass with hang: the open bottoms (studded parts may hang)
         self.maps: dict[tuple, np.ndarray] = {}
 
     def reset(self) -> None:
@@ -485,8 +618,12 @@ class _FitMap:
         if self.open_bottom is not None and y + sy < ny:
             fits &= _window_sums(self.open_bottom[y + sy], sz, sx) == 0
         if y > 0:
-            # A stud below somewhere, and no tile top (a filled cell below without a stud).
-            fits &= _window_sums(studs[y - 1], sz, sx) > 0
+            # A stud below somewhere (or, hanging, a flat underside right above), and no tile top (a filled
+            # cell below without a stud).
+            supported = _window_sums(studs[y - 1], sz, sx) > 0
+            if self.hang_bottom is not None and studded and y + sy < ny:
+                supported |= _window_sums(filled[y + sy] & ~self.hang_bottom[y + sy], sz, sx) > 0
+            fits &= supported
             fits &= _window_sums(filled[y - 1] & ~studs[y - 1], sz, sx) == 0
         return fits
 
