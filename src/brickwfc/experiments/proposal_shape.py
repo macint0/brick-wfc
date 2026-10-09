@@ -1,6 +1,7 @@
 """M12b step 2, phase 2: learned proposal vs statistics with a target shape (a BrickGPT object), from pipeline runs.
 
     python -m brickwfc.alt 7796-1 --shape brickgpt:4b15b71c-f400-4e54-a118-f0c2afba6e17 --n 20 \\
+        --no-supports --max-clutch inf \\
         --out out/m12b_proposal_shape/7796-1/stats_random                       # and --order raster,
     python -m brickwfc.experiments.proposal_shape --dir out/m12b_proposal_shape \\
         --weights data/models/proposal_run2.npz --figure-set 7796-1             # --order raster --proposal ...

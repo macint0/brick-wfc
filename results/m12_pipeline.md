@@ -216,5 +216,5 @@ reproduces.
 - **Time.** Up to 140 s per candidate on 10182-1 with 10 repair rounds (10 in parallel). It is fine for
   k-of-100, but slow for sweeps.
 - **Clutch.** Median required clutch is 9–210 plate-cell weights per stud, depending on the set. It is
-  unbounded for now; M13 calibrates `--max-clutch`.
+  unbounded here; since M12b, `--max-clutch` defaults to 1111, a real stud (`m12b_overhangs_tables.md`).
 - **Shapes.** Model shapes are heightfields by default (`--shape-exact` keeps the exact cells).

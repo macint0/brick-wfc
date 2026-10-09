@@ -154,8 +154,10 @@ python -m brickwfc.experiments.demo --out out/m12_demo
 **A single pipeline run, as in the write-up's 10182-1 example**:
 
 ```
-python -m brickwfc.alt 10182-1 --n 200 --k 8
+python -m brickwfc.alt 10182-1 --n 200 --k 8 --max-clutch inf
 ```
+
+`--max-clutch inf`: the run predates the real-clutch default.
 
 0.8 CPU-hours.
 
@@ -287,11 +289,12 @@ Needs `data/models/proposal_run2.npz` and `vocab.json`. Three pipeline runs per 
 
 ```
 CAR=brickgpt:4b15b71c-f400-4e54-a118-f0c2afba6e17
+OLD="--no-supports --max-clutch inf"  # the runs predate these defaults (2026-10-09)
 for s in 7796-1 6370-1 7743-1; do
-  python -m brickwfc.alt $s --shape $CAR --n 20 --workers 10 --out out/m12b_proposal_shape/$s/stats_random
-  python -m brickwfc.alt $s --shape $CAR --n 20 --workers 10 --order raster \
+  python -m brickwfc.alt $s --shape $CAR --n 20 --workers 10 $OLD --out out/m12b_proposal_shape/$s/stats_random
+  python -m brickwfc.alt $s --shape $CAR --n 20 --workers 10 $OLD --order raster \
       --out out/m12b_proposal_shape/$s/stats_raster
-  python -m brickwfc.alt $s --shape $CAR --n 20 --workers 10 --order raster \
+  python -m brickwfc.alt $s --shape $CAR --n 20 --workers 10 $OLD --order raster \
       --proposal data/models/proposal_run2.npz --out out/m12b_proposal_shape/$s/proposal_raster
 done
 python -m brickwfc.experiments.proposal_shape --dir out/m12b_proposal_shape \

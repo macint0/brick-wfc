@@ -67,9 +67,9 @@ Main options:
 | `--generator d2\|wfc` | the bottom-up decoder (default) or constrained WFC (compared method) |
 | `--workers` | processes for generation (default: CPU count - 2); `--wfc-workers` caps WFC (memory) |
 | `--no-balance`, `--no-connect`, `--no-bridge` | switch off the tip-over check, the one-piece pass, the bridging preference |
-| `--max-clutch` | limit on the required clutch per stud in the physics check (default: unbounded) |
+| `--max-clutch` | limit on the required clutch per stud in the physics check (default 1111: a real stud; `inf`: none) |
 | `--hollow N` | 3D target: a shell N cells thick plus internal pillars (default 0: solid) |
-| `--supports` | 3D target: add support columns under overhangs that are out of a part's reach |
+| `--no-supports`, `--support-height N` | 3D target: support columns under overhangs out of a part's reach are on by default, up to 6 cells tall (`0`: any height) |
 | `--no-open-tops` | with a target: let tiles cap cells that have target cells above them (as before M12b) |
 | `--style-version v1\|v2` | learned style statistics: v2 (default) includes slopes and corners; v1 is M10's |
 | `--seed`, `--out`, `--fresh` | first seed, output folder, discard cached candidates |

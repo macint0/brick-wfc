@@ -171,6 +171,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     shape = write_spaceship()
     common = ["--shape", str(shape[0]), "--height-map", str(shape[1]), "--color-map", str(shape[2])]
     common += ["--catalog", args.catalog, "--style-version", args.style_version]
+    common += ["--max-clutch", "inf"]  # the M12 tables predate the real-clutch default
     common += ["--workers", str(args.workers)] if args.workers else []
     runs = [("d2", ["--n", str(args.n), "--k", "4"]),
             ("d2_no_connect", ["--n", str(args.n), "--k", "1", "--no-connect"])]
