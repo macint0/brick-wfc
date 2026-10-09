@@ -1,5 +1,9 @@
 # M12b step 1d — overhangs
 
+*History: these tables are from the 63-part catalog, before support columns (up to 6 cells) and the 1111 clutch
+cap became defaults; the 88-part rerun with the defaults and the redrawn table figure are in
+[`m12b_brickgpt.md`](m12b_brickgpt.md).*
+
 Targets are StableText2Brick structures (their data, not their model), each set's whole inventory, D2 + learned
 style, 50 candidates per run. Three ways to handle overhangs on the six objects × 3 sets (6378-1, 5891-1, 10182-1):
 
@@ -15,9 +19,10 @@ style, 50 candidates per run. Three ways to handle overhangs on the six objects 
   or the ground. Support cells are reported as a share of the object's cells. Fill and IoU are measured on the
   object's cells only. "Built outside object" counts the cells a build places in the columns.
 
-**Figure:** `results/m12b_opentops_before_after.png` shows the table on the six demo sets, exact | open tops.
-In the figure, the caption's fill is the pictured (selected) build's fill. The tables give the mean over all
-valid candidates. For example, 6378-1 exact is 28% in the caption and 15.4% in the table.
+**Figure:** `results/m12b_opentops_before_after.png` showed the table on the six demo sets, exact | open tops, on
+the 63-part catalog; it is now redrawn on the 88-part catalog, exact | the pipeline defaults (see `m12b_brickgpt.md`).
+The figure runs below are the 63-part ones. A caption's fill is the pictured (selected) build's fill; the tables
+give the mean over all valid candidates.
 
 Every run, the 54 head-to-head runs and the 12 figure runs, is 100% valid, 100% physics (stands on a table)
 and 100% one piece.
