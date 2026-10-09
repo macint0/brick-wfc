@@ -101,6 +101,12 @@ stand (grown from one leg, a table could never reach its other legs); it asks it
 build is cut back to the longest prefix of its placements that stands (every prefix is supported and one piece
 by construction), and the parts cut go back to the inventory for the hole pass, which checks balance at every
 placement as the main pass does.
+
+Diagnosis (M12b completeness): a ``trace`` object set on the builder hears about every cell visit of the main pass
+that places nothing (``skipped``: the solid-share draw passed the cell over; ``failed``: no part fits there) and
+about every connect repair (``repaired``, with the state before it); the hole pass is not traced. It must not draw
+from the generator, so traced builds are identical to untraced ones. The
+connected order's growth is not traced either.
 """
 
 from __future__ import annotations
@@ -154,6 +160,7 @@ class BottomUpBuilder:
         self.bridge = bridge
         self.connect = connect
         self.connect_rounds = connect_rounds
+        self.trace = None  # diagnosis hooks (see the module docstring); None: no tracing
         self.index = {info: t for t, info in enumerate(parts.infos)}
         # Largest part footprint side: a part covering a cell reaches at most this - 1 cells away from it.
         self.reach = max(max(info.shape.size_z, info.shape.size_x) for info in parts.infos if info.solid)
@@ -218,6 +225,8 @@ class BottomUpBuilder:
             # Keep the largest cluster and return the others' parts to the inventory. Earlier rounds place
             # them again anywhere (they may join the kept cluster); the last round only above the ground,
             # where each part rests on (so joins) the kept cluster.
+            if self.trace is not None:
+                self.trace.repaired(state)
             keep = set(found[0][0])
             returned = Counter((p.shape.part.name, p.color.name) for i, p in enumerate(state.placed) if i not in keep)
             remaining = None if state.remaining is None else dict(Counter(state.remaining) + returned)
@@ -253,10 +262,14 @@ class BottomUpBuilder:
                               open_bottom)
             for flat in rng.permutation(nz * nx) if self.order == "random" else range(nz * nx):
                 z, x = divmod(int(flat), nx)
-                if state.filled[y, z, x] or not allowed[y, z, x] or rng.random() >= self.solid_share:
+                if state.filled[y, z, x] or not allowed[y, z, x]:
+                    continue
+                if rng.random() >= self.solid_share:
+                    if self.trace is not None:
+                        self.trace.skipped(state, y, z, x)
                     continue
                 # Try parts in weighted-random order until one fits here. Whether a part fits depends
-                # only on its box, so once a box size fails here, other parts of that size are skipped.
+                # only on its _fit_key, so once one fails here, other parts with that key are skipped.
                 failed: set[tuple[int, int, int]] = set()
                 p = self._cell_p(state, y, z, x, preferred, bool(reachable[z, x]))
                 on_skin = state.skin is not None and bool(state.skin[y, z, x])
@@ -283,6 +296,9 @@ class BottomUpBuilder:
                             self._put_mirror(state, part, allowed)
                         fit_map.reset()
                         break
+                else:
+                    if self.trace is not None:
+                        self.trace.failed(self, state, allowed, reachable, y, z, x)
 
     def _cell_p(self, state: "_State", y: int, z: int, x: int, preferred: np.ndarray | None,
                 reachable: bool) -> np.ndarray:
@@ -763,11 +779,13 @@ class _State:
 
 
 def _fit_key(shape: Shape) -> tuple:
-    """What decides whether a part fits at a cell: its box for a rectangular part (so once one part fails
-    there, others of the same box are skipped), its cells and their faces otherwise."""
+    """What decides whether a part fits at a cell: its box and whether it has studs for a rectangular part (so
+    once one part fails there, others of the same key are skipped), its cells and their faces otherwise. The studs
+    count since open tops (M12b 1d): a tile may not sit under a target cell where a plate of its box may (before M12b
+    completeness the key was the box alone, so a failed tile made the builder skip the plate)."""
     box = (shape.size_y, shape.size_z, shape.size_x)
     if shape.rectangular:
-        return box
+        return (*box, shape.part.studs)
     g = shape.geometry
     return box, g.footprint, g.studded, g.seated
 

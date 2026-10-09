@@ -11,6 +11,7 @@ from collections import Counter
 from typing import Mapping
 
 import numpy as np
+from scipy import ndimage
 
 from brickwfc.bricks.colors import BrickColor, color_for_code
 from brickwfc.bricks.parts import BY_FILE, CATALOG, PLATE_FILES, Part, PartSet, PlacedPart, Shape, shapes_of
@@ -80,7 +81,7 @@ def inventory_cells(inventory: Inventory) -> int:
     return sum(count * part_cells(CATALOG[part]) for (part, _), count in inventory.items())
 
 
-SIZINGS = ("fillable", "box")
+SIZINGS = ("fillable", "box", "usable")
 
 
 def fillable_cells(part: Part) -> int:
@@ -95,12 +96,34 @@ def fillable_cells(part: Part) -> int:
 
 def target_volume(inventory: Inventory, sizing: str = "fillable") -> int:
     """The volume a target shape is scaled to: every part by ``fillable_cells`` ("fillable", M12b) or by its
-    box (``inventory_cells``, "box": as before)."""
+    box (``inventory_cells``, "box": as before). "usable" starts from the fillable volume; the parts that fit
+    nowhere inside the scaled target are then taken out (``pipeline.sized_target``)."""
     if sizing == "box":
         return inventory_cells(inventory)
-    if sizing != "fillable":
+    if sizing not in SIZINGS:
         raise ValueError(f"sizing must be one of {SIZINGS}, not {sizing!r}")
     return sum(count * fillable_cells(CATALOG[part]) for (part, _), count in inventory.items())
+
+
+def fits_inside(part: Part, mask: np.ndarray) -> bool:
+    """Whether ``part`` fits entirely inside ``mask`` in some orientation and position (every other rule off:
+    ``BottomUpBuilder._fits`` with only the shape check)."""
+    for shape in shapes_of([part]):
+        kernel = np.zeros((shape.size_y, shape.size_z, shape.size_x), dtype=bool)
+        for dz, dx in shape.footprint:
+            kernel[:, dz, dx] = True
+        if any(k > n for k, n in zip(kernel.shape, mask.shape)):
+            continue
+        if ndimage.binary_erosion(mask, structure=kernel, border_value=0).any():
+            return True
+    return False
+
+
+def unusable(inventory: Inventory, mask: np.ndarray) -> dict[str, int]:
+    """Part name -> count, for the inventory's parts that fit nowhere inside ``mask``."""
+    names = sorted({part for part, _ in inventory})
+    out = [name for name in names if not fits_inside(CATALOG[name], mask)]
+    return {name: sum(n for (part, _), n in inventory.items() if part == name) for name in out}
 
 
 def inventory_coverage(inventory: Inventory) -> dict[tuple[str, str], float]:

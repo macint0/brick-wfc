@@ -213,7 +213,8 @@ M8_NAMES = ("plate1x2", "plate2x4", "brick1x1", "brick1x2", "brick2x4", "brick1x
 M8_FINGERPRINTS = {
     "d": ["0bd1e3906fc701c6", "45bc7804d50b24d8", "f0fadc23d2b06ef9"],
     "d2": ["875e568f3723130b", "1bd0e74c558e24b2", "eb09245ebb62100b"],
-    "d2_connect": ["caa951dc119cbf5e", "43a519186e5b143d", "5fffaad27298a09b"],
+    # seeds 0 and 1 changed with the _fit_key fix (M12b completeness; connect rounds only, see test_bottomup_proposal)
+    "d2_connect": ["8f4e531e3e4e29ac", "10ef9c6b62d4a2e4", "5fffaad27298a09b"],
     "wfc": ["d209830a142d1936", "f6dc0023c8746426", "66bc5e512a85feed"],
 }
 
