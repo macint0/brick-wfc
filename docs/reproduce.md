@@ -351,6 +351,27 @@ python -m brickwfc.experiments.brickgpt --out out/m12b_brickgpt --steps 1d --wor
 - Runs the six BrickGPT objects × 3 sets × {exact, open tops, supports} and the table on the six demo sets.
 - 31 CPU-hours over these runs (the exact runs are shared with step 1a). Resumable through the pipeline caches.
 
+### `results/m12b_skins_measure.md` (M12b step 3: skins and symmetry, measured first), with `m12b_skins_measure.json`
+
+Measures the step-1a rerun (`out/m12b_brickgpt_v2`, the `m12b_brickgpt.md` runs), the BrickGPT structures and the 28 real sets with `bricks/skin.py` (distinct parts per all-skin 4 x 4 window, faces per visible part) and `bricks/symmetry.py` (mirrored share of mirrorable parts):
+
+```
+python -m brickwfc.experiments.skins --steps measure --runs out/m12b_brickgpt_v2
+```
+
+- A few CPU-minutes; no generation.
+
+### `results/m12b_skins.md` (M12b step 3: `--skin` and `--symmetric` before / after), with `m12b_skins.json`, `m12b_skins_sheet.png`
+
+Chair, car and table on 6378-1, 5891-1 and 10182-1, four arms per cell (base, `--skin`, `--symmetric`, both), 50 candidates each with the pipeline defaults; the base arm reuses the step-1a cache when the key matches:
+
+```
+python -m brickwfc.experiments.skins --steps compare --sets 6378-1 5891-1 10182-1 \
+    --objects chair car table --n 50 --workers 10 --compare-out out/m12b_skins
+```
+
+- About 4 CPU-hours at 5 workers, most of it the 10182-1 arms and the symmetric arms (mirrored placement).
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
