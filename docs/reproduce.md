@@ -372,6 +372,31 @@ python -m brickwfc.experiments.skins --steps compare --sets 6378-1 5891-1 10182-
 
 - About 4 CPU-hours at 5 workers, most of it the 10182-1 arms and the symmetric arms (mirrored placement).
 
+### `results/m12b_skins_soft_sweep.md` (M12b step 3: soft skin preference, sweep of a), with `m12b_skins_soft_sweep.json`
+
+The table on 6378-1, the base, skin and both arms of `m12b_skins.md` (from their caches) next to `--skin --skin-power a` for a = 0.25, 0.5, 1, 2, 4, same seeds:
+
+```
+python -m brickwfc.experiments.skins --steps compare --objects table --sets 6378-1 \
+    --arms base skin both skin_a0.25 skin_a0.5 skin_a1 skin_a2 skin_a4 --n 50 --workers 5 \
+    --compare-out out/m12b_skins --compare-results results/m12b_skins_soft_sweep.md
+```
+
+- About 1 CPU-hour (5 new arms x 50 candidates at 8-15 s each).
+
+### `results/m12b_skins_soft.md` (M12b step 3: soft skin preference, a = 1 on all cells), with `m12b_skins_soft.json`, `m12b_skins_soft_sheet.png`
+
+Chair, car and table on 6378-1, 5891-1 and 10182-1: base, skin, both and symmetric (from the `m12b_skins.md` caches) next to `--skin --skin-power 1` alone and with `--symmetric`, same seeds:
+
+```
+python -m brickwfc.experiments.skins --steps compare --sets 6378-1 5891-1 10182-1 --objects chair car table \
+    --arms base skin both skin_a1 both_a1 symmetric --n 50 --workers 5 \
+    --compare-out out/m12b_skins --compare-results results/m12b_skins_soft.md
+```
+
+- About 13 CPU-hours (2 new arms x 9 cells x 50 candidates), about 3 hours at 5 workers.
+- The findings and the decision at the end of the write-up are written by hand; a rerun overwrites the file, so copy them back.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):

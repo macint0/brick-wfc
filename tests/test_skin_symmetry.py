@@ -7,6 +7,7 @@ import numpy as np
 from brickwfc.bricks.parts import CATALOG, PlacedPart, Shape, shapes_of
 from brickwfc.bricks.skin import exterior, size_class, skin
 from brickwfc.bricks.symmetry import Plane, mirror_part, mirror_plane, mirror_shape, part_symmetry, reflected
+from brickwfc.experiments.skins import sheet_label
 from conftest import BLUE, RED
 
 
@@ -89,3 +90,10 @@ def test_mirror_plane() -> None:
     mask[1, 2, 2] = False  # one side only: x still the better plane, but no longer exact
     assert mirror_plane(mask).score < 1.0
     assert mirror_plane(np.zeros((1, 2, 2), dtype=bool)) is None
+
+
+def test_sheet_label_is_ascii_when_a_window_is_missing() -> None:
+    # The comparison sheet's default font has no em dash: a build without an all-skin 4 x 4 top window reads n/a.
+    r = {"fill": 0.666, "top_patch_parts": float("nan"), "side_patch_parts": 3.64, "mirrorable_mirrored": 0.56}
+    label = sheet_label({"object": "car", "set": "6378-1"}, "both_a1", r)
+    assert label.isascii() and "top n/a, sides 3.6" in label and "mirrored 56%" in label

@@ -157,8 +157,8 @@ def measure_set(set_number: str, data: Path) -> dict:
 # Report ----------------------------------------------------------------------------------------------------
 
 
-def f(value: float | None, fmt: str = "{:.2f}") -> str:
-    return "—" if value is None or (isinstance(value, float) and math.isnan(value)) else fmt.format(value)
+def f(value: float | None, fmt: str = "{:.2f}", missing: str = "—") -> str:
+    return missing if value is None or (isinstance(value, float) and math.isnan(value)) else fmt.format(value)
 
 
 def skin_cells(r: dict) -> str:
@@ -363,7 +363,8 @@ def compare_report(cells: list[dict]) -> str:
              "one's contact events; higher is better). Fill: of the arm's own object (no support columns). "
              "Base-object fill: of the base arm's object, on the same grid (the symmetric arms make a car or table "
              "exactly symmetric by adding the mirror image of its cells, so their own object is 2-15% larger). "
-             "Fragmentation: distinct parts per all-skin 4 x 4-cell window (lower is cleaner). Mirrored: share of "
+             "Fragmentation: distinct parts per all-skin 4 x 4-cell window (lower is cleaner; — when the build has no "
+             "such window on that face, e.g. a stepped roof). Mirrored: share of "
              "mirrorable parts whose mirror image is placed (any color; then same color).", "",
              f"## Change against base (means over valid candidates, averaged over the {len(cells)} cells)", ""]
     lines += delta_table(cells)
@@ -381,6 +382,14 @@ def compare_report(cells: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def sheet_label(cell: dict, arm: str, r: dict) -> str:
+    """Caption of a build on the comparison sheet, ASCII only (the sheet's default font has no em dash); "n/a":
+    no all-skin 4 x 4 window on that face (a stepped roof), or nothing mirrorable."""
+    return (f"{cell['object']} {cell['set']}: {arm}\nfill {100 * r['fill']:.0f}%, "
+            f"top {f(r['top_patch_parts'], '{:.1f}', 'n/a')}, sides {f(r['side_patch_parts'], '{:.1f}', 'n/a')}\n"
+            f"mirrored {f(100 * r['mirrorable_mirrored'], '{:.0f}%', 'n/a')}")
+
+
 def compare_sheet(cells: list[dict], path: Path) -> None:
     images, labels = [], []
     for cell in cells:
@@ -389,8 +398,7 @@ def compare_sheet(cells: list[dict], path: Path) -> None:
             if a["png"] is None or r is None:
                 continue
             images.append(Path(a["png"]))
-            labels.append(f"{cell['object']} {cell['set']}: {arm}\nfill {100 * r['fill']:.0f}%, top {f(r['top_patch_parts'], '{:.1f}')}, "
-                          f"sides {f(r['side_patch_parts'], '{:.1f}')}\nmirrored {f(100 * r['mirrorable_mirrored'], '{:.0f}')}%")
+            labels.append(sheet_label(cell, arm, r))
     labeled_sheet(images, labels, path, columns=len(cells[0]["arms"]), width=600)
 
 
