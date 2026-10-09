@@ -28,6 +28,11 @@ fragmentation, faces per visible part, the mirrored share of mirrorable parts, a
 the valid candidates (mean) and the selected build. Runs go to ``--compare-out`` (resumable: rerun the same
 command); writes ``results/m12b_skins.md``, ``.json`` and ``m12b_skins_sheet.png`` (the selected build of
 each arm, side by side).
+
+``threshold``: the symmetry score of each scaled object (before supports and symmetrization) under the box sizing
+of the step-3 runs and the fillable sizing after M12b sizing, the cells symmetrizing would add, and which side of
+the old (0.8) and new (``SYMMETRIZE_MIN_SCORE``) threshold each falls on; writes ``--threshold-results``
+(``results/m12b_symmetry_threshold.md`` and ``.json``).
 """
 
 from __future__ import annotations
@@ -37,6 +42,7 @@ import json
 import math
 import shutil
 import statistics
+from dataclasses import replace
 from pathlib import Path
 from typing import Sequence
 
@@ -44,7 +50,7 @@ import numpy as np
 
 from brickwfc.alt.candidates import Candidate
 from brickwfc.alt.features import occupancy
-from brickwfc.alt.inputs import learned_style, load_source
+from brickwfc.alt.inputs import Source, learned_style, load_source
 from brickwfc.alt.pipeline import AltConfig, make_target
 from brickwfc.alt.pipeline import main as alt_main
 from brickwfc.alt.target import BRICKGPT_PREFIX
@@ -54,7 +60,7 @@ from brickwfc.bricks.parts import BY_FILE, PlacedPart
 from brickwfc.bricks.shapes import fill
 from brickwfc.bricks.style import events, matched_divergence
 from brickwfc.bricks.skin import SIZE_CLASSES, Skin, skin
-from brickwfc.bricks.symmetry import Plane, best_plane, mirror_part, part_symmetry
+from brickwfc.bricks.symmetry import SYMMETRIZE_MIN_SCORE, Plane, best_plane, mirror_part, part_symmetry
 from brickwfc.bricks.voxelize import grid_shape, voxelize
 from brickwfc.experiments.brickgpt import SETS, target_for
 from brickwfc.experiments.demo import labeled_sheet, load_run
@@ -263,21 +269,32 @@ def run_arm(set_number: str, structure: brickgpt.Structure, arm: str, args: argp
     if arm == "base" and not cache.exists() and reused.exists():
         directory.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(reused, cache)
+    forced = []
+    if args.symmetrize_min_score is not None and "--symmetric" in arm_flags(arm):
+        forced = ["--symmetrize-min-score", str(args.symmetrize_min_score)]
     alt_main([set_number, "--shape", BRICKGPT_PREFIX + structure.structure_id, "--n", str(args.n), "--k", "1",
-              "--out", str(directory), "--workers", str(args.workers), *arm_flags(arm)])
+              "--out", str(directory), "--workers", str(args.workers), *arm_flags(arm), *forced])
     return directory
 
 
-def arm_masks(set_number: str, structure: brickgpt.Structure, arm: str,
-              sizing: str = "fillable") -> tuple[np.ndarray, np.ndarray]:
-    """(the arm's target, as built in; its object without support columns). ``sizing`` as the run's (runs before
-    M12b sizing: "box")."""
+def arm_masks(set_number: str, structure: brickgpt.Structure, arm: str, sizing: str = "fillable",
+              symmetrize_min_score: float = SYMMETRIZE_MIN_SCORE) -> tuple[np.ndarray, np.ndarray]:
+    """(the arm's target, as built in; its object without support columns). ``sizing`` and
+    ``symmetrize_min_score`` as the run's (runs before M12b sizing: "box"; before the threshold was a setting: 0.8)."""
     source = load_source(set_number)
     symmetric = "--symmetric" in arm_flags(arm)
     shape = BRICKGPT_PREFIX + structure.structure_id
-    full = make_target(source, AltConfig(shape=shape, symmetric=symmetric, sizing=sizing)).mask
-    obj = make_target(source, AltConfig(shape=shape, symmetric=symmetric, supports=False, sizing=sizing)).mask
+    config = AltConfig(shape=shape, symmetric=symmetric, sizing=sizing, symmetrize_min_score=symmetrize_min_score)
+    full = make_target(source, config).mask
+    obj = make_target(source, replace(config, supports=False)).mask
     return full, obj
+
+
+def run_target_settings(run_stats: dict) -> tuple[str, float]:
+    """(sizing, symmetrize_min_score) a run's target was built with; runs from before either setting existed used
+    box sizing and 0.8."""
+    config = run_stats["config"]
+    return config.get("sizing", "box"), config.get("symmetrize_min_score", 0.8)
 
 
 def compare_cell(set_number: str, name: str, structure: brickgpt.Structure, args: argparse.Namespace) -> dict:
@@ -293,7 +310,7 @@ def compare_cell(set_number: str, name: str, structure: brickgpt.Structure, args
     base_sizing = loaded["base"][2]["config"].get("sizing", "box") if "base" in loaded else "fillable"
     _, base_obj = arm_masks(set_number, structure, "base", base_sizing)
     for arm, (directory, candidates, run_stats) in loaded.items():
-        full, obj = arm_masks(set_number, structure, arm, run_stats["config"].get("sizing", "box"))
+        full, obj = arm_masks(set_number, structure, arm, *run_target_settings(run_stats))
         plane = best_plane(obj)
         valid = [c for c in candidates if c.valid]
         per = []
@@ -358,9 +375,11 @@ def compare_report(cells: list[dict]) -> str:
              "`python -m brickwfc.experiments.skins --steps compare` (measures: `results/m12b_skins_measure.md`). "
              "Chair, car and table on 6378-1, 5891-1 and 10182-1, 50 candidates per run, pipeline defaults plus the "
              "arm's flags: **base** (the step-1a rerun), **skin** (`--skin`: largest parts first on the target's "
-             "surface), **symmetric** (`--symmetric`: the target's mirror plane; a car or table, at least 0.8 symmetric after "
-             "scaling, is made exactly symmetric by adding the mirror image of its cells, the chair, 0.71-0.77, is "
-             "not; each part's mirror image is placed with it where it fits and the inventory has it), **both**; "
+             "surface), **symmetric** (`--symmetric`: the target's mirror plane; a target at least the run's "
+             "`--symmetrize-min-score` symmetric after scaling (0.8 in the m12b_skins runs, 0.83 by default after M12b sizing) "
+             "is made exactly symmetric by adding the mirror image of its cells (cars and tables; the chair, "
+             "0.71-0.77 at box sizing, is not); each part's mirror image is placed with it where it fits and the "
+             "inventory has it), **both**; "
              "**skin_a<a>** / **both_a<a>**: the soft skin preference (`--skin --skin-power a`: choice weights x "
              "cells ** a on skin cells instead of largest first), alone or with `--symmetric`.", "",
              "Judge: size-matched across the arms of a cell (every valid candidate subsampled to the smallest "
@@ -406,6 +425,65 @@ def compare_sheet(cells: list[dict], path: Path) -> None:
     labeled_sheet(images, labels, path, columns=len(cells[0]["arms"]), width=600)
 
 
+OLD_SYMMETRIZE_MIN_SCORE = 0.8  # the threshold of the m12b_skins runs (box sizing)
+
+
+def threshold_row(source: Source, name: str, structure: brickgpt.Structure) -> dict:
+    """One (object, set): its scaled object's best plane under each sizing and what symmetrizing it adds."""
+    shape = BRICKGPT_PREFIX + structure.structure_id
+    row = {"object": name, "set": source.name}
+    for sizing in ("box", "fillable"):
+        obj = make_target(source, AltConfig(shape=shape, supports=False, sizing=sizing)).mask
+        plane = best_plane(obj)
+        forced = make_target(source, AltConfig(shape=shape, supports=False, sizing=sizing, symmetric=True,
+                                               symmetrize_min_score=0.0)).mask
+        row[sizing] = {"cells": int(obj.sum()), "plane": plane.name, "score": plane.score,
+                       "added": int(forced.sum() - obj.sum())}
+    return row
+
+
+def yes(score: float, threshold: float) -> str:
+    return "yes" if score >= threshold else "no"
+
+
+def threshold_report(rows: list[dict]) -> str:
+    old, new = OLD_SYMMETRIZE_MIN_SCORE, SYMMETRIZE_MIN_SCORE
+    lines = ["# M12b step 3: the symmetrize threshold after M12b sizing", "",
+             "`python -m brickwfc.experiments.skins --steps threshold`. The symmetry score of each scaled object "
+             "(BrickGPT's chair, car and table at each set's volume, before support columns and symmetrization; "
+             "best vertical plane through the middle of its extent) under the box sizing of the step-3 runs "
+             "(`results/m12b_skins.md`) and the fillable sizing after M12b sizing (`results/m12b_sizing.md`, the "
+             "default). With `--symmetric`, an object whose score reaches the threshold is made exactly symmetric "
+             "by adding the mirror image of its cells; *added* is what that adds under fillable sizing.", "",
+             f"| object | set | box: cells | box: plane (score) | fillable: cells | fillable: plane (score) | "
+             f"added (cells) | added % | symmetrized at {old} | symmetrized at {new} |",
+             "|---|---|---|---|---|---|---|---|---|---|"]
+    for r in rows:
+        b, f_ = r["box"], r["fillable"]
+        crossed = " (crosses)" if (b["score"] >= old) != (f_["score"] >= old) else ""
+        lines.append(f"| {r['object']} | {r['set']} | {b['cells']} | {b['plane']} ({b['score']:.3f}) | {f_['cells']} | "
+                     f"{f_['plane']} ({f_['score']:.3f}) | {f_['added']} | {100 * f_['added'] / f_['cells']:.0f} | "
+                     f"{yes(f_['score'], old)}{crossed} | {yes(f_['score'], new)} |")
+    chairs = [r["fillable"]["score"] for r in rows if r["object"] == "chair"]
+    others = [r["fillable"]["score"] for r in rows if r["object"] != "chair"]
+    lines += ["", f"Fillable sizing: chairs score at most {max(chairs):.3f}, cars and tables at least {min(others):.3f}. "
+              f"The threshold {new} sits between them with margins of {new - max(chairs):.3f} and "
+              f"{min(others) - new:.3f}: a fitted threshold on {len(rows)} pairs, not a property of the objects."]
+    return "\n".join(lines) + "\n"
+
+
+def step_threshold(args: argparse.Namespace) -> None:
+    structures = {name: brickgpt.find(OBJECTS[name], args.brickgpt_data) for name in args.objects}
+    rows = []
+    for set_number in args.sets:
+        source = load_source(set_number)
+        rows += [threshold_row(source, name, structure) for name, structure in structures.items()]
+    out = args.threshold_results
+    out.with_suffix(".json").write_text(json.dumps(rows, indent=1), encoding="utf-8")
+    out.write_text(threshold_report(rows), encoding="utf-8")
+    print(f"wrote {out}")
+
+
 def step_compare(args: argparse.Namespace) -> None:
     structures = {name: brickgpt.find(OBJECTS[name], args.brickgpt_data) for name in args.objects}
     for set_number in args.sets:  # small sets first: their rows are ready early
@@ -424,7 +502,7 @@ def step_compare(args: argparse.Namespace) -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.skins", description=__doc__.splitlines()[0])
-    parser.add_argument("--steps", nargs="+", choices=("measure", "compare"), default=["measure"])
+    parser.add_argument("--steps", nargs="+", choices=("measure", "compare", "threshold"), default=["measure"])
     parser.add_argument("--sets", nargs="+", default=list(SETS))
     parser.add_argument("--runs", type=Path, default=Path("out/m12b_brickgpt_v2"))
     parser.add_argument("--data", type=Path, default=Path("data/omr"))
@@ -436,13 +514,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--arms", nargs="+", default=list(ARMS),
                         help="compare: base, skin, symmetric, both, skin_a<a>, both_a<a> (soft skin, --skin-power a)")
     parser.add_argument("--workers", type=int, default=5)
+    parser.add_argument("--symmetrize-min-score", type=float,
+                        help="compare: passed to the symmetric arms' runs (default: the pipeline's)")
     parser.add_argument("--compare-out", type=Path, default=Path("out/m12b_skins"))
     parser.add_argument("--compare-results", type=Path, default=Path("results/m12b_skins.md"))
+    parser.add_argument("--threshold-results", type=Path, default=Path("results/m12b_symmetry_threshold.md"))
     args = parser.parse_args(argv)
     if "measure" in args.steps:
         step_measure(args)
     if "compare" in args.steps:
         step_compare(args)
+    if "threshold" in args.steps:
+        step_threshold(args)
     return 0
 
 

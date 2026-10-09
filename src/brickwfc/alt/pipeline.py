@@ -57,6 +57,7 @@ from brickwfc.alt.target import Target, load_target, takes_supports
 from brickwfc.bricks.inventory import SIZINGS, inventory_cells, target_volume, utilization
 from brickwfc.bricks.shapes import SHAPES, fill, iou
 from brickwfc.bricks.style import StyleStats, events, matched_divergence
+from brickwfc.bricks.symmetry import SYMMETRIZE_MIN_SCORE
 from brickwfc.bricks.voxelize import voxelize
 from brickwfc.experiments.inventory import grid_for
 from brickwfc.experiments.style import InlineExecutor
@@ -103,6 +104,7 @@ class AltConfig:
     skin: bool = False  # d2 with a target: largest parts first on the target's skin (M12b step 3)
     skin_power: float | None = None  # with skin: soft preference, choice weights x cells ** this (None: hard sort)
     symmetric: bool = False  # d2 with a target: mirror-preserving scale + symmetric decoding (M12b step 3)
+    symmetrize_min_score: float = SYMMETRIZE_MIN_SCORE  # with symmetric: a plane this good symmetrizes the object
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = 1111.0  # physics: keep builds needing at most this clutch per stud, in plate-cell weights;
     # 1111 is a real stud (calibrated in results/m12b_overhangs_tables.md); inf: no limit
@@ -149,7 +151,7 @@ def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) ->
                        config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
                        hollow=config.hollow, supports=config.supports and takes_supports(config.shape),
                        support_height=config.support_height, symmetric=config.symmetric,
-                       keep_sections=config.sizing == "fillable")
+                       keep_sections=config.sizing == "fillable", symmetrize_min_score=config.symmetrize_min_score)
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
@@ -374,6 +376,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--symmetric", action="store_true",
                         help="d2 with a target shape: find its mirror plane, scale a 3D target so the plane survives, "
                         "and place each part's mirror image with it where it fits")
+    parser.add_argument("--symmetrize-min-score", type=float, default=defaults.symmetrize_min_score,
+                        help="with --symmetric: a mirror plane covering at least this share of the target makes it "
+                        "exactly symmetric (adds the mirror image of its cells)")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -424,7 +429,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         shape_exact=args.shape_exact, shape_columns=args.shape_columns, voxels=args.voxels, mesh_up=args.mesh_up,
         hollow=args.hollow, supports=args.supports, support_height=args.support_height, open_tops=not args.no_open_tops,
         order=args.order, proposal=args.proposal, skin=args.skin, skin_power=args.skin_power,
-        symmetric=args.symmetric, sizing=args.sizing,
+        symmetric=args.symmetric, symmetrize_min_score=args.symmetrize_min_score, sizing=args.sizing,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,

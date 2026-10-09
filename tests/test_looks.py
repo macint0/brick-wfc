@@ -11,7 +11,8 @@ from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.parts import CATALOG, extract_parts, part_tileset
 from brickwfc.bricks.skin import skin
 from brickwfc.bricks.support import is_stable
-from brickwfc.bricks.symmetry import mirror_plane, part_symmetry, reflected
+from brickwfc.bricks.symmetry import SYMMETRIZE_MIN_SCORE, mirror_plane, part_symmetry, reflected
+from brickwfc.experiments.skins import run_target_settings
 from conftest import BLUE, RED
 
 NAMES = ("plate1x1", "plate1x2", "plate2x2", "plate2x4", "brick1x1", "brick1x2", "brick2x2", "brick2x4",
@@ -120,3 +121,22 @@ def test_soft_skin_preference(parts) -> None:
         per_part["plain"].append(skin(check(a, parts, mask), mask.shape).faces_per_part)
         per_part["soft"].append(skin(check(b, parts, mask), mask.shape).faces_per_part)
     assert np.mean(per_part["soft"]) > np.mean(per_part["plain"])
+
+
+def test_symmetrize_threshold_is_a_setting(tmp_path: Path) -> None:
+    # Above the threshold the object gains its mirror image; a threshold no plane reaches keeps the scaled object.
+    text = "1x1 (2,1,0)\n1x1 (9,1,0)\n1x1 (2,1,1)\n1x1 (9,1,1)\n1x1 (3,1,0)\n" + "".join(
+        f"8x1 (0,{y},2)\n4x1 (8,{y},2)\n" for y in range(9))
+    path = tmp_path / "bench.txt"
+    path.write_text(text, encoding="utf-8")
+    plain = load_target(str(path), 1500, [RED])
+    kept = load_target(str(path), 1500, [RED], symmetric=True, symmetrize_min_score=1.01)
+    made = load_target(str(path), 1500, [RED], symmetric=True, symmetrize_min_score=0.5)
+    assert (kept.mask == plain.mask).all() and kept.plane is not None and kept.plane.score < 1.0
+    assert made.plane.score == 1.0 and (made.mask >= plain.mask).all() and made.mask.sum() > plain.mask.sum()
+    assert SYMMETRIZE_MIN_SCORE == 0.83
+
+
+def test_runs_without_the_setting_read_back_as_before() -> None:
+    assert run_target_settings({"config": {}}) == ("box", 0.8)
+    assert run_target_settings({"config": {"sizing": "fillable", "symmetrize_min_score": 0.83}}) == ("fillable", 0.83)

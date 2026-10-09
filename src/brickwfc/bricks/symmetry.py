@@ -26,9 +26,11 @@ MIN_SCORE = 0.9  # a mask has a mirror plane if its reflection covers at least t
 # mirror image of a part is placed only where it lies inside the target, so a partly symmetric target (a
 # chair's seat and back on a five-arm base, 0.7) is mirrored where it is symmetric.
 DECODE_MIN_SCORE = 0.5
-# A target this symmetric is made exactly symmetric (``alt.target``); the car and table score 0.85-0.98 after
-# scaling, the chair (not symmetric: a five-arm base) 0.71-0.77.
-SYMMETRIZE_MIN_SCORE = 0.8
+# A target this symmetric is made exactly symmetric (``alt.target``). A fitted threshold, with margins of about
+# 0.02 on 9 (object, set) pairs (``results/m12b_symmetry_threshold.md``): after fillable sizing the car and table
+# score 0.848-0.979, the chair (not symmetric: a five-arm base has no mirror plane) 0.708-0.806. It was 0.8 until
+# fillable sizing lifted the 5891-1 chair to 0.806 (the step-3 comparison, ``results/m12b_skins.md``, used 0.8).
+SYMMETRIZE_MIN_SCORE = 0.83
 
 
 @dataclass(frozen=True)
