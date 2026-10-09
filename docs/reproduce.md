@@ -448,6 +448,18 @@ python -m brickwfc.experiments.skins --steps compare --sets 5891-1 --objects cha
 - `chair_5891-1.json` and `_sheet.png` are copied to `results/m12b_symmetry_threshold_chair.json` and `.png`.
 - The chair section and the notes at the end of the write-up are written by hand (from `chair_5891-1.md`); the threshold step rewrites the file, so copy them back.
 
+### `results/m12b_complete.md` (M12b completeness: fill, holes, surface, missing maps), with `m12b_complete_final.json`, `m12b_complete_missing.png`
+
+The final-state pass reads the sizing runs (`out/m12b_sizing_fig`, `out/m12b_sizing`; see `m12b_sizing.md`). It runs no
+generation and takes about a minute:
+
+```
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps final
+```
+
+It writes `final.md`, `final.json` (copied to `results/m12b_complete_final.json`) and `missing_sheet.png` (copied to
+`results/m12b_complete_missing.png`), plus one missing map per pair under `missing/`.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):

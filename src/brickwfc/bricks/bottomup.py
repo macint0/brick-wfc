@@ -62,6 +62,11 @@ style still decides among them (a -> infinity is the hard sort). With a mirror
 fits there (every rule as for any part, balance included) and the inventory has it: in the part's color, else
 in the first color of that part left (in the choices' fixed order). Both only reorder or add placements that
 pass the same checks, so every guarantee stays.
+
+Diagnosis (M12b completeness): a ``trace`` object set on the builder hears about every cell visit that places
+nothing (``skipped``: the solid-share draw passed the cell over; ``failed``: no part fits there) and about every
+connect repair (``repaired``, with the state before it). It must not draw from the generator, so traced builds
+are identical to untraced ones.
 """
 
 from __future__ import annotations
@@ -109,6 +114,7 @@ class BottomUpBuilder:
         self.bridge = bridge
         self.connect = connect
         self.connect_rounds = connect_rounds
+        self.trace = None  # diagnosis hooks (see the module docstring); None: no tracing
         self.index = {info: t for t, info in enumerate(parts.infos)}
         # Largest part footprint side: a part covering a cell reaches at most this - 1 cells away from it.
         self.reach = max(max(info.shape.size_z, info.shape.size_x) for info in parts.infos if info.solid)
@@ -165,6 +171,8 @@ class BottomUpBuilder:
             # Keep the largest cluster and return the others' parts to the inventory. Earlier rounds place
             # them again anywhere (they may join the kept cluster); the last round only above the ground,
             # where each part rests on (so joins) the kept cluster.
+            if self.trace is not None:
+                self.trace.repaired(state)
             keep = set(found[0][0])
             returned = Counter((p.shape.part.name, p.color.name) for i, p in enumerate(state.placed) if i not in keep)
             remaining = None if state.remaining is None else dict(Counter(state.remaining) + returned)
@@ -197,7 +205,11 @@ class BottomUpBuilder:
                               open_bottom)
             for flat in rng.permutation(nz * nx) if self.order == "random" else range(nz * nx):
                 z, x = divmod(int(flat), nx)
-                if state.filled[y, z, x] or not allowed[y, z, x] or rng.random() >= self.solid_share:
+                if state.filled[y, z, x] or not allowed[y, z, x]:
+                    continue
+                if rng.random() >= self.solid_share:
+                    if self.trace is not None:
+                        self.trace.skipped(state, y, z, x)
                     continue
                 # Try parts in weighted-random order until one fits here. Whether a part fits depends
                 # only on its box, so once a box size fails here, other parts of that size are skipped.
@@ -235,6 +247,9 @@ class BottomUpBuilder:
                             self._put_mirror(state, part, allowed)
                         fit_map.reset()
                         break
+                else:
+                    if self.trace is not None:
+                        self.trace.failed(self, state, allowed, reachable, y, z, x)
 
     def _put(self, state: "_State", part: PlacedPart) -> None:
         """Record a placed part in every structure of ``state``."""
