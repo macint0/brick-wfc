@@ -220,7 +220,10 @@ at the end of this entry (defaults for `--skin` / `--symmetric`).
    `--skin-power a` (choice weight × cells^a on skin cells; `results/m12b_skins_soft_sweep.md`, `m12b_skins_soft.md`)
    at a=1 gives about half the cleanup at a flat judge but gives back most of the visible gain; the hard sort stays
    what `--skin` does (cf, 2026-10-09: the judge is not the arbiter of looks). Skins numbers are at 3c7ef1e (box sizing,
-   lattice supports); the symmetry threshold is being rechecked on the new masks.
+   lattice supports). Under fillable sizing the 5891-1 chair scores 0.806, so the gate is 0.83 (`--symmetrize-min-score`,
+   a fitted threshold: chairs ≤ 0.806, cars and tables ≥ 0.848; `results/m12b_symmetry_threshold.md`); the doubled-base
+   chair builds and looks acceptable but is no longer BrickGPT's chair. Union symmetrization adds 9–15% cells to cars;
+   an intersection variant is the M13 alternative if symmetry becomes a default.
 4. **Slopes and corner parts — done** (`results/m12b_catalog.md`): catalog 63 → 88 parts (corner plates/bricks,
    slopes, inverted, corner and ridge slopes, cheese slopes) with per-cell geometry (footprint, stud cells, seated
    cells; a slope is its bounding box, the sloped face accepts nothing). Style statistics v2 relearned. Recognized
