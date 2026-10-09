@@ -217,8 +217,11 @@ Also landed: `rebrickable:<set>` / any set number as the inventory from Rebricka
 kernel normalized per setup by the median D2 pair distance, `funnel/diversity.py`, `results/m13_diversity.md`);
 paper skeleton in `paper/`. Not now: style-bias tuning, color logic, WFC.
 **Decisions (Mac, 2026-10-09 morning):** (a) yes: `--supports --support-height 6` is the default with a 3D target;
-(b) yes: `--max-clutch 1111` (real clutch, StableLego calibration) is the pipeline default everywhere; (c) yes: ee reruns
-1a/1d on the 88-part catalog with these defaults and redraws the figures; (d) close step 2 with the result as is:
+(b) yes: `--max-clutch 1111` (real clutch, StableLego calibration) is the pipeline default everywhere; (c) done (fd9015b): 1a/1d rerun on the 88-part catalog
+with these defaults, figures redrawn; every valid build within 1111 by construction, chairs 58–81% fill on every set.
+Two open failures from that rerun: slope-heavy sets lose 15–24 fill points because `sized_for` counts a slope as its
+box (5891-1 car 73% on 63 parts → 61% on 88); narrow stems starve (4956-1 table 45/50 stop in the 3×3 post).
+In progress: `m12b-sizing` (ee) and step 3 skins/symmetry, measured first (`m12b-skins`, 64); (d) close step 2 with the result as is:
 statistics stay the baseline and the default, the comparison is a paper result, no more model training now.
 **Done when:** the six-set demo re-rendered with a 3D target looks clearly better side by side (yes:
 `m12b_before_after.png`), every build still valid/stable/one piece (yes), the learned proposal is compared to
