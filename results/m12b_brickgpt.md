@@ -1,5 +1,7 @@
 # M12b step 1 — true 3D targets, and a head-to-head on BrickGPT's data
 
+*Note (2026-10-10): the builds here predate the `_fit_key` fix (60b3a3b, `builder_version` 2: a tile that failed at a cell no longer makes the builder skip the plate of its box). The fix moves pair means by less than 2 SE (old vs fixed base on 9 pairs in [`m12b_complete.md`](m12b_complete.md)); a rerun would give different individual builds.*
+
 **Steps 1a–1d done; 1d's tables in [`m12b_overhangs_tables.md`](m12b_overhangs_tables.md).** Targets can now be true
 3D shapes instead of extruded heightfields:
 - 1a: a StableText2Brick structure, `--shape brickgpt:<id>` (`bricks/brickgpt.py`);

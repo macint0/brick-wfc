@@ -1,5 +1,7 @@
 # M12b step 3: the symmetrize threshold after M12b sizing
 
+*Note (2026-10-10): the builds here predate the `_fit_key` fix (60b3a3b, `builder_version` 2: a tile that failed at a cell no longer makes the builder skip the plate of its box). The fix moves pair means by less than 2 SE (old vs fixed base on 9 pairs in [`m12b_complete.md`](m12b_complete.md)); a rerun would give different individual builds.*
+
 `python -m brickwfc.experiments.skins --steps threshold`. The symmetry score of each scaled object (BrickGPT's chair, car and table at each set's volume, before support columns and symmetrization; best vertical plane through the middle of its extent) under the box sizing of the step-3 runs (`results/m12b_skins.md`) and the fillable sizing after M12b sizing (`results/m12b_sizing.md`, the default). With `--symmetric`, an object whose score reaches the threshold is made exactly symmetric by adding the mirror image of its cells; *added* is what that adds under fillable sizing.
 
 | object | set | box: cells | box: plane (score) | fillable: cells | fillable: plane (score) | added (cells) | added % | symmetrized at 0.8 | symmetrized at 0.83 |
