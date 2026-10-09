@@ -288,7 +288,9 @@ def compare_cell(set_number: str, name: str, structure: brickgpt.Structure, args
                         **skin_row(skin(c.placed, full.shape)), **symmetry_row(c.placed, plane, full)})
         chosen = run_stats["selected"][0]["seed"] if run_stats["selected"] else None
         index = next((i for i, c in enumerate(valid) if c.seed == chosen), None)
-        arms[arm] = {"valid_pct": 100 * len(valid) / len(candidates), "candidates": len(candidates),
+        judges = [r["judge"] for r in per]
+        arms[arm] = {"valid_pct": 100 * len(valid) / len(candidates), "valid": len(valid), "candidates": len(candidates),
+                     "judge_sd": statistics.stdev(judges) if len(judges) > 1 else math.nan,
                      "plane": plane.name, "plane_score": plane.score, "object_cells": int(obj.sum()),
                      "seconds_per_candidate": statistics.mean(c.seconds + c.physics_seconds for c in candidates),
                      "check_failures": run_stats["check_failures"],
@@ -298,7 +300,7 @@ def compare_cell(set_number: str, name: str, structure: brickgpt.Structure, args
     return {"set": set_number, "object": name, "judge_size": size, "arms": arms}
 
 
-COMPARE_HEAD = ("| object | set | arm | valid % | judge | fill % | base-object fill % | top: parts per 4x4 | sides: parts per 4x4 | "
+COMPARE_HEAD = ("| object | set | arm | valid | judge (sd) | fill % | base-object fill % | top: parts per 4x4 | sides: parts per 4x4 | "
                 "faces / visible part | mirrored of mirrorable % | same color % | s/candidate |")
 
 
@@ -306,8 +308,9 @@ def compare_line(cell: dict, arm: str, which: str) -> str:
     a = cell["arms"][arm]
     r = a[which]
     if r is None:
-        return f"| {cell['object']} | {cell['set']} | {arm} | {a['valid_pct']:.0f} |" + " — |" * 9
-    return (f"| {cell['object']} | {cell['set']} | {arm} | {a['valid_pct']:.0f} | {r['judge']:.4f} | "
+        return f"| {cell['object']} | {cell['set']} | {arm} | {a['valid']}/{a['candidates']} |" + " — |" * 9
+    sd = f" ({a['judge_sd']:.4f})" if which == "mean" else ""
+    return (f"| {cell['object']} | {cell['set']} | {arm} | {a['valid']}/{a['candidates']} | {r['judge']:.4f}{sd} | "
             f"{100 * r['fill']:.1f} | {100 * r['base_fill']:.1f} | {f(r['top_patch_parts'])} | {f(r['side_patch_parts'])} | "
             f"{f(r['faces_per_part'], '{:.1f}')} | {f(100 * r['mirrorable_mirrored'], '{:.0f}')} | "
             f"{f(100 * r['mirrorable_mirrored_color'], '{:.0f}')} | {a['seconds_per_candidate']:.1f} |")
@@ -318,6 +321,8 @@ def delta_table(cells: list[dict]) -> list[str]:
     keys = ("judge", "fill", "base_fill", "top_patch_parts", "side_patch_parts", "faces_per_part", "mirrorable_mirrored")
     lines = ["| arm | judge | fill (points) | base-object fill (points) | top parts per 4x4 | side parts per 4x4 | faces / visible part | "
              "mirrored of mirrorable (points) | judge up in | fill up in |", "|---|---|---|---|---|---|---|---|---|---|"]
+    base_sd = statistics.mean(c["arms"]["base"]["judge_sd"] for c in cells)
+    lines.append(f"| (base: judge sd across candidates, mean over cells) | {base_sd:.4f} |" + " |" * 8)
     for arm in ARMS:
         if arm == "base":
             continue
@@ -337,8 +342,9 @@ def compare_report(cells: list[dict]) -> str:
              "`python -m brickwfc.experiments.skins --steps compare` (measures: `results/m12b_skins_measure.md`). "
              "Chair, car and table on 6378-1, 5891-1 and 10182-1, 50 candidates per run, pipeline defaults plus the "
              "arm's flags: **base** (the step-1a rerun), **skin** (`--skin`: largest parts first on the target's "
-             "surface), **symmetric** (`--symmetric`: mirror-preserving target scale and each part's mirror image "
-             "placed with it where it fits and the inventory has it), **both**.", "",
+             "surface), **symmetric** (`--symmetric`: the target's mirror plane; a car or table, at least 0.8 symmetric after "
+             "scaling, is made exactly symmetric by adding the mirror image of its cells, the chair, 0.71-0.77, is "
+             "not; each part's mirror image is placed with it where it fits and the inventory has it), **both**.", "",
              "Judge: size-matched across the four arms of a cell (every valid candidate subsampled to the smallest "
              "one's contact events; higher is better). Fill: of the arm's own object (no support columns). "
              "Base-object fill: of the base arm's object, on the same grid (the symmetric arms make a car or table "
