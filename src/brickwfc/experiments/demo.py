@@ -80,8 +80,9 @@ def summarize(set_number: str, generator: str, directory: Path, shape: tuple[Pat
               catalog: str = "m8") -> dict:
     candidates, stats = load_run(directory)
     source = load_source(set_number, catalog=catalog)
-    target = load_target(str(shape[0]), target_volume(source.inventory, stats["config"].get("sizing", "box")),
-                         source.colors, shape[1], shape[2])
+    sizing = stats["config"].get("sizing", "box")
+    target = load_target(str(shape[0]), target_volume(source.inventory, sizing), source.colors, shape[1], shape[2],
+                         keep_sections=sizing == "fillable")
     built = [c for c in candidates if "generate" not in c.failed]
     valid = [c for c in candidates if c.valid]
     # Shape metrics over builds that pass every check but connectivity, so the rows without the

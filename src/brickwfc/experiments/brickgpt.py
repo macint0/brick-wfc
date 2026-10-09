@@ -162,7 +162,8 @@ def target_for(set_number: str, structure: brickgpt.Structure, variant: str, siz
     hollow = int(variant.removeprefix("hollow")) if variant.startswith("hollow") else 0  # opentops: as exact
     return load_target(BRICKGPT_PREFIX + structure.structure_id, target_volume(source.inventory, sizing),
                        source.colors, columns=variant == "columns", hollow=hollow, supports=supported(variant),
-                       support_height=AltConfig().support_height if variant == "default" else 0)
+                       support_height=AltConfig().support_height if variant == "default" else 0,
+                       keep_sections=sizing == "fillable")
 
 
 def run_ours(set_number: str, structure: brickgpt.Structure, out: Path, n: int, workers: int | None,

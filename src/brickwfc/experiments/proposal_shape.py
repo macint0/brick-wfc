@@ -49,8 +49,9 @@ def summarize(set_number: str, arm: str, directory: Path, vocab: Vocab, style_di
     candidates, stats = load_run(directory)
     source = load_source(set_number)
     style, _ = learned_style(source.name, style_dir, sets_file)
-    target = load_target(stats["config"]["shape"], target_volume(source.inventory, stats["config"].get("sizing", "box")),
-                         source.colors)
+    sizing = stats["config"].get("sizing", "box")
+    target = load_target(stats["config"]["shape"], target_volume(source.inventory, sizing), source.colors,
+                         keep_sections=sizing == "fillable")
     if int(target.mask.sum()) != stats["shape_cells"]:
         raise ValueError(f"{directory}: target has {int(target.mask.sum())} cells, the run had {stats['shape_cells']}")
     real_parts = voxelize(flatten(source.model))[0]

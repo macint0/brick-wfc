@@ -96,9 +96,9 @@ class AltConfig:
     support_height: int = 6  # with supports: only columns at most this many cells tall (0: any); 6 props the
     # chair's caster hub without towers under a table top (results/m12b_brickgpt.md)
     open_tops: bool = True  # with a target shape: studless top cells only under empty target cells
-    order: str = "random"  # d2: cells of a layer visited in random, raster or thin order (smaller sections first)
-    reserve_thin: int = 0  # d2 with a target: reserve parts for sections of at most this many cells (0: off)
-    sizing: str = "fillable"  # target volume: slopes count their stud cells x 1 layer ("box": as before M12b sizing)
+    order: str = "random"  # d2: cells of a layer visited in random or raster order
+    sizing: str = "fillable"  # target volume: slopes count their stud cells x 1 layer, and the scale keeps thin parts
+    # thick ("box": both as before M12b sizing)
     proposal: str | None = None  # d2: learned proposal model (.npz from training/, vocab.json next to it)
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = 1111.0  # physics: keep builds needing at most this clutch per stud, in plate-cell weights;
@@ -145,7 +145,7 @@ def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) ->
                        Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
                        config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
                        hollow=config.hollow, supports=config.supports and takes_supports(config.shape),
-                       support_height=config.support_height)
+                       support_height=config.support_height, keep_sections=config.sizing == "fillable")
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
@@ -160,7 +160,7 @@ def make_context(source: Source, stats: StyleStats, config: AltConfig, target: T
     return Context(source.inventory, source.colors, stats, grid, mask, preferred, empty, config.strength,
                    config.generator, config.max_clutch, config.wfc_time_limit_s, config.balanced,
                    config.bridge, config.connect, config.connect_rounds, config.open_tops and target is not None,
-                   config.order, config.proposal or "", config.reserve_thin if target is not None else 0)
+                   config.order, config.proposal or "")
 
 
 # Generation, resumable ---------------------------------------------------------------------------
@@ -181,8 +181,6 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
         key["open_tops"] = True
     if context.order != "random":  # likewise
         key["order"] = context.order
-    if context.thin:  # likewise
-        key["thin"] = context.thin
     if context.proposal:  # the model by content, so retrained weights are not mixed with old candidates
         key["proposal"] = hashlib.sha256(Path(context.proposal).read_bytes()).hexdigest()[:16]
     return json.loads(json.dumps(key))
@@ -352,13 +350,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--support-height", type=int, default=defaults.support_height,
                         help="with supports: only columns at most this many cells (plates) tall; 0: any height "
                         f"(default {defaults.support_height})")
-    parser.add_argument("--order", choices=("random", "raster", "thin"), default=defaults.order,
-                        help="d2: order the cells of a layer are visited in (thin: random, smaller target sections first)")
-    parser.add_argument("--reserve-thin", type=int, default=defaults.reserve_thin,
-                        help="d2 with a target: set small studded parts aside for target sections of at most this "
-                        "many cells (a post, legs) so lower layers cannot use them up (0: off)")
+    parser.add_argument("--order", choices=("random", "raster"), default=defaults.order,
+                        help="d2: order the cells of a layer are visited in")
     parser.add_argument("--sizing", choices=SIZINGS, default=defaults.sizing,
-                        help="target volume: fillable (a slope counts its stud cells x 1 layer) or box (as before)")
+                        help="target sizing: fillable (a slope counts its stud cells x 1 layer toward the volume, and "
+                        "the scale keeps thin parts thick) or box (as before)")
     parser.add_argument("--proposal", help="d2: learned proposal model (.npz, vocab.json next to it; see training/)")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
@@ -407,7 +403,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         shape=args.shape, height_map=args.height_map, color_map=args.color_map, shape_height=args.shape_height,
         shape_exact=args.shape_exact, shape_columns=args.shape_columns, voxels=args.voxels, mesh_up=args.mesh_up,
         hollow=args.hollow, supports=args.supports, support_height=args.support_height, open_tops=not args.no_open_tops,
-        order=args.order, proposal=args.proposal, reserve_thin=args.reserve_thin, sizing=args.sizing,
+        order=args.order, proposal=args.proposal, sizing=args.sizing,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,

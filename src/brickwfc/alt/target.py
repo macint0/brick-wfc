@@ -72,12 +72,13 @@ def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_ma
                 color_map: Path | None = None, height: int = 6, data_dir: Path = Path("data/omr"),
                 exact: bool = False, columns: bool = False, brickgpt_dir: Path = brickgpt.DATA_DIR,
                 voxels: int = 32, up: str = "y", hollow: int = 0, supports: bool = False,
-                support_height: int = 0) -> Target:
+                support_height: int = 0, keep_sections: bool = False) -> Target:
     """The target ``spec`` with a volume of about ``cells`` grid cells. ``exact``: a model keeps its own
     cells instead of solid columns; ``columns``: a 3D target becomes solid columns instead of its own cells;
     ``voxels``, ``up``: mesh resolution and up axis; ``hollow``: shell thickness of a 3D target (0: solid);
     ``supports``: add support columns under far overhangs of a 3D target; ``support_height`` > 0: only columns
-    at most that many cells tall."""
+    at most that many cells tall; ``keep_sections``: a 3D target or model is scaled so its thin parts stay thick
+    (``shapes.fit_scale``; the pipeline's fillable sizing)."""
     path = Path(spec)
     suffix = path.suffix.lower()
     is_image = suffix in IMAGE_SUFFIXES
@@ -107,7 +108,8 @@ def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_ma
                 raise ValueError(f"{spec}: no bricks")
             occupied, kind = brickgpt.occupancy(bricks), "BrickGPT structure"
         kind += ", solid columns" if columns else ", exact cells"
-        return Target(finish(scaled_to(occupied, cells, columns, hollow)), None, f"{name} ({kind}{hollowed})")
+        return Target(finish(scaled_to(occupied, cells, columns, hollow, keep_sections)), None,
+                      f"{name} ({kind}{hollowed})")
     if spec in SHAPES:
         return Target(sized_for(spec, cells), None, f"{spec} (primitive)")
     if is_image:
@@ -132,5 +134,6 @@ def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_ma
     if not placed:
         raise ValueError(f"{spec}: no catalog parts on the stud grid to take a shape from")
     kind = "model, exact cells" if exact else "model, solid columns"
-    return Target(finish(from_model(placed, cells, solid_columns=not exact, shell=hollow)), None,
+    return Target(finish(from_model(placed, cells, solid_columns=not exact, shell=hollow, keep_sections=keep_sections)),
+                  None,
                   f"{path.stem if path.suffix else spec} ({kind}{hollowed})")
