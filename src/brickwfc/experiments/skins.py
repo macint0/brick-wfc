@@ -19,11 +19,11 @@ five-arm base) is measured where symmetry is possible.
 
 Writes ``results/m12b_skins_measure.md`` and ``.json`` (``--results``).
 
-``compare``: chair, car and table on the three sets, ``--n`` candidates each, in four arms of the pipeline
-(``ARMS``): base (pipeline defaults; the step-1a rerun's candidates are reused, the pipeline checks their setup
+``compare``: chair, car and table on the three sets, ``--n`` candidates each, in arms of the pipeline
+(``--arms``, default ``ARMS``; ``arm_flags``): base (pipeline defaults; the step-1a rerun's candidates are reused, the pipeline checks their setup
 key), ``--skin``, ``--symmetric`` and both. Per arm: valid share, object fill (against the arm's own object,
-without support columns; the symmetric arms scale the target so its mirror plane survives), the judge
-size-matched across the four arms (every valid candidate subsampled to the smallest one's contact events),
+without support columns; the symmetric arms make a car or table exactly symmetric by adding cells), the judge
+size-matched across the arms (every valid candidate subsampled to the smallest one's contact events),
 fragmentation, faces per visible part, the mirrored share of mirrorable parts, and seconds per candidate; for
 the valid candidates (mean) and the selected build. Runs go to ``--compare-out`` (resumable: rerun the same
 command); writes ``results/m12b_skins.md``, ``.json`` and ``m12b_skins_sheet.png`` (the selected build of
@@ -62,7 +62,19 @@ from brickwfc.ldraw.fetch import fetch_set
 from brickwfc.ldraw.mpd import flatten
 
 OBJECTS = {"chair": "a712684f", "table": "858f0955", "car": "4b15b71c"}
-ARMS = {"base": [], "skin": ["--skin"], "symmetric": ["--symmetric"], "both": ["--skin", "--symmetric"]}
+ARMS = ("base", "skin", "symmetric", "both")
+FLAGS = {"base": [], "skin": ["--skin"], "symmetric": ["--symmetric"], "both": ["--skin", "--symmetric"]}
+
+
+def arm_flags(arm: str) -> list[str]:
+    """Pipeline flags of an arm: one of ``FLAGS``, or ``skin_a<a>`` / ``both_a<a>`` (the soft skin preference,
+    ``--skin-power a``, alone or with ``--symmetric``)."""
+    if arm in FLAGS:
+        return FLAGS[arm]
+    for prefix in ("skin_a", "both_a"):
+        if arm.startswith(prefix):
+            return [*FLAGS[prefix[:-2]], "--skin-power", arm.removeprefix(prefix)]
+    raise ValueError(f"unknown arm {arm!r}")
 JUDGE_DRAWS = 5
 GRAY = color_for_code(71)
 
@@ -251,14 +263,14 @@ def run_arm(set_number: str, structure: brickgpt.Structure, arm: str, args: argp
         directory.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(reused, cache)
     alt_main([set_number, "--shape", BRICKGPT_PREFIX + structure.structure_id, "--n", str(args.n), "--k", "1",
-              "--out", str(directory), "--workers", str(args.workers), *ARMS[arm]])
+              "--out", str(directory), "--workers", str(args.workers), *arm_flags(arm)])
     return directory
 
 
 def arm_masks(set_number: str, structure: brickgpt.Structure, arm: str) -> tuple[np.ndarray, np.ndarray]:
     """(the arm's target, as built in; its object without support columns)."""
     source = load_source(set_number)
-    symmetric = "--symmetric" in ARMS[arm]
+    symmetric = "--symmetric" in arm_flags(arm)
     shape = BRICKGPT_PREFIX + structure.structure_id
     full = make_target(source, AltConfig(shape=shape, symmetric=symmetric)).mask
     obj = make_target(source, AltConfig(shape=shape, symmetric=symmetric, supports=False)).mask
@@ -269,7 +281,7 @@ def compare_cell(set_number: str, name: str, structure: brickgpt.Structure, args
     """Every arm of one (object, set): per-candidate measures, the judge size-matched across arms."""
     stats, _ = learned_style(set_number)
     loaded = {}
-    for arm in ARMS:
+    for arm in args.arms:
         directory = args.compare_out / set_number / f"{structure.structure_id[:8]}_{arm}"
         loaded[arm] = (directory, *load_run(directory))
     found = {(arm, c.seed): events(c.placed) for arm, (_, cands, _) in loaded.items() for c in cands if c.valid}
@@ -323,7 +335,7 @@ def delta_table(cells: list[dict]) -> list[str]:
              "mirrored of mirrorable (points) | judge up in | fill up in |", "|---|---|---|---|---|---|---|---|---|---|"]
     base_sd = statistics.mean(c["arms"]["base"]["judge_sd"] for c in cells)
     lines.append(f"| (base: judge sd across candidates, mean over cells) | {base_sd:.4f} |" + " |" * 8)
-    for arm in ARMS:
+    for arm in cells[0]["arms"]:
         if arm == "base":
             continue
         pairs = [(c["arms"][arm]["mean"], c["arms"]["base"]["mean"]) for c in cells
@@ -344,25 +356,26 @@ def compare_report(cells: list[dict]) -> str:
              "arm's flags: **base** (the step-1a rerun), **skin** (`--skin`: largest parts first on the target's "
              "surface), **symmetric** (`--symmetric`: the target's mirror plane; a car or table, at least 0.8 symmetric after "
              "scaling, is made exactly symmetric by adding the mirror image of its cells, the chair, 0.71-0.77, is "
-             "not; each part's mirror image is placed with it where it fits and the inventory has it), **both**.", "",
-             "Judge: size-matched across the four arms of a cell (every valid candidate subsampled to the smallest "
+             "not; each part's mirror image is placed with it where it fits and the inventory has it), **both**; "
+             "**skin_a<a>** / **both_a<a>**: the soft skin preference (`--skin --skin-power a`: choice weights x "
+             "cells ** a on skin cells instead of largest first), alone or with `--symmetric`.", "",
+             "Judge: size-matched across the arms of a cell (every valid candidate subsampled to the smallest "
              "one's contact events; higher is better). Fill: of the arm's own object (no support columns). "
              "Base-object fill: of the base arm's object, on the same grid (the symmetric arms make a car or table "
              "exactly symmetric by adding the mirror image of its cells, so their own object is 2-15% larger). "
              "Fragmentation: distinct parts per all-skin 4 x 4-cell window (lower is cleaner). Mirrored: share of "
              "mirrorable parts whose mirror image is placed (any color; then same color).", "",
-             "## Change against base (means over valid candidates, averaged over the 9 cells)", ""]
+             f"## Change against base (means over valid candidates, averaged over the {len(cells)} cells)", ""]
     lines += delta_table(cells)
     for which, title in (("mean", "Means over valid candidates"), ("selected", "Selected build (k = 1)")):
         lines += ["", f"## {title}", "", COMPARE_HEAD, "|---|---|---|" + "---|" * 10]
         for cell in cells:
-            for arm in ARMS:
+            for arm in cell["arms"]:
                 lines.append(compare_line(cell, arm, which))
     lines += ["", "## Targets", "", "| object | set | arm | object cells | plane (score) | judge size (events) |",
               "|---|---|---|---|---|---|"]
     for cell in cells:
-        for arm in ARMS:
-            a = cell["arms"][arm]
+        for arm, a in cell["arms"].items():
             lines.append(f"| {cell['object']} | {cell['set']} | {arm} | {a['object_cells']} | {a['plane']} "
                          f"({a['plane_score']:.2f}) | {cell['judge_size']} |")
     return "\n".join(lines) + "\n"
@@ -371,22 +384,21 @@ def compare_report(cells: list[dict]) -> str:
 def compare_sheet(cells: list[dict], path: Path) -> None:
     images, labels = [], []
     for cell in cells:
-        for arm in ARMS:
-            a = cell["arms"][arm]
+        for arm, a in cell["arms"].items():
             r = a["selected"]
             if a["png"] is None or r is None:
                 continue
             images.append(Path(a["png"]))
             labels.append(f"{cell['object']} {cell['set']}: {arm}\nfill {100 * r['fill']:.0f}%, top {f(r['top_patch_parts'], '{:.1f}')}, "
                           f"sides {f(r['side_patch_parts'], '{:.1f}')}\nmirrored {f(100 * r['mirrorable_mirrored'], '{:.0f}')}%")
-    labeled_sheet(images, labels, path, columns=len(ARMS), width=600)
+    labeled_sheet(images, labels, path, columns=len(cells[0]["arms"]), width=600)
 
 
 def step_compare(args: argparse.Namespace) -> None:
     structures = {name: brickgpt.find(OBJECTS[name], args.brickgpt_data) for name in args.objects}
     for set_number in args.sets:  # small sets first: their rows are ready early
         for name, structure in structures.items():
-            for arm in ARMS:
+            for arm in args.arms:
                 print(f"== {name} {set_number} {arm}", flush=True)
                 run_arm(set_number, structure, arm, args)
     cells = [compare_cell(set_number, name, structure, args)
@@ -409,6 +421,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--results", type=Path, default=Path("results/m12b_skins_measure.md"))
     parser.add_argument("--objects", nargs="+", choices=sorted(OBJECTS), default=["chair", "car", "table"])
     parser.add_argument("--n", type=int, default=50, help="compare: candidates per run")
+    parser.add_argument("--arms", nargs="+", default=list(ARMS),
+                        help="compare: base, skin, symmetric, both, skin_a<a>, both_a<a> (soft skin, --skin-power a)")
     parser.add_argument("--workers", type=int, default=5)
     parser.add_argument("--compare-out", type=Path, default=Path("out/m12b_skins"))
     parser.add_argument("--compare-results", type=Path, default=Path("results/m12b_skins.md"))

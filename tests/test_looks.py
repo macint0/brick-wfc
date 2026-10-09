@@ -105,3 +105,18 @@ def test_symmetric_target_has_a_plane_and_mirrored_supports(tmp_path: Path) -> N
     assert sym.plane.score == 1.0 and (reflected(sym.mask, sym.plane) == sym.mask).all()
     assert (sym.mask >= plain.mask).all()  # symmetrized by adding cells, never removing them
     assert "mirror plane" in sym.description
+
+
+def test_soft_skin_preference(parts) -> None:
+    mask = target()
+    plain = BottomUpBuilder(parts, any_offset=True, balanced=True, open_tops=True)
+    flat = BottomUpBuilder(parts, any_offset=True, balanced=True, open_tops=True, skin=True, skin_power=0.0)
+    soft = BottomUpBuilder(parts, any_offset=True, balanced=True, open_tops=True, skin=True, skin_power=2.0)
+    per_part = {"plain": [], "soft": []}
+    for seed in range(8):
+        a = plain.build(mask.shape, np.random.default_rng(seed), allowed=mask)
+        assert (a == flat.build(mask.shape, np.random.default_rng(seed), allowed=mask)).all()  # cells ** 0 = 1
+        b = soft.build(mask.shape, np.random.default_rng(seed), allowed=mask)
+        per_part["plain"].append(skin(check(a, parts, mask), mask.shape).faces_per_part)
+        per_part["soft"].append(skin(check(b, parts, mask), mask.shape).faces_per_part)
+    assert np.mean(per_part["soft"]) > np.mean(per_part["plain"])

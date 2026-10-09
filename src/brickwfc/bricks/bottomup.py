@@ -54,7 +54,10 @@ by z, then x, as in its training data) rather than the default random order.
 
 Looks (M12b step 3), both off by default (builds as before). With ``skin=True`` and a target, at a cell on the
 target's outer surface (``shapes.surface``) parts are tried largest first (most cells; the sampled order breaks
-ties), so the first one that fits is the largest that fits: the skin shows fewer, larger parts. With a mirror
+ties), so the first one that fits is the largest that fits: the skin shows fewer, larger parts. With
+``skin_power`` = a, the preference is soft instead: on those cells the choice weights (style included) are
+multiplied by each part's cells ** a before the order is drawn, so larger parts are tried earlier but the learned
+style still decides among them (a -> infinity is the hard sort). With a mirror
 ``plane`` passed to ``build`` (``symmetry.Plane``), every placed part is followed by its mirror image when it
 fits there (every rule as for any part, balance included) and the inventory has it: in the part's color, else
 in the first color of that part left (in the choices' fixed order). Both only reorder or add placements that
@@ -86,13 +89,15 @@ class BottomUpBuilder:
     def __init__(self, parts: PartSet, any_offset: bool = False, style: StyleBias | None = None,
                  balanced: bool = False, bridge: bool = False, connect: bool = False,
                  connect_rounds: int = 1, open_tops: bool = False, order: str = "random",
-                 proposal: Proposal | None = None, proposal_strength: float = 1.0, skin: bool = False) -> None:
+                 proposal: Proposal | None = None, proposal_strength: float = 1.0, skin: bool = False,
+                 skin_power: float | None = None) -> None:
         if bridge and not (balanced and any_offset):
             raise ValueError("bridge needs balanced=True and any_offset=True")
         if order not in ("random", "raster"):
             raise ValueError(f"order must be 'random' or 'raster', not {order!r}")
         self.order = order
         self.skin = skin
+        self.skin_power = skin_power  # None: hard largest-first sort on the skin; a: weights x cells ** a
         self.proposal = proposal
         self.proposal_strength = proposal_strength
         self.parts = parts
@@ -122,6 +127,7 @@ class BottomUpBuilder:
         self.choice_p = weights / weights.sum()
         self.choice_color_names = np.array([color.name for _, color in self.choices])
         self.choice_cells = np.array([shape.cells for shape, _ in self.choices])
+        self.skin_weights = None if skin_power is None else self.choice_cells.astype(float) ** skin_power
         self.shape_colors: dict[Shape, list[BrickColor]] = {}  # colors each shape has tiles in, in choice order
         for shape, color in self.choices:
             self.shape_colors.setdefault(shape, []).append(color)
@@ -202,8 +208,12 @@ class BottomUpBuilder:
                     p = p / p.sum()
                 if state.session is not None and reachable[z, x]:
                     p = self._proposed_p(p, state.session, y, z, x)
+                on_skin = state.skin is not None and bool(state.skin[y, z, x])
+                if on_skin and self.skin_weights is not None:  # soft: larger parts weigh more on the skin
+                    p = p * self.skin_weights
+                    p = p / p.sum()
                 order = rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p)
-                if state.skin is not None and state.skin[y, z, x]:  # largest first on the skin
+                if on_skin and self.skin_weights is None:  # hard: largest first on the skin
                     order = order[np.argsort(-self.choice_cells[order], kind="stable")]
                 for choice in order:
                     part_shape, color = self.choices[choice]
