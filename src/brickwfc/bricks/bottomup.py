@@ -82,6 +82,25 @@ layer of an overhang, which bottom-up cantilevering never does (it has no stud b
 part carry another under it. A hung part joins the cluster of the parts it hangs from for the balance check, and
 the build is then supported in the sense of ``support.is_stable(hanging=True)``: every part is joined to the
 ground through stud joints. Physics needs no change: the LP already lets a stud joint hold a part up (clutch).
+
+Connected growth (M12b, ``order="connected"``; for target shapes). The main pass grows one piece instead of
+building layer by layer: the first part goes on the ground in the largest connected region of the target's
+ground layer (ties: the one nearest the centre of the target's footprint), and after it a cell is visited only
+if a part covering it could join the structure: rest on a stud of it within a part's reach below, or, with
+``hang``, hang from it within reach above. A part on the ground joins only by hanging (its studs under the
+structure). The lowest layer with such cells comes first: its cells are visited in seeded random order, each
+tried (no empty draw, the style's order among the parts), and the layer is visited again until nothing more fits
+there; only then does the growth move up a layer. A placement may open cells below it (a part hanging under it)
+as well as above, so after one the growth steps back down by the tallest part's height. A cell where nothing fits
+is left and tried again on every later visit of its layer. So the structure spreads low first (a chair's arms,
+then its feet, hung down to the ground) before it climbs. Every placement, mirror images and the hole
+pass included, joins the one piece, so the connect repair has nothing to do; feet and tips are reached from the
+seed along the arms (down to the ground by hanging) instead of being built as separate stacks. Without ``hang``,
+nothing but the seed reaches the ground. With ``balanced``, the growth does not ask every partial build to
+stand (grown from one leg, a table could never reach its other legs); it asks it of the result instead: the
+build is cut back to the longest prefix of its placements that stands (every prefix is supported and one piece
+by construction), and the parts cut go back to the inventory for the hole pass, which checks balance at every
+placement as the main pass does.
 """
 
 from __future__ import annotations
@@ -117,8 +136,8 @@ class BottomUpBuilder:
             raise ValueError("holes needs any_offset=True")
         if hang and not holes:
             raise ValueError("hang needs holes=True")
-        if order not in ("random", "raster"):
-            raise ValueError(f"order must be 'random' or 'raster', not {order!r}")
+        if order not in ("random", "raster", "connected"):
+            raise ValueError(f"order must be 'random', 'raster' or 'connected', not {order!r}")
         self.order = order
         self.skin = skin
         self.skin_power = skin_power  # None: hard largest-first sort on the skin; a: weights x cells ** a
@@ -186,7 +205,10 @@ class BottomUpBuilder:
         allowed = np.ones(shape, dtype=bool) if allowed is None else allowed
         skin = surface(target) if self.skin and target is not None else None
         state = self._new_state(shape, inventory, target, skin, plane)
-        self._fill(state, range(shape[0]), rng, allowed, preferred)
+        if self.order == "connected":
+            state = self._grow(state, rng, allowed, preferred, target)
+        else:
+            self._fill(state, range(shape[0]), rng, allowed, preferred)
         if self.holes:
             self._fill_holes(state, range(shape[0]), rng, allowed, preferred)
         for round_ in range(self.connect_rounds if self.connect else 0):
@@ -280,36 +302,119 @@ class BottomUpBuilder:
     def _fill_holes(self, state: "_State", layers: range, rng: np.random.Generator, allowed: np.ndarray,
                     preferred: np.ndarray | None) -> None:
         """The hole-filling pass (see the module docstring): sweeps over ``layers`` until one places nothing."""
-        _, nz, nx = state.filled.shape
+        self._sweeps(state, layers, rng, allowed, preferred, True, self.order == "connected")
+
+    def _grow(self, state: "_State", rng: np.random.Generator, allowed: np.ndarray, preferred: np.ndarray | None,
+              target: np.ndarray | None) -> "_State":
+        """The connected growth order's main pass (see the module docstring): a seed part on the ground, sweeps
+        over joinable cells until one places nothing, then (``balanced``) the longest prefix that stands."""
+        balance, state.balance = state.balance, None  # checked on the result, below
+        self._grow_from_seed(state, rng, allowed, preferred)
+        if balance is None:
+            return state
+        keep = self._standing_prefix(state.placed, allowed.shape)
+        returned = Counter((p.shape.part.name, p.color.name) for p in state.placed[keep:])
+        remaining = None if state.remaining is None else dict(Counter(state.remaining) + returned)
+        kept = state.placed[:keep]
+        state = self._new_state(allowed.shape, None, target, state.skin, state.plane)
+        for part in kept:  # already counted against the inventory
+            self._put(state, part, self._links(part, state.owner))
+        state.remaining = remaining
+        return state
+
+    def _standing_prefix(self, placed: list[PlacedPart], shape: tuple[int, int, int]) -> int:
+        """The length of the longest prefix of ``placed`` (one piece at every length) that stands on a table."""
+        balance, owner, keep = Balance(), np.full(shape, -1, dtype=np.int64), 0
+        for i, part in enumerate(placed):
+            balance.add(part, self._links(part, owner))
+            for cell in part.cells():
+                owner[cell] = i
+            if all(cluster.stands() for cluster in balance.clusters.values()):
+                keep = i + 1
+        return keep
+
+    def _grow_from_seed(self, state: "_State", rng: np.random.Generator, allowed: np.ndarray,
+                        preferred: np.ndarray | None) -> None:
+        labels, count = ndimage.label(allowed[0])
+        if not count:
+            return
+        sizes = np.bincount(labels.ravel())[1:]
+        footprint = np.argwhere(allowed.any(axis=0)).mean(axis=0)
+
+        def rank(region: int) -> tuple[int, float]:  # largest, then nearest the footprint's centre
+            centre = np.argwhere(labels == region).mean(axis=0)
+            return int(sizes[region - 1]), -float(np.hypot(*(centre - footprint)))
+
+        region = max(range(1, count + 1), key=rank)
+        cells = np.argwhere(labels == region)
+        cells = cells[rng.permutation(len(cells))]
+        open_bottom = state.open_bottom if self.open_bottoms else None
+        fit_map = _FitMap(state.filled, state.studs, allowed, 0, self._studless_top if self.open_tops else None,
+                          open_bottom, state.open_bottom if self.hang else None)
+        for z, x in cells.tolist():
+            if self._try_cell(state, 0, z, x, rng, allowed, preferred, fit_map, False, False):
+                break
+        else:
+            return
+        drop = max(self.heights) if self.hang else 0
+        y = 0
+        while y < allowed.shape[0]:
+            if state.remaining is not None and not any(n > 0 for n in state.remaining.values()):
+                return
+            if self._sweep_layer(state, y, rng, allowed, preferred, False, True):
+                y = max(0, y - drop)  # visit this layer again, and the layers a part could now hang into
+            else:
+                y += 1
+
+    def _sweeps(self, state: "_State", layers: range, rng: np.random.Generator, allowed: np.ndarray,
+                preferred: np.ndarray | None, largest_first: bool, joined: bool) -> None:
+        """Sweeps over the free cells of ``allowed`` in ``layers`` that a part could reach (rest on a stud within
+        reach below, hang within reach above with ``hang``), bottom layer first, trying every visited cell, until
+        one places nothing. ``largest_first``: the hole pass's part order; ``joined``: every part must join the
+        structure (a part on the ground only by hanging)."""
         changed = True
         while changed:
             changed = False
             for y in layers:
                 if state.remaining is not None and not any(n > 0 for n in state.remaining.values()):
                     return
-                reachable = self._reachable(state.studs, y)
-                if self.hang:
-                    reachable = reachable | self._hang_reachable(state, y)
-                cells = np.argwhere(allowed[y] & ~state.filled[y] & reachable)
-                if not len(cells):
-                    continue
-                if self.order == "random":
-                    cells = cells[rng.permutation(len(cells))]
-                open_bottom = state.open_bottom if self.open_bottoms else None
-                fit_map = _FitMap(state.filled, state.studs, allowed, y, self._studless_top if self.open_tops else None,
-                                  open_bottom, state.open_bottom if self.hang else None)
-                for z, x in cells.tolist():
-                    if state.filled[y, z, x]:  # taken by a part placed at a cell visited earlier
-                        continue
-                    if self._fill_hole(state, y, z, x, rng, allowed, preferred, fit_map):
-                        changed = True
+                if self._sweep_layer(state, y, rng, allowed, preferred, largest_first, joined):
+                    changed = True
 
-    def _fill_hole(self, state: "_State", y: int, z: int, x: int, rng: np.random.Generator, allowed: np.ndarray,
-                   preferred: np.ndarray | None, fit_map: "_FitMap") -> bool:
-        """Place the first part that fits covering free cell (y, z, x), largest first; whether one was placed."""
+    def _sweep_layer(self, state: "_State", y: int, rng: np.random.Generator, allowed: np.ndarray,
+                     preferred: np.ndarray | None, largest_first: bool, joined: bool) -> bool:
+        """One visit of layer ``y``'s reachable free cells (``_sweeps``); whether it placed a part."""
+        reachable = self._reachable(state.studs, y)
+        if joined and y == 0:  # the ground joins nothing
+            reachable = np.zeros_like(reachable)
+        if self.hang:
+            reachable = reachable | self._hang_reachable(state, y)
+        cells = np.argwhere(allowed[y] & ~state.filled[y] & reachable)
+        if not len(cells):
+            return False
+        if self.order != "raster":
+            cells = cells[rng.permutation(len(cells))]
+        open_bottom = state.open_bottom if self.open_bottoms else None
+        fit_map = _FitMap(state.filled, state.studs, allowed, y, self._studless_top if self.open_tops else None,
+                          open_bottom, state.open_bottom if self.hang else None)
+        placed = False
+        for z, x in cells.tolist():
+            if state.filled[y, z, x]:  # taken by a part placed at a cell visited earlier
+                continue
+            if self._try_cell(state, y, z, x, rng, allowed, preferred, fit_map, largest_first, joined):
+                placed = True
+        return placed
+
+    def _try_cell(self, state: "_State", y: int, z: int, x: int, rng: np.random.Generator, allowed: np.ndarray,
+                  preferred: np.ndarray | None, fit_map: "_FitMap", largest_first: bool, joined: bool) -> bool:
+        """Place the first part that fits covering free cell (y, z, x), in the sampled order (``largest_first``:
+        sorted largest first; else the skin's hard sort where it applies); whether one was placed."""
         p = self._cell_p(state, y, z, x, preferred, True)
         order = rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p)
-        order = order[np.argsort(-self.choice_size[order], kind="stable")]
+        if largest_first:
+            order = order[np.argsort(-self.choice_size[order], kind="stable")]
+        elif state.skin is not None and state.skin[y, z, x] and self.skin_weights is None:
+            order = order[np.argsort(-self.choice_cells[order], kind="stable")]
         failed: set = set()
         for choice in order:
             part_shape, color = self.choices[choice]
@@ -320,13 +425,13 @@ class BottomUpBuilder:
                 continue
             part = self._place(part_shape, color, y, z, x, state.filled, state.studs, allowed, rng,
                                state.owner, state.balance, fit_map, state.open_bottom,
-                               state.open_bottom if self.hang else None)
+                               state.open_bottom if self.hang else None, joined)
             if part is None:
                 failed.add(box)
                 continue
             self._put(state, part, self._links(part, state.owner) if self.hang else None)
-            if state.plane is not None:
-                self._put_mirror(state, part, allowed, self.hang)
+            if state.plane is not None:  # in the connected order every mirror image joins too (the seed's)
+                self._put_mirror(state, part, allowed, self.hang, joined or self.order == "connected")
             fit_map.reset()
             return True
         return False
@@ -366,7 +471,8 @@ class BottomUpBuilder:
         if state.session is not None:
             state.session.add(part)
 
-    def _put_mirror(self, state: "_State", part: PlacedPart, allowed: np.ndarray, hang: bool = False) -> None:
+    def _put_mirror(self, state: "_State", part: PlacedPart, allowed: np.ndarray, hang: bool = False,
+                    joined: bool = False) -> None:
         """Place ``part``'s mirror image across ``state.plane`` if it fits and the inventory has it."""
         image = mirror_part(part, state.plane)
         if image is None or image == part:
@@ -377,11 +483,13 @@ class BottomUpBuilder:
         if not left:
             return
         image = PlacedPart(image.shape, left[0], image.layer, image.x, image.z)
-        if self._fits_now(image, state, allowed, hang):  # whether a part fits does not depend on its color
+        if self._fits_now(image, state, allowed, hang, joined):  # whether a part fits does not depend on its color
             self._put(state, image, self._links(image, state.owner) if hang else None)
 
-    def _fits_now(self, part: PlacedPart, state: "_State", allowed: np.ndarray, hang: bool = False) -> bool:
-        """Every check ``_place`` makes, for this exact placement (``hang``: as in the hole pass with ``hang``)."""
+    def _fits_now(self, part: PlacedPart, state: "_State", allowed: np.ndarray, hang: bool = False,
+                  joined: bool = False) -> bool:
+        """Every check ``_place`` makes, for this exact placement (``hang``: as in the hole pass with ``hang``;
+        ``joined``: a part on the ground must hang from the structure, as in the connected order)."""
         open_bottom = state.open_bottom if self.open_bottoms else None
         hang_bottom = state.open_bottom if hang else None
         cells = self.cell_masks.get(part.shape)
@@ -391,9 +499,12 @@ class BottomUpBuilder:
         else:
             studless = self._studless_top(part.shape) if self.open_tops else None
             fits = self._fits(part, state.filled, state.studs, allowed, studless, open_bottom, hang_bottom)
-        if not fits or state.balance is None:
-            return fits
-        return state.balance.can_add(part, self._links(part, state.owner) if hang else self._below(part, state.owner))
+        if not fits:
+            return False
+        links = self._links(part, state.owner) if hang else self._below(part, state.owner)
+        if joined and part.layer == 0 and not links:
+            return False
+        return state.balance is None or state.balance.can_add(part, links)
 
     def _proposed_p(self, p: np.ndarray, session: Session, y: int, z: int, x: int) -> np.ndarray:
         """Choice probabilities ``p`` times the proposal's weights (normalized, floored so that every choice
@@ -422,12 +533,13 @@ class BottomUpBuilder:
         self, part_shape: Shape, color: BrickColor, y: int, z: int, x: int,
         filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray, rng: np.random.Generator,
         owner: np.ndarray | None = None, balance: Balance | None = None, fit_map: "_FitMap | None" = None,
-        open_bottom: np.ndarray | None = None, hang_bottom: np.ndarray | None = None,
+        open_bottom: np.ndarray | None = None, hang_bottom: np.ndarray | None = None, joined: bool = False,
     ) -> PlacedPart | None:
         """A fitting placement of the part with its bottom layer covering cell (y, z, x), or None.
         ``fit_map`` (the current layer's, up to date) answers ``_fits`` by lookup for rectangular parts;
         other parts are checked cell by cell (``_fits_cells``). ``hang_bottom`` (the build's open bottoms): the
-        part may also hang from a part above (see the module docstring)."""
+        part may also hang from a part above (see the module docstring); ``joined``: a part on the ground must
+        hang from the structure (the connected order)."""
         open_bottom = open_bottom if self.open_bottoms else None
         cells = self.cell_masks.get(part_shape)
         valid = None if fit_map is None or cells is not None else fit_map.corners(part_shape)
@@ -443,7 +555,11 @@ class BottomUpBuilder:
                 fits = self._fits(part, filled, studs, allowed, studless, open_bottom, hang_bottom)
             else:
                 fits = 0 <= part.z < valid.shape[0] and 0 <= part.x < valid.shape[1] and bool(valid[part.z, part.x])
-            return fits and (balance is None or balance.can_add(part, links(part)))
+            if not fits:
+                return False
+            if joined and part.layer == 0 and not links(part):
+                return False
+            return balance is None or balance.can_add(part, links(part))
 
         if not self.any_offset:
             part = PlacedPart(part_shape, color, y, x, z)
@@ -461,11 +577,11 @@ class BottomUpBuilder:
             part = PlacedPart(part_shape, color, y, x - dx, z - dz)
             if not ok(part):
                 continue
-            if not self.bridge:
+            if not self.bridge or balance is None:  # no clusters to join while connected growth defers balance
                 return part
-            joined = len({balance.root(i) for i in links(part)})
-            if joined > best_joined:
-                best, best_joined = part, joined
+            count = len({balance.root(i) for i in links(part)})
+            if count > best_joined:
+                best, best_joined = part, count
         return best
 
     def _reachable(self, studs: np.ndarray, y: int) -> np.ndarray:
