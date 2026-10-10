@@ -477,8 +477,8 @@ The sweep (third part of the write-up; `m12b_complete_sweep.json`, `m12b_complet
 `m12b_complete_sweep_missing.png`, `m12b_complete_holes.json`, `m12b_complete_old_vs_base.json`), at 49d5739 or later:
 
 ```
-python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps sweep --n 50 --workers 5
-python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps sweep-report
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps sweep --n 50 --workers 5 --arms old base hang usable usable90 usable80
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps sweep-report --arms old base hang usable usable90 usable80
 python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps holes --arm usable80 --workers 1
 python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps old-vs-base
 ```

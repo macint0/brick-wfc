@@ -693,7 +693,16 @@ ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed a
                     ["--sizing", "usable", "--fill-slack", "0.9", *HANG, "--order", "connected"]),
     "connected80": ("connected + usable 0.8 + hang",
                     ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--order", "connected"]),
+    # small parts kept for the hole pass (M12b completeness, cf 2026-10-10), at the defaults (usable 1.0 + hang) and
+    # at slack 0.8; compared with "usable" and "usable80"
+    "reserve": ("reserve-small", ["--sizing", "usable", *HANG, "--reserve-small"]),
+    "small1": ("small-last 1", ["--sizing", "usable", *HANG, "--small-last", "1"]),
+    "small2": ("small-last 2", ["--sizing", "usable", *HANG, "--small-last", "2"]),
+    "reserve80": ("reserve-small 0.8", ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--reserve-small"]),
+    "small1_80": ("small-last 1, 0.8", ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--small-last", "1"]),
+    "small2_80": ("small-last 2, 0.8", ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--small-last", "2"]),
 }
+SMALL_ARMS = ("usable", "reserve", "small1", "small2", "usable80", "reserve80", "small1_80", "small2_80")
 COMPARE = (("usable", "connected"), ("usable90", "connected90"), ("usable80", "connected80"))
 STALL_FILL = 50.0  # a candidate under this fill % of its target stalled
 TIP_HEIGHT = 1 / 3  # tip cells: in the lowest third of the target's height ...
@@ -795,7 +804,7 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
         chosen = next(c for c in candidates if c.seed == selected["seed"])
         cell["selected"] = rows[selected["seed"]] | {"seed": selected["seed"], "parts": selected["parts"],
                                                      "utilization_pct": selected["utilization_pct"],
-                                                     "clutch": selected["clutch"]}
+                                                     "clutch": selected["clutch"], "judge": selected["judge"]}
         cell["selected"]["complete"] = complete(cell["selected"])
         cell["preview"] = (directory / selected["png"]).as_posix()
         path = args.out / "sweep_missing" / f"{obj}_{set_number}_{arm}.png"
@@ -806,8 +815,8 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
 def sweep_report(cells: list[dict]) -> str:
     lines = ["| object | set | arm | target cells | object cells | valid | complete | fill % (sel / mean) | "
              "holes (sel / mean) | largest hole (sel / mean) | surface % (sel / mean) | parts (sel) | used % (sel) | "
-             "s / candidate | tips filled % (sel / mean) | clutch (sel) | stalled (top layers) |",
-             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+             "judge (sel) | s / candidate | tips filled % (sel / mean) | clutch (sel) | stalled (top layers) |",
+             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for c in cells:
         s = c.get("selected", {})
         title = ARMS[c["arm"]][0] + (f" (= {ARMS[c['same_as']][0]})" if c["same_as"] else "")
@@ -817,7 +826,7 @@ def sweep_report(cells: list[dict]) -> str:
             f"{s.get('fill_pct', math.nan):.1f} / {c['mean_fill_pct']:.1f} | "
             f"{s.get('holes', 0)} / {c['mean_holes']:.1f} | {s.get('largest_hole', 0)} / {c['mean_largest_hole']:.0f} | "
             f"{s.get('surface_pct', math.nan):.1f} / {c['mean_surface_pct']:.1f} | {s.get('parts', 0)} | "
-            f"{s.get('utilization_pct', math.nan):.0f} | {c['s_per_candidate']:.1f} | "
+            f"{s.get('utilization_pct', math.nan):.0f} | {s.get('judge', math.nan):.4f} | {c['s_per_candidate']:.1f} | "
             f"{s.get('tips_pct', math.nan):.0f} / {c.get('mean_tips_pct', math.nan):.0f} | "
             f"{s.get('clutch', math.nan):.0f} | {c.get('stalled', 0)}{stall_tops_text(c.get('stall_tops', []))} |")
     return "\n".join(lines)
@@ -959,6 +968,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--arms", nargs="+", choices=list(ARMS), help="sweep, sweep-report: these arms (default: all)")
     parser.add_argument("--report-name", default="sweep", help="sweep-report: file names (<name>.md, .json, sheets)")
     parser.add_argument("--arm", default="usable80", help="holes: the sweep arm whose selected builds to diagnose")
+    parser.add_argument("--arms", nargs="+", choices=list(ARMS), help="sweep, sweep-report: these arms (default: all; "
+                        "the small-part comparison: " + " ".join(SMALL_ARMS) + ")")
+    parser.add_argument("--report-name", default="sweep", help="sweep-report: file names (<name>.md, .json, sheets)")
     args = parser.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
     if "final" in args.steps:

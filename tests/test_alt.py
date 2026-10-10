@@ -242,3 +242,15 @@ def test_3d_target_defaults() -> None:
     assert no_hang.holes and not no_hang.hang
     flat = resolve(AltConfig(shape="pyramid", holes=True))
     assert flat.holes and not flat.hang  # the hole pass on a 2D target when asked; hanging stays a 3D default
+
+
+def test_small_part_options_reach_the_builder_and_the_cache_key(tiny_ldr: Path, style_dir: tuple[Path, Path]) -> None:
+    source, label, plain = tiny_context(tiny_ldr, style_dir)
+    assert "reserve_small" not in cache_key(source, label, plain) and "small_last" not in cache_key(source, label, plain)
+    _, _, reserve = tiny_context(tiny_ldr, style_dir, reserve_small=True)
+    _, _, soft = tiny_context(tiny_ldr, style_dir, small_last=1.0)
+    assert cache_key(source, label, reserve)["reserve_small"] is True
+    assert cache_key(source, label, soft)["small_last"] == 1.0
+    for context in (reserve, soft):
+        candidates = generate(context, range(2))
+        assert all(not set(c.failed) & {"generate", "integrity", "inventory", "support"} for c in candidates)
