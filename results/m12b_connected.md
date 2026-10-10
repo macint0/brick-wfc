@@ -319,6 +319,154 @@ connected build loses to the default because of one.
 - **The old 6378-1 chair cells.** On the cut-post target its connected cells measured the bug: all 50 seeds stalled
   at 8.9% fill. With the post back, none stalls.
 
+## Connected growth with the small parts kept (2026-10-10)
+
+ee's small-part options (`--reserve-small`, `--small-last A`; `m12b_complete.md`) now apply inside connected growth
+(e12b27f): the growth, its seed and its sweeps are the main pass, and the hole pass is untouched. With the options off,
+the builds are bit-identical. cf picked the arms from ee's sweep, where reserve was the best option and small-last 1 the
+better A at both slacks. They run on the same 9 pairs as above:
+
+| arm | flags | compared with |
+|---|---|---|
+| creserve | connected + `--reserve-small` | connected; default (`usable + hang`) |
+| csmall1 | connected + `--small-last 1` | connected; default |
+| creserve80 | connected80 + `--reserve-small` | connected80; default at 0.8 |
+| csmall1_80 | connected80 + `--small-last 1` | connected80; default at 0.8 |
+
+The same rule applies as above. An arm is adopted only if, on every pair, its selected build has more fill, no larger
+largest hole and more surface, with no fewer valid candidates. Between passing arms, the smaller judge cost decides.
+
+### Result
+
+**No arm passes the rule. creserve, the reserve inside growth, is the strongest arm in this sweep.** It passes on 5/9
+pairs against the default at both slacks, and on 4/9 against plain connected. Its selected build fills more than the
+default's on all 9 pairs at both slacks. Its misses are a larger largest hole, less surface, or fewer valid candidates,
+on 4 pairs at each slack. ee's reserve in random order passed on 6/9 at 1.0 and 3/9 at 0.8. **One candidate is
+complete**, the first in any sweep: a creserve80 build of the 5891-1 chair. The judge did not select it.
+
+| arm | passes vs connected | passes vs default | sel. fill % | sel. largest hole | sel. surface % | valid | complete candidates | stalled | judge (sel) | s / candidate |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| default | | | 81.8 | 202 | 78.4 | 412 | 0 | 0 | -0.2959 | 39.3 |
+| connected | | 2/9 | 84.2 | 240 | 83.0 | 423 | 0 | 26 | -0.2922 | 25.0 |
+| creserve | 4/9 | 5/9 | **87.8** | **143** | **86.5** | 426 | 0 | 15 | -0.3036 | 24.8 |
+| csmall1 | 1/9 | 4/9 | 85.9 | 172 | 84.5 | 412 | 0 | 20 | -0.2965 | 23.8 |
+| default 0.8 | | | 86.3 | 112 | 83.9 | 415 | 0 | 1 | -0.2974 | 29.4 |
+| connected80 | | 4/9 | 90.1 | 81 | 89.3 | 422 | 0 | 17 | -0.2886 | 23.4 |
+| creserve80 | 4/9 | 5/9 | **91.4** | 85 | **89.7** | 424 | **1** | 22 | -0.2906 | 16.8 |
+| csmall1_80 | 2/9 | 4/9 | 90.0 | **72** | 88.6 | 425 | 0 | 15 | -0.2838 | 17.8 |
+
+Notes on the table:
+- **Columns.** Selected-build columns are means over the 9 pairs. Valid, complete candidates and stalled are sums over
+  the 9 pairs × 50 seeds. A complete candidate is any valid candidate that meets the bar, not only the selected one.
+- **Pairs that fail the rule** (base → arm):
+  - default → creserve: 6378-1 chair (hole 34 → 96, surface 87.0 = 87.0), 6378-1 table (hole 96 → 119), 4956-1 table
+    (hole 253 → 307, surface −0.1, valid 39 → 37), 5891-1 car (valid 50 → 49).
+  - default 0.8 → creserve80: 4956-1 table (hole 351 → 390, surface −5.3, valid 41 → 38), 6378-1 car (hole 49 → 75),
+    5891-1 car (hole 22 → 31), 4956-1 car (valid 50 → 48).
+  - csmall1 and csmall1_80 fail on 5 pairs against the default. Against plain connected they lose fill or surface on
+    most pairs (1/9 and 2/9 pass). As in ee's random-order sweep, small-last 1 is weaker than the reserve.
+- **Judge.** The judge does not rank the arms the way completeness does. creserve's selected builds score 0.011 lower
+  than connected's at 1.0, and 0.002 lower at 0.8. This is the size-matched contact-statistics judge, as everywhere
+  above.
+- **Time.** At 0.8, the small-part arms are faster than plain connected: 17 vs 23 s per candidate.
+
+**The complete candidate** is seed 1 of creserve80 on the 5891-1 chair:
+- **Completeness:** fill 98.7%, largest hole 4, surface 98.3%, tips 99%.
+- **Validity:** valid, so it stands, is one piece and is within real clutch.
+- **Selection:** the selected build is seed 43 of the same run: fill 98.5%, largest hole 7, surface 98.0%. It misses
+  the bar only by its 7-cell hole. Rerunning the funnel on the cached candidates puts seed 1 at rank 6 of the 34 unique
+  verified builds. Its selection score is z(judge) + z(fill). Its fill is above seed 43's, but its judge (−0.351) is
+  the lowest of the top 8, and seed 43's is −0.294.
+- **Figure:** `m12b_connected_complete_chair.png`. From the left: seed 1, then its missing cells (red: target cells
+  left empty), then seed 43, then its missing cells.
+
+A selection that prefers complete candidates, or ranks on completeness before the judge, would have picked it. That
+is a change to the select stage, not to the generator, and has not been run.
+
+### Stalls with the small parts kept
+
+Stalled seeds (under 50% fill) per pair, split by cause. B is a base block: nothing fits above the grown top, even with
+any catalog part. S is small parts used up: nothing fits with the inventory left, but some catalog part would fit. The
+connected columns repeat the table above. Chair 6378-1, table 4956-1 and the cars stall in no arm.
+
+| pair | connected | creserve | csmall1 | connected80 | creserve80 | csmall1_80 |
+|---|---|---|---|---|---|---|
+| chair 5891-1 | 6 B | 5 B | 5 B | 7 B | 14 B | 10 B |
+| chair 4956-1 | 5 B | 3 B | 3 B | 3 B + 2 S | 4 B | 2 S |
+| table 6378-1 | 1 B + 10 S | 2 B + 5 S | 2 B + 8 S | 1 B + 2 S | 2 B | 2 B |
+| table 5891-1 | 4 S | 0 | 2 B | 2 B | 2 B | 1 B |
+| **total** | **12 B + 14 S** | **10 B + 5 S** | **12 B + 8 S** | **13 B + 4 S** | **22 B** | **13 B + 2 S** |
+
+**The reserve removes most of the stalls it was aimed at.** Over both slacks, the small-parts-used-up stalls fall
+from 18 to 5 with the reserve, and to 10 with small-last 1. Each of the 72 stalled seeds was rebuilt with the arm's
+option, as above, and in none is the balance cut the cause.
+
+The 5 that remain are creserve's 6378-1 table at 1.0. That build still climbs one 2 × 2 leg and stops with 83–87
+parts left, none of which fits the leg. This matches ee's diagnosis of reserve80: the set has no more small parts.
+
+**The base blocks are not touched, and the reserve adds some.** Base blocks go from 25 to 32 with the reserve (5891-1
+chair at 0.8: 7 → 14) and stay at 25 with small-last 1. On the chairs, growth still stops at the top of the base,
+with nothing fitting above it: layer 9 on 5891-1 (one seed at 6), layers 10–11 on 4956-1. On the tables it stops at
+layers 5–10, where the target joins the legs low down. Growth no longer climbs a leg until the small parts run out,
+but the seed column still covers its own studs. The run does not show why the reserve makes the 5891-1 chair's seed
+column seal itself more often; that was not diagnosed further. Multi-seed growth, or a preference for parts that leave
+a stud on the overhang side, would still be the fix for this cause.
+
+As before, no selected build is a stalled seed. The stalls cost mean fill (creserve80 5891-1 chair: 67.6% mean vs
+98.5% selected), not the selected build.
+
+### Per pair, selected builds
+
+Fill % / largest hole / surface % of the selected build (valid candidates of 50):
+
+**At 1.0:**
+
+| pair | default | connected | creserve | csmall1 |
+|---|---:|---:|---:|---:|
+| chair 6378-1 | 88.6 / 34 / 87.0 (49) | 86.3 / 33 / 84.0 (49) | 88.9 / 96 / 87.0 (49) | 88.8 / 53 / 86.9 (50) |
+| chair 5891-1 | 84.9 / 172 / 81.5 (50) | 92.3 / 38 / 90.9 (49) | 93.6 / 18 / 92.8 (50) | 92.1 / 37 / 90.6 (45) |
+| chair 4956-1 | 77.7 / 363 / 72.6 (41) | 83.9 / 293 / 80.2 (47) | 86.6 / 244 / 82.1 (47) | 83.7 / 200 / 80.8 (42) |
+| table 6378-1 | 78.5 / 96 / 76.4 (48) | 81.4 / 131 / 83.7 (49) | 81.4 / 119 / 84.5 (50) | 86.0 / 66 / 85.3 (50) |
+| table 5891-1 | 87.1 / 108 / 81.3 (39) | 88.9 / 94 / 89.1 (46) | 91.9 / 15 / 90.7 (48) | 91.0 / 60 / 89.9 (44) |
+| table 4956-1 | 81.5 / 253 / 78.4 (39) | 77.1 / 873 / 70.2 (39) | 84.1 / 307 / 78.3 (37) | 79.8 / 512 / 76.4 (38) |
+| car 6378-1 | 75.8 / 194 / 74.0 (50) | 75.8 / 174 / 75.5 (50) | 87.4 / 92 / 86.5 (50) | 79.2 / 125 / 79.4 (49) |
+| car 5891-1 | 84.8 / 75 / 81.4 (50) | 89.8 / 107 / 89.2 (50) | 92.5 / 53 / 93.1 (49) | 90.2 / 54 / 89.1 (50) |
+| car 4956-1 | 76.8 / 527 / 73.0 (46) | 82.5 / 413 / 84.0 (44) | 83.4 / 345 / 83.1 (46) | 82.5 / 438 / 82.3 (44) |
+
+**At 0.8:**
+
+| pair | default | connected | creserve | csmall1 |
+|---|---:|---:|---:|---:|
+| chair 6378-1 | 90.6 / 35 / 89.1 (50) | 92.7 / 35 / 91.4 (50) | 94.5 / 35 / 93.4 (50) | 92.1 / 35 / 90.8 (48) |
+| chair 5891-1 | 88.0 / 49 / 85.1 (44) | 96.4 / 14 / 95.5 (44) | 98.5 / 7 / 98.0 (48) | 94.8 / 33 / 93.0 (47) |
+| chair 4956-1 | 83.0 / 122 / 78.7 (38) | 91.2 / 69 / 89.4 (40) | 89.9 / 80 / 87.6 (42) | 90.7 / 68 / 90.1 (42) |
+| table 6378-1 | 83.9 / 92 / 79.1 (49) | 88.0 / 82 / 88.4 (50) | 86.5 / 76 / 82.7 (50) | 87.1 / 41 / 87.4 (50) |
+| table 5891-1 | 93.3 / 29 / 91.1 (43) | 92.5 / 15 / 91.9 (49) | 96.0 / 9 / 95.9 (48) | 95.1 / 13 / 94.8 (50) |
+| table 4956-1 | 84.9 / 351 / 85.4 (41) | 86.5 / 82 / 83.9 (42) | 86.4 / 390 / 80.1 (38) | 87.9 / 123 / 84.3 (41) |
+| car 6378-1 | 84.1 / 49 / 82.0 (50) | 87.0 / 88 / 86.9 (50) | 87.6 / 75 / 87.5 (50) | 81.7 / 69 / 80.4 (50) |
+| car 5891-1 | 87.2 / 22 / 85.4 (50) | 92.0 / 42 / 92.7 (50) | 92.3 / 31 / 91.0 (50) | 93.1 / 28 / 92.4 (50) |
+| car 4956-1 | 81.4 / 260 / 79.5 (50) | 84.0 / 305 / 83.5 (47) | 91.1 / 59 / 90.7 (48) | 87.2 / 242 / 84.1 (47) |
+
+The full comparison, with every metric's sign for each pair (base → arm), is in
+`m12b_connected_sweep_connected_small.json`. The joined report also writes it as the `.md`'s second table. Sheets:
+`m12b_connected_sweep_connected_small_previews.png` and `_missing.png` (rows: pairs; columns: the 8 arms; scaled to
+40%).
+
+### Runs
+
+- **Code:** the 36 runs ran at 95ee01d. Its `src/` matches 0e4f6ec except for a CLI fix: the first launch, at
+  93c2773, died in argparse on a duplicated `--arms` option left by the e0f97d8 merge. A test now parses the command
+  line.
+- **Joined report:** made at 901af33, which only adds the compare pairs against the default.
+- **Timing:** 15:34–18:07 on 5 workers, alone on the machine, with no crash. The four arms took 45 (creserve), 42
+  (csmall1), 30 (creserve80) and about 35 (csmall1_80, with the 4-arm report at the end) minutes.
+- **Targets:** all 36 match those of connected / connected80 for the same pair. Each cache key differs from its
+  connected twin's only in the small-part option.
+- **Stall diagnosis:** made with the same scripts as above, extended to pass the small-part option. Every rebuild
+  matches its cached candidate.
+- **Complete-candidate check:** the funnel rerun and the figure come from one-off scripts that read the cached
+  candidates; they generate nothing.
+
 ## Reproduce
 
 See `docs/reproduce.md` (§ `results/m12b_connected.md`).
