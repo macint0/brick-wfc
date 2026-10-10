@@ -721,7 +721,10 @@ COMPARE = (("usable", "connected"), ("usable90", "connected90"), ("usable80", "c
            ("reserve", "creserve"), ("small1", "csmall1"), ("small2", "csmall2"), ("reserve80", "creserve80"),
            ("small1_80", "csmall1_80"), ("small2_80", "csmall2_80"), ("connected", "creserve"),
            ("connected", "csmall1"), ("connected", "csmall2"), ("connected80", "creserve80"),
-           ("connected80", "csmall1_80"), ("connected80", "csmall2_80"))
+           ("connected80", "csmall1_80"), ("connected80", "csmall2_80"),
+           # and vs the default at their slack (cf, 2026-10-10: the adoption rule's comparison)
+           ("usable", "creserve"), ("usable", "csmall1"), ("usable", "csmall2"), ("usable80", "creserve80"),
+           ("usable80", "csmall1_80"), ("usable80", "csmall2_80"))
 CONNECTED_SMALL_ARMS = ("connected", "creserve", "csmall1", "csmall2", "connected80", "creserve80", "csmall1_80",
                         "csmall2_80")
 STALL_FILL = 50.0  # a candidate under this fill % of its target stalled
