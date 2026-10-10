@@ -29,8 +29,10 @@ identical to the cached build). Every unfilled target cell gets the cause of its
 ``sweep`` runs the arms (``ARMS``; ``--arms`` picks some) on the 9 sweep pairs; ``sweep-report`` writes their
 table, previews and missing maps (``--report-name``, default ``sweep``). Besides completeness it reports the
 selected build's clutch, the share of the target's tip cells filled (``tip_cells``: the far ends of the low
-structure, a chair's casters, a table's feet, a car's wheel corners) and, for the connected arms, how many
-candidates stalled (fill under half the run's median: single-seed growth that could not cantilever across).
+structure, a chair's casters, a table's feet, a car's wheel corners) and how many candidates stalled (``STALL_FILL``:
+fill under half the target; single-seed growth that could not get across) with the layers their builds top out at.
+Where a report holds both arms of a ``COMPARE`` pair (same target, same seeds), it also compares their selected
+builds metric by metric (``compare_report``).
 """
 
 from __future__ import annotations
@@ -663,6 +665,8 @@ ARMS = {  # name: (title, pipeline flags); "old" is the cached pre-fix run (run_
     "connected80": ("connected + usable 0.8 + hang",
                     ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--order", "connected"]),
 }
+COMPARE = (("usable", "connected"), ("usable90", "connected90"), ("usable80", "connected80"))
+STALL_FILL = 50.0  # a candidate under this fill % of its target stalled
 TIP_HEIGHT = 1 / 3  # tip cells: in the lowest third of the target's height ...
 TIP_RADIUS = 2 / 3  # ... and at least this share of the farthest such cell's distance from their centroid
 
@@ -747,13 +751,15 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
         filled = occupancy(c.placed, mask.shape)
         rows[c.seed] = completeness(filled, mask) | {"tips_pct": tips_filled_pct(filled, tips)}
     selected = stats["selected"][0] if stats["selected"] else None
-    median_fill = float(np.median([r["fill_pct"] for r in rows.values()])) if rows else math.nan
+    stall_tops = Counter(top_layer(c.placed) for c in candidates
+                         if 100 * (occupancy(c.placed, mask.shape) & mask).sum() < STALL_FILL * mask.sum())
     cell = {"arm": arm, "set": set_number, "object": obj, "run": directory.as_posix(), "same_as": alias,
             "target_cells": int(mask.sum()), "object_cells": int(obj_target.mask.sum()), "sizing": sizing,
             "valid": len(valid), "candidates": len(candidates),
             "s_per_candidate": stats["generation_cpu_s"] / max(1, len(candidates)),
             "complete": sum(complete(r) for r in rows.values()), "tip_cells": int(tips.sum()),
-            "stalled": sum(r["fill_pct"] < median_fill / 2 for r in rows.values())}
+            "stalled": sum(stall_tops.values()), "stalled_valid": sum(r["fill_pct"] < STALL_FILL for r in rows.values()),
+            "stall_tops": sorted(stall_tops.items())}
     for name in ("fill_pct", "holes", "largest_hole", "surface_pct", "tips_pct"):
         cell[f"mean_{name}"] = mean([r[name] for r in rows.values()])
     if selected is not None:
@@ -771,7 +777,7 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
 def sweep_report(cells: list[dict]) -> str:
     lines = ["| object | set | arm | target cells | object cells | valid | complete | fill % (sel / mean) | "
              "holes (sel / mean) | largest hole (sel / mean) | surface % (sel / mean) | parts (sel) | used % (sel) | "
-             "s / candidate | tips filled % (sel / mean) | clutch (sel) | stalled |",
+             "s / candidate | tips filled % (sel / mean) | clutch (sel) | stalled (top layers) |",
              "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for c in cells:
         s = c.get("selected", {})
@@ -784,8 +790,59 @@ def sweep_report(cells: list[dict]) -> str:
             f"{s.get('surface_pct', math.nan):.1f} / {c['mean_surface_pct']:.1f} | {s.get('parts', 0)} | "
             f"{s.get('utilization_pct', math.nan):.0f} | {c['s_per_candidate']:.1f} | "
             f"{s.get('tips_pct', math.nan):.0f} / {c.get('mean_tips_pct', math.nan):.0f} | "
-            f"{s.get('clutch', math.nan):.0f} | {c.get('stalled', 0)} |")
+            f"{s.get('clutch', math.nan):.0f} | {c.get('stalled', 0)}{stall_tops_text(c.get('stall_tops', []))} |")
     return "\n".join(lines)
+
+
+def top_layer(placed: Sequence[PlacedPart]) -> int:
+    """The highest layer a build reaches (-1 if empty)."""
+    return max((cell[0] for p in placed for cell in p.cells()), default=-1)
+
+
+def stall_tops_text(tops: Sequence[Sequence[int]]) -> str:
+    if not tops:
+        return ""
+    return " (" + ", ".join(f"{y}" if n == 1 else f"{y}: {n}" for y, n in tops) + ")"
+
+
+COMPARED = (  # (label, value of a sweep cell, higher is better, format)
+    ("fill %", lambda c: c["selected"]["fill_pct"], True, ".1f"),
+    ("holes", lambda c: c["selected"]["holes"], False, ".0f"),
+    ("largest hole", lambda c: c["selected"]["largest_hole"], False, ".0f"),
+    ("surface %", lambda c: c["selected"]["surface_pct"], True, ".1f"),
+    ("tips filled %", lambda c: c["selected"]["tips_pct"], True, ".0f"),
+    ("valid", lambda c: c["valid"], True, ".0f"),
+    ("s / candidate", lambda c: c["s_per_candidate"], False, ".1f"),
+)
+
+
+def compare_report(cells: list[dict], pairs: Sequence[tuple[str, str]] = COMPARE) -> str:
+    """Per pair and per (base, arm) in ``pairs`` present in ``cells``: the selected builds' metrics, base -> arm,
+    marked + where the arm is better, - where worse, = where equal; and the count of each."""
+    by_key = {(c["arm"], c["object"], c["set"]): c for c in cells}
+    lines = ["| object | set | base -> arm | " + " | ".join(name for name, *_ in COMPARED)
+             + " | complete (sel) | stalled | better / worse |",
+             "|---|---|---|" + "---:|" * (len(COMPARED) + 3)]
+    for base, arm in pairs:
+        for obj in OBJECTS:
+            for set_number in SWEEP_SETS:
+                a, b = by_key.get((base, obj, set_number)), by_key.get((arm, obj, set_number))
+                if a is None or b is None or "selected" not in a or "selected" not in b:
+                    continue
+                row, better, worse = [], 0, 0
+                for _, value, higher, spec in COMPARED:
+                    x, y = value(a), value(b)
+                    if math.isclose(x, y, abs_tol=1e-9):
+                        mark = "="
+                    elif (y > x) == higher:
+                        mark, better = "+", better + 1
+                    else:
+                        mark, worse = "-", worse + 1
+                    row.append(f"{x:{spec}} -> {y:{spec}} {mark}")
+                lines.append(f"| {obj} | {set_number} | {ARMS[base][0]} -> {ARMS[arm][0]} | " + " | ".join(row)
+                             + f" | {int(a['selected']['complete'])} -> {int(b['selected']['complete'])} | "
+                             f"{a.get('stalled', 0)} -> {b.get('stalled', 0)} | {better} / {worse} |")
+    return "\n".join(lines) if len(lines) > 2 else ""
 
 
 def sweep_sheets(cells: list[dict], out: Path, arms: Sequence[str] = tuple(ARMS), name: str = "sweep") -> list[Path]:
@@ -825,6 +882,9 @@ def step_sweep_report(args: argparse.Namespace) -> None:
     (args.out / f"{name}.json").write_text(json.dumps(cells, indent=2), encoding="utf-8")
     sheets = sweep_sheets(cells, args.out, arms, name)
     text = sweep_report(cells) + "\n"
+    if compared := compare_report(cells):
+        text += "\nSelected builds compared (same target, same seeds; + the second arm better, - worse):\n\n"
+        text += compared + "\n"
     (args.out / f"{name}.md").write_text(text, encoding="utf-8")
     print(text)
     print(f"wrote {name}.json, {name}.md, " + ", ".join(p.name for p in sheets))
