@@ -315,7 +315,8 @@ def replay_setup(directory: str) -> tuple[Context, object, StyleBias]:
     """The run's context (rebuilt from its stats.json; its cache key must equal the cached one), tileset and bias."""
     key, stats, _ = load_run(Path(directory))
     known = {f.name for f in fields(AltConfig)}
-    config = AltConfig(**{k: v for k, v in stats["config"].items() if k in known})
+    saved = {"holes": False, "hang": False, "sizing": "box"} | stats["config"]  # as before these settings existed
+    config = AltConfig(**{k: v for k, v in saved.items() if k in known})
     source = load_source(key["source"])
     style, label = learned_style(source.name)
     context = make_context(source, style, config, make_target(source, config))
@@ -669,10 +670,11 @@ SWEEP_SETS = ("6378-1", "5891-1", "4956-1")
 STRUCTURES = {"chair": "a712684f-8e79-4ecd-81de-11aef42b50d4", "table": "858f0955-846e-4138-84d9-df66b66eddc2",
               "car": "4b15b71c-f400-4e54-a118-f0c2afba6e17"}
 HANG = ["--holes", "--hang"]
-ARMS = {  # name: (title, pipeline flags); "old" is the cached pre-fix run (run_dir), not run again
+ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed after the sweep); "old" is the
+    # cached pre-fix run (run_dir), not run again
     "old": ("old base (pre-fix)", []),
-    "base": ("base", []),
-    "hang": ("hang", HANG),
+    "base": ("base", ["--sizing", "fillable", "--no-holes"]),
+    "hang": ("hang", ["--sizing", "fillable", *HANG]),
     "usable": ("usable + hang", ["--sizing", "usable", *HANG]),
     "usable90": ("usable 0.9 + hang", ["--sizing", "usable", "--fill-slack", "0.9", *HANG]),
     "usable80": ("usable 0.8 + hang", ["--sizing", "usable", "--fill-slack", "0.8", *HANG]),

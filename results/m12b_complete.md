@@ -248,6 +248,8 @@ failures are not this effect; the 4956-1 chair keeps its targets too.
 
 ## Sweep: hanging support, usable sizing, slack
 
+**Decision (cf, 2026-10-10, against the pre-stated rule below; Mac can reverse):** with a 3D target the hole pass with hanging support (`--holes --hang`) and usable sizing are the pipeline defaults, scoped as `--supports` is (`alt.pipeline.resolve`; `--no-holes`, `--no-hang` and `--sizing fillable` give the old setup); no slack default (`--fill-slack` stays a flag, since none makes a build complete). The hang and usable arms below are the new defaults' numbers; nothing was rerun. The drivers of the earlier M12b tables (`experiments/brickgpt.py`, `skins.py`) and this sweep's arms pass the old setup explicitly.
+
 Chair, table and car × 6378-1, 5891-1, 4956-1; 50 candidates, seeds 0–49, 5 workers, the same seeds in every arm; pipeline defaults otherwise (`experiments/complete.py --steps sweep`, at 49d5739 for the cells the two scale fixes changed, 59cbfdc for the rest, whose targets are byte-identical at 49d5739):
 - **old base**: the cached pre-fix runs above (fillable 1.0, no flags);
 - **base**: the same with the `_fit_key` fix;

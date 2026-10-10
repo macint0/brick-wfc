@@ -42,7 +42,7 @@ import os
 import time
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Sequence
 
@@ -98,16 +98,19 @@ class AltConfig:
     # chair's caster hub without towers under a table top (results/m12b_brickgpt.md)
     open_tops: bool = True  # with a target shape: studless top cells only under empty target cells
     order: str = "random"  # d2: cells of a layer visited in random or raster order
-    sizing: str = "fillable"  # target volume: slopes count their stud cells x 1 layer, and the scale keeps thin parts
-    # thick ("box": both as before M12b sizing; "usable": fillable without the parts that fit nowhere in the target)
+    sizing: str | None = None  # target volume; None: usable with a 3D target, fillable otherwise (``resolve``).
+    # fillable: slopes count their stud cells x 1 layer, and the scale keeps thin parts thick; box: both as before
+    # M12b sizing; usable: fillable without the parts that fit nowhere in the target (M12b completeness)
     fill_slack: float = 1.0  # target volume = this x the sizing's volume (1: as if every part were used)
     proposal: str | None = None  # d2: learned proposal model (.npz from training/, vocab.json next to it)
     skin: bool = False  # d2 with a target: largest parts first on the target's skin (M12b step 3)
     skin_power: float | None = None  # with skin: soft preference, choice weights x cells ** this (None: hard sort)
     symmetric: bool = False  # d2 with a target: mirror-preserving scale + symmetric decoding (M12b step 3)
     symmetrize_min_score: float = SYMMETRIZE_MIN_SCORE  # with symmetric: a plane this good symmetrizes the object
-    holes: bool = False  # d2: hole-filling pass after the main pass and each connect round (M12b holes)
-    hang: bool = False  # d2 with holes: the hole pass may hang parts from parts above by their studs
+    holes: bool | None = None  # d2: hole-filling pass after the main pass and each connect round (M12b holes);
+    # None: on with a 3D target (``resolve``)
+    hang: bool | None = None  # d2 with holes: the hole pass may hang parts from parts above by their studs; None: as
+    # holes with a 3D target
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = 1111.0  # physics: keep builds needing at most this clutch per stud, in plate-cell weights;
     # 1111 is a real stud (calibrated in results/m12b_overhangs_tables.md); inf: no limit
@@ -148,6 +151,20 @@ def cube_grid(cells: float, room: float) -> tuple[int, int, int]:
 USABLE_ROUNDS = 5  # usable sizing: most rescaling rounds (a fixpoint is usually reached in 2 or 3)
 
 
+def resolve(config: AltConfig) -> AltConfig:
+    """``config`` with its target-dependent defaults filled in. With a 3D target (a model, BrickGPT structure or mesh:
+    ``takes_supports``, as for support columns): usable sizing and, for d2, the hole pass with hanging support (cf,
+    2026-10-10, from the M12b completeness sweep: hanging support raised fill on 9/9 pairs, usable sizing on the one
+    pair where it leaves a part out and changed nothing on the other 8). Otherwise fillable sizing and no hole pass.
+    Settings given explicitly stay as they are."""
+    three_d = config.shape is not None and takes_supports(config.shape)
+    on = three_d and config.generator == "d2"
+    holes = on if config.holes is None else config.holes
+    hang = holes and on if config.hang is None else config.hang
+    sizing = ("usable" if three_d else "fillable") if config.sizing is None else config.sizing
+    return replace(config, holes=holes, hang=hang, sizing=sizing)
+
+
 def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -> Target | None:
     return sized_target(source, config, data_dir)[0]
 
@@ -162,6 +179,7 @@ def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -
     and, with usable sizing, the left-out parts (name -> count), their cells, the rounds and whether they settled."""
     if config.shape is None:
         return None, {}
+    config = resolve(config)
     if not 0 < config.fill_slack <= 1:
         raise ValueError(f"fill_slack must be in (0, 1], not {config.fill_slack}")
     left_out: dict[str, int] = {}  # the parts left out of the volume the target is scaled to
@@ -191,6 +209,7 @@ def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
+    config = resolve(config)
     if target is None:
         grid = (cube_grid(inventory_cells(source.inventory), config.room) if config.height is None
                 else grid_for(source.inventory, config.height, config.room))
@@ -432,7 +451,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--sizing", choices=SIZINGS, default=defaults.sizing,
                         help="target sizing: fillable (a slope counts its stud cells x 1 layer toward the volume, and "
                         "the scale keeps thin parts thick), box (as before) or usable (fillable, without the parts "
-                        "that fit nowhere inside the scaled target; rescaled until those settle)")
+                        "that fit nowhere inside the scaled target; rescaled until those settle); default usable "
+                        "with a 3D target, fillable otherwise")
     parser.add_argument("--fill-slack", type=float, default=defaults.fill_slack,
                         help="with a target: scale it to this share of the sizing's volume (1: as if every part "
                         "were used)")
@@ -447,12 +467,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--symmetrize-min-score", type=float, default=defaults.symmetrize_min_score,
                         help="with --symmetric: a mirror plane covering at least this share of the target makes it "
                         "exactly symmetric (adds the mirror image of its cells)")
-    parser.add_argument("--holes", action="store_true",
+    parser.add_argument("--holes", action=argparse.BooleanOptionalAction, default=defaults.holes,
                         help="d2: a hole-filling pass after the main pass and each connect round (every free target "
-                        "cell, every remaining part, largest first)")
-    parser.add_argument("--hang", action="store_true",
+                        "cell, every remaining part, largest first); on by default with a 3D target")
+    parser.add_argument("--hang", action=argparse.BooleanOptionalAction, default=defaults.hang,
                         help="with --holes: the hole pass may also hang a part from a part above by its studs "
-                        "(fills the lowest layer of overhangs)")
+                        "(fills the lowest layer of overhangs); on by default with a 3D target")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -492,13 +512,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.generator != "d2" and (args.proposal or args.order != "random" or args.skin or args.symmetric
                                    or args.holes or args.hang):
         parser.error("--order, --proposal, --skin, --symmetric, --holes and --hang apply to --generator d2 only")
-    if args.hang and not args.holes:
-        parser.error("--hang goes with --holes")
     if args.skin_power is not None and not args.skin:
         parser.error("--skin-power goes with --skin")
 
     start = time.perf_counter()
-    config = AltConfig(
+    config = resolve(AltConfig(
         n=args.n, k=args.k, seed=args.seed, generator=args.generator, height=args.height, room=args.room,
         balanced=not args.no_balance, bridge=not args.no_balance and not args.no_bridge,
         connect=not args.no_connect, connect_rounds=args.connect_rounds,
@@ -512,7 +530,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
-    )
+    ))
+    if config.hang and not config.holes:
+        parser.error("--hang goes with --holes")
     source = load_source(args.input, args.data, catalog=args.catalog)
     stats, style_label = learned_style(source.name, args.style_dir, args.sets_file, args.style_version)
     out = args.out or Path("out/alt") / source.name
