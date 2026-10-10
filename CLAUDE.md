@@ -261,8 +261,9 @@ statistics under the judge (yes, `m12b_proposal.md`, `m12b_proposal_shape.md`), 
 Mac's bar: "the build should be complete first, not a part of a chair but a complete chair." A smaller complete object
 beats a larger partial one; completeness before size and looks. Working bar (cf): fill ≥ 97%, no hole larger than 4 cells,
 ≥ 98% of the exposed surface filled (`alt/features.completeness`; the pipeline prints fill, holes, largest hole, surface).
-**Status (2026-10-10, 09:00):** causes measured, four fixes merged, defaults changed; no build meets the bar yet (best
-93% fill). Everything below is in `results/m12b_complete.md` (+ `_trace/_sweep/_holes/_old_vs_base.json`, sheets).
+**Status (2026-10-10, 16:00):** causes measured, four fixes merged, defaults changed, two reorderings measured and kept
+as flags; no build meets the bar yet (best 96% fill). The limit is now measured: the sets' small-part supply.
+Everything below is in `results/m12b_complete.md` (+ `_trace/_sweep/_holes/_old_vs_base.json`, sheets).
 - **Cause trace** (`experiments/complete.py --steps final trace report`, 160 builds, a builder `trace` hook with no rng
   draws): of the empty target cells, 66% had no stud below when visited (overhang undersides), 16% were tips discarded by
   the one-piece repair, 11% ran out of parts or fit nothing, ~1% each balance/geometry/missed. Found on the way and fixed
@@ -297,13 +298,26 @@ beats a larger partial one; completeness before size and looks. Working bar (cf)
   1350) are never the balance cut: 26 are a base block (the seed column covers its own studs, the stair-stepped arms are
   unreachable), 31 ran out of small parts while climbing a thin leg (27–101 placements would fit with any catalog part).
   **Stays a flag** (not better on every pair); the small-plate reserve inside growth is the combination to measure next.
+- **Small parts kept for the hole pass** (`--reserve-small`: parts of ≤ 3 cells tried at a main-pass cell only after
+  every larger part failed there; `--small-last a`: their choice weight × (cells/4)^a; 8584bed, ee; both off by
+  default). 6 arms × 9 pairs × 50 candidates at the defaults and at slack 0.8 (`results/m12b_complete.md`, fourth part,
+  merged 26ab91f): **no arm passes the rule** (reserve, the best, 6/9 pairs at 1.0 and 3/9 at 0.8; small-last 1
+  5/9 and 3/9; small-last 2 3/9 and 2/9), none complete (0 of 2700). Reserve raises the selected build's fill on 6/9
+  (mean +2.1) and on 8/9 at 0.8 (+2.5), fewer holes on 9/9, 0.7× the time, but the largest hole grows on 3/9 and 5/9
+  (small holes close, the large ones stay or merge) and 0.8 loses 1–2 valid on 3 pairs. Diagnosis of reserve at 0.8: 0
+  small parts left at the last hole pass on 8/9 pairs, as without it; the cells only small parts can fill (rims, stepped
+  curves, thin posts) take the whole supply in the main pass (6378-1: 171 small-part cells, 5891-1: 266, 4956-1: 324),
+  and the empty cells a used-up part would still fill number 30–509 per build on top. **The limit is the sets'
+  small-part supply, not the order**; reordering cannot close it. Next lever: a sizing that counts the cells only small
+  parts can fill against the small parts the set holds.
 **Decisions (cf, 2026-10-10, against the pre-stated rule "every pair's selected build more complete, no validity lost";
 Mac can reverse):** with a 3D target the pipeline defaults are now `--holes --hang` and `--sizing usable`
 (`pipeline.resolve`; `--no-holes`, `--sizing fillable` restore the old path; the earlier drivers pass them explicitly, so
 their tables stay reproducible); no slack default. Merged e0933bb, 404 tests.
-**Next:** keep small plates for the hole pass (`--reserve-small`: parts of ≤ 3 cells tried last at every cell, so a thin
-post still gets them; `--small-last a`: their choice weight × (cells/4)^a; ee, 6 arms × 9 pairs at the defaults and at
-slack 0.8), then the same inside connected growth (64). Deferred until builds are complete: skin/symmetric defaults.
+**Next:** the reserve inside connected growth (64, 4 arms × 9 pairs: creserve, csmall1 at 1.0 and 0.8, vs connected;
+same rule), and a small-part budget sizing (ee: first measure, per pair and scale, the target's cells no part > 3 cells
+can cover against the set's small-part cells; if the measured shortfall tracks it, `--sizing budget` shrinks until they
+fit, then the 9 pairs vs usable). Deferred until builds are complete: skin/symmetric defaults.
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
