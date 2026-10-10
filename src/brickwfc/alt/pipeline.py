@@ -452,8 +452,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--support-height", type=int, default=defaults.support_height,
                         help="with supports: only columns at most this many cells (plates) tall; 0: any height "
                         f"(default {defaults.support_height})")
-    parser.add_argument("--order", choices=("random", "raster"), default=defaults.order,
-                        help="d2: order the cells of a layer are visited in")
+    parser.add_argument("--order", choices=("random", "raster", "connected"), default=defaults.order,
+                        help="d2: order the cells of a layer are visited in; connected: grow one piece from a seed on "
+                        "the ground (with --hang, down to the ground by hanging; see bricks/bottomup.py)")
     parser.add_argument("--sizing", choices=SIZINGS, default=defaults.sizing,
                         help="target sizing: fillable (a slope counts its stud cells x 1 layer toward the volume, and "
                         "the scale keeps thin parts thick), box (as before) or usable (fillable, without the parts "
@@ -527,6 +528,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                      "apply to --generator d2 only")
     if args.reserve_small and args.small_last is not None:
         parser.error("--reserve-small and --small-last are alternatives")
+    if (args.reserve_small or args.small_last is not None) and args.order == "connected":
+        parser.error("--reserve-small and --small-last act on the layer-by-layer main pass, not --order connected")
     if args.skin_power is not None and not args.skin:
         parser.error("--skin-power goes with --skin")
 
