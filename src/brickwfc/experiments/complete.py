@@ -701,9 +701,29 @@ ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed a
     "reserve80": ("reserve-small 0.8", ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--reserve-small"]),
     "small1_80": ("small-last 1, 0.8", ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--small-last", "1"]),
     "small2_80": ("small-last 2, 0.8", ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--small-last", "2"]),
+    # connected growth with the small parts kept (cf, 2026-10-10): each pairs with the arm above with the same option
+    # and with the connected arm of its slack
+    "creserve": ("connected + reserve-small", ["--sizing", "usable", *HANG, "--order", "connected", "--reserve-small"]),
+    "csmall1": ("connected + small-last 1",
+                ["--sizing", "usable", *HANG, "--order", "connected", "--small-last", "1"]),
+    "csmall2": ("connected + small-last 2",
+                ["--sizing", "usable", *HANG, "--order", "connected", "--small-last", "2"]),
+    "creserve80": ("connected + reserve-small, 0.8",
+                   ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--order", "connected", "--reserve-small"]),
+    "csmall1_80": ("connected + small-last 1, 0.8",
+                   ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--order", "connected", "--small-last", "1"]),
+    "csmall2_80": ("connected + small-last 2, 0.8",
+                   ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--order", "connected", "--small-last", "2"]),
 }
 SMALL_ARMS = ("usable", "reserve", "small1", "small2", "usable80", "reserve80", "small1_80", "small2_80")
-COMPARE = (("usable", "connected"), ("usable90", "connected90"), ("usable80", "connected80"))
+COMPARE = (("usable", "connected"), ("usable90", "connected90"), ("usable80", "connected80"),
+           # connected growth with the small parts kept: vs the same option in random order, and vs plain connected
+           ("reserve", "creserve"), ("small1", "csmall1"), ("small2", "csmall2"), ("reserve80", "creserve80"),
+           ("small1_80", "csmall1_80"), ("small2_80", "csmall2_80"), ("connected", "creserve"),
+           ("connected", "csmall1"), ("connected", "csmall2"), ("connected80", "creserve80"),
+           ("connected80", "csmall1_80"), ("connected80", "csmall2_80"))
+CONNECTED_SMALL_ARMS = ("connected", "creserve", "csmall1", "csmall2", "connected80", "creserve80", "csmall1_80",
+                        "csmall2_80")
 STALL_FILL = 50.0  # a candidate under this fill % of its target stalled
 TIP_HEIGHT = 1 / 3  # tip cells: in the lowest third of the target's height ...
 TIP_RADIUS = 2 / 3  # ... and at least this share of the farthest such cell's distance from their centroid
