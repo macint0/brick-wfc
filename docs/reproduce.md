@@ -544,8 +544,10 @@ The small-part arms inside connected growth (section "Connected growth with the 
 later, after the runs above and ee's small-part sweep (`m12b_complete.md`):
 
 ```
-python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report     --arms creserve csmall1 creserve80 csmall1_80 --workers 5 --report-name sweep_connected_small
-python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-report     --arms usable connected creserve csmall1 usable80 connected80 creserve80 csmall1_80 --report-name sweep_connected_small
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report \
+    --arms creserve csmall1 creserve80 csmall1_80 --workers 5 --report-name sweep_connected_small
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-report \
+    --arms usable connected creserve csmall1 usable80 connected80 creserve80 csmall1_80 --report-name sweep_connected_small
 ```
 
 - **Runtime:** 36 runs of 50 candidates on 5 workers, about 2.5 hours; resumable. The second command overwrites the
