@@ -10,11 +10,14 @@ or from a voxelized model, rescaled to a target volume (M12), or from any 3D mas
 
 from __future__ import annotations
 
+import functools
+import math
 from typing import Callable, Sequence
 
 import numpy as np
 from PIL import Image
 from scipy import ndimage
+from scipy.spatial import ConvexHull
 
 from brickwfc.bricks.colors import BrickColor
 from brickwfc.bricks.parts import PartSet, PlacedPart
@@ -160,30 +163,91 @@ SECTION_BAND = 0.05  # thin-aware scaling: volumes within 5% of the target count
 
 
 def thinnest_section(mask: Mask) -> int:
-    """The smallest 4-connected region of any layer of ``mask``, in cells (0 if the mask is empty)."""
+    """The smallest 4-connected region of any layer of ``mask``, in cells (0 if the mask is empty). An empty layer
+    between the lowest and the highest filled layer is a section of 0 cells: the shape is cut in two there (M12b
+    completeness: resampling can drop a thin post entirely, and skipping its empty layers scored that as thick)."""
+    filled = np.nonzero(mask.any(axis=(1, 2)))[0]
+    if len(filled) == 0 or len(filled) < filled[-1] - filled[0] + 1:
+        return 0
     sizes = []
-    for layer in mask:
+    for layer in mask[filled[0]:filled[-1] + 1]:
         labels, regions = ndimage.label(layer)
-        if regions:
-            sizes.append(int(np.bincount(labels.ravel())[1:].min()))
-    return min(sizes, default=0)
+        sizes.append(int(np.bincount(labels.ravel())[1:].min()))
+    return min(sizes)
 
+
+def _hull_distance(points: np.ndarray, z: float, x: float) -> float:
+    """Distance from (z, x) to the convex hull of ``points`` ((n, 2) of z, x; 0 inside)."""
+    hull = ConvexHull(points)
+    if (hull.equations @ np.array([z, x, 1.0]) <= 1e-9).all():
+        return 0.0
+    best = math.inf
+    for a, b in points[hull.simplices]:
+        t = np.clip(np.dot((z, x) - a, b - a) / np.dot(b - a, b - a), 0.0, 1.0)
+        best = min(best, float(np.hypot(*((z, x) - (a + t * (b - a))))))
+    return best
+
+
+def overhang_moment(mask: Mask) -> float:
+    """The largest moment a horizontal section of ``mask`` holds off its footprint: per layer and per piece of the
+    shape at and above it (6-connected), the cells of the piece above the layer times the horizontal distance of
+    their centre of mass from the convex hull of the piece's cells in the layer (0 over it). A part resting there
+    holds that moment by clutch alone (M12b completeness: at 0.9 of the 5891-1 chair's volume, resampling put its
+    1 x 2 post 1.2 studs off the seat's centre of mass; 47 of 50 builds needed more than real clutch). The largest
+    rather than the sum, since the clutch a build needs is its worst joint's, and a post carries the same moment
+    through every layer."""
+    best = 0.0
+    for y in np.nonzero(mask.any(axis=(1, 2)))[0]:
+        pieces, _ = ndimage.label(mask[y:])
+        for piece in np.unique(pieces[0][mask[y]]):
+            above = np.argwhere(pieces[1:] == piece)
+            if not len(above):
+                continue
+            zs, xs = np.nonzero(pieces[0] == piece)
+            corners = np.concatenate([np.stack([zs + dz, xs + dx], axis=1) for dz in (0, 1) for dx in (0, 1)])
+            lever = _hull_distance(corners.astype(float), above[:, 1].mean() + 0.5, above[:, 2].mean() + 0.5)
+            best = max(best, len(above) * lever)
+    return best
 
 def fit_scale(volume: Callable[[float], int], cells: float, dims: int, steps: int = 121,
-              section: Callable[[float], int] | None = None, band: float = SECTION_BAND) -> float:
+              section: Callable[[float], int] | None = None, band: float = SECTION_BAND,
+              moment: Callable[[float], float] | None = None) -> float:
     """The factor ``f`` near (cells / volume(1)) ** (1 / dims) whose ``volume(f)`` is closest to ``cells``. With
     ``section`` (f -> the thinnest horizontal section of the scaled shape, ``thinnest_section``), among the factors
     whose volume is within ``band`` of ``cells`` (relative), the one with the thickest thinnest section, ties by
     the closest volume (M12b sizing: nearest-neighbour resampling thins a part unevenly, e.g. a chair's post from
-    8 cells to 3 between factors 2% apart). Without a factor in the band, the closest volume."""
+    8 cells to 3 between factors 2% apart). If no factor in the band keeps the shape whole (all cut it: section
+    0), the band is widened once to ``2 * band`` (M12b completeness: a chair's 2-cell post vanished at some volumes).
+    Without a factor in either band, the closest volume. With ``moment`` (f -> ``overhang_moment`` of the scaled
+    shape), among the thickest, the one with the smallest moment, then the closest volume (M12b completeness:
+    resampling moves a thin post under or off the load it carries)."""
     estimate = (cells / volume(1.0)) ** (1 / dims)
     factors = [float(f) for f in estimate * np.exp(np.linspace(-0.3, 0.3, steps))]
     errors = [abs(volume(f) - cells) for f in factors]
     best = int(np.argmin(errors))
     if section is not None:
-        fitting = [i for i, error in enumerate(errors) if error <= band * cells]
-        if fitting:
-            best = max(fitting, key=lambda i: (section(factors[i]), -errors[i], -i))
+        sections: dict[int, int] = {}
+        moments: dict[int, float] = {}
+
+        def thickest(width: float) -> int | None:
+            fitting = [i for i, error in enumerate(errors) if error <= width * cells]
+            for i in fitting:
+                if i not in sections:
+                    sections[i] = section(factors[i])
+            if moment is not None:
+                thick = max((sections[i] for i in fitting), default=0)
+                for i in fitting:
+                    if sections[i] == thick and i not in moments:
+                        moments[i] = moment(factors[i])
+            return max(fitting, key=lambda i: (sections[i], -moments.get(i, 0.0), -errors[i], -i), default=None)
+
+        found = thickest(band)
+        if found is None or sections[found] == 0:
+            wider = thickest(2 * band)
+            if wider is not None and sections[wider] > 0:
+                found = wider
+        if found is not None:
+            best = found
     return factors[best]
 
 
@@ -218,8 +282,8 @@ def scaled_to(occupied: Mask, cells: float, solid_columns: bool = False, shell: 
     """A 3D mask in cells (1 stud x 1 stud x 1 plate), scaled uniformly so the volume is about ``cells``
     and cut to its bounds; with ``solid_columns``, each column filled from the ground to its top cell first;
     with ``shell`` > 0, hollowed after scaling (``hollow``), so the same volume makes a larger object. With
-    ``keep_sections``, the scale keeps thin parts thick (``fit_scale`` with ``thinnest_section`` of the unhollowed
-    shape)."""
+    ``keep_sections``, the scale keeps thin parts thick and under the load they carry (``fit_scale`` with
+    ``thinnest_section`` and ``overhang_moment`` of the unhollowed shape)."""
     if solid_columns:
         occupied = extrude(np.round(height_map_of(occupied)).astype(np.int64))
 
@@ -228,8 +292,10 @@ def scaled_to(occupied: Mask, cells: float, solid_columns: bool = False, shell: 
         return hollow(mask, shell) if shell else mask
 
     # A shell's volume grows with its surface, about f ** 2.
-    section = (lambda f: thinnest_section(resample(occupied, (f, f, f)))) if keep_sections else None
-    f = fit_scale(lambda f: int(at(f).sum()), cells, 2 if shell else 3, section=section)
+    solid = functools.lru_cache(maxsize=None)(lambda f: resample(occupied, (f, f, f)))
+    section = (lambda f: thinnest_section(solid(f))) if keep_sections else None
+    moment = (lambda f: overhang_moment(solid(f))) if keep_sections else None
+    f = fit_scale(lambda f: int(at(f).sum()), cells, 2 if shell else 3, section=section, moment=moment)
     mask = at(f)
     return mask[bounds(mask)]
 

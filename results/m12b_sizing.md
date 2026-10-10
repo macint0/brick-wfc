@@ -1,5 +1,7 @@
 # M12b sizing — slopes, thin parts and support columns
 
+*Note (2026-10-10): the builds here predate the `_fit_key` fix (60b3a3b, `builder_version` 2: a tile that failed at a cell no longer makes the builder skip the plate of its box). The fix moves pair means by less than 2 SE (old vs fixed base on 9 pairs in [`m12b_complete.md`](m12b_complete.md)); a rerun would give different individual builds.*
+
 The 88-part rerun (`m12b_brickgpt.md`) left two failures: on slope-heavy sets the target was too large to fill
 (5891-1: object fill down 5–24 points), and narrow stems starved (the 4956-1 table: 45 of 50 builds stopped inside
 its post). Fixing the first exposed two more: support columns on a fixed lattice land in different places at

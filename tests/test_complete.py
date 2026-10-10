@@ -7,7 +7,8 @@ from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.parts import CATALOG, PLATES, part_tileset
 from brickwfc.bricks.shapes import mushroom
-from brickwfc.experiments.complete import CAUSES, Trace, completeness, complete
+from brickwfc.experiments.complete import (CAUSES, FINAL_CAUSES, Trace, completeness, complete, final_causes,
+                                           holes_of)
 
 
 def test_completeness_metrics() -> None:
@@ -59,3 +60,34 @@ def test_failed_tile_does_not_block_plate_of_same_box(holes: bool) -> None:
     for seed in range(20):
         grid = builder.build(mask.shape, np.random.default_rng(seed), inventory, mask)
         assert parts.solid[grid].all(), seed  # plate below, tile on top
+
+
+def test_final_causes_after_the_hole_pass() -> None:
+    """With the hole pass and hanging support, the trace's final state is the build's, every unfilled target cell
+    gets a cause, and none is a cell where a part still fits (the pass ends when nothing fits)."""
+    parts = part_tileset(list(PLATES.values()) + [CATALOG["brick2x4"], CATALOG["tile2x2"]],
+                         colors_by_name(["red", "blue"]), empty_weight=0.3)
+    inventory = {("plate2x4", "red"): 6, ("plate1x2", "blue"): 10, ("brick2x4", "red"): 3, ("plate1x1", "red"): 6,
+                 ("tile2x2", "blue"): 4}
+    mask = mushroom(6, 8, 8)
+    seen = set()
+    for seed in range(4):
+        builder = BottomUpBuilder(parts, any_offset=True, balanced=True, bridge=True, connect=True, connect_rounds=4,
+                                  open_tops=True, holes=True, hang=True)
+        plain = builder.build(mask.shape, np.random.default_rng(seed), inventory, mask)
+        filled = parts.solid[plain]
+        trace = Trace(mask & ~filled)
+        builder.trace = trace
+        assert np.array_equal(plain, builder.build(mask.shape, np.random.default_rng(seed), inventory, mask))
+        assert np.array_equal(trace.final.filled, filled) and trace.at_holes is not None
+        cause = final_causes(builder, trace, mask)
+        assert np.array_equal(cause >= 0, mask & ~filled)
+        found = {FINAL_CAUSES[i] for i in np.unique(cause[cause >= 0])}
+        assert "missed" not in found
+        seen |= found
+        bins, small = holes_of(filled, mask, cause, trace.at_holes, trace.final.remaining)
+        assert sum(b["cells"] for b in bins) == int((mask & ~filled).sum())
+        for hole in small:
+            assert hole["size"] <= 4 and len(hole["causes"]) == hole["size"]
+            assert not hole["fitting"] or "plate1x1" in hole["fitting"]  # a plate 1 x 1 fits any free cell
+    assert seen

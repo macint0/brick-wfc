@@ -104,9 +104,9 @@ placement as the main pass does.
 
 Diagnosis (M12b completeness): a ``trace`` object set on the builder hears about every cell visit of the main pass
 that places nothing (``skipped``: the solid-share draw passed the cell over; ``failed``: no part fits there) and
-about every connect repair (``repaired``, with the state before it); the hole pass is not traced. It must not draw
-from the generator, so traced builds are identical to untraced ones. The
-connected order's growth is not traced either.
+about every connect repair (``repaired``, with the state before it); of the hole pass it hears only when each
+pass starts (``holes``, with the state then), and it gets the final state (``finished``). It must not draw from the
+generator, so traced builds are identical to untraced ones. The connected order's growth is not traced.
 """
 
 from __future__ import annotations
@@ -240,6 +240,8 @@ class BottomUpBuilder:
             self._fill(state, layers, rng, allowed, preferred)
             if self.holes:
                 self._fill_holes(state, layers, rng, allowed, preferred)
+        if self.trace is not None:
+            self.trace.finished(state)
         return state.grid
 
     def _new_state(self, shape: tuple[int, int, int], inventory: Mapping[tuple[str, str], int] | None,
@@ -318,6 +320,8 @@ class BottomUpBuilder:
     def _fill_holes(self, state: "_State", layers: range, rng: np.random.Generator, allowed: np.ndarray,
                     preferred: np.ndarray | None) -> None:
         """The hole-filling pass (see the module docstring): sweeps over ``layers`` until one places nothing."""
+        if self.trace is not None:
+            self.trace.holes(state)
         self._sweeps(state, layers, rng, allowed, preferred, True, self.order == "connected")
 
     def _grow(self, state: "_State", rng: np.random.Generator, allowed: np.ndarray, preferred: np.ndarray | None,

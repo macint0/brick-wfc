@@ -5,7 +5,8 @@ import pytest
 
 from brickwfc.bricks.inventory import fillable_cells, fits_inside, inventory_cells, part_cells, target_volume, unusable
 from brickwfc.bricks.parts import CATALOG
-from brickwfc.bricks.shapes import SECTION_BAND, scaled_to, thinnest_section
+from brickwfc.bricks.shapes import (SECTION_BAND, fit_scale, overhang_moment, resample, scaled_to,
+                                    thinnest_section)
 
 
 def test_fillable_cells() -> None:
@@ -36,6 +37,70 @@ def test_keep_sections_keeps_thin_parts_thick() -> None:
         thicker += thinnest_section(kept) > thinnest_section(plain)
     assert thicker  # nearest-neighbour scaling thins the post at some volumes; the kept scale avoids it
 
+
+
+def _cut(mask: np.ndarray) -> bool:
+    """Whether a layer between the lowest and the highest filled layer is empty (the shape is in two pieces)."""
+    filled = np.nonzero(mask.any(axis=(1, 2)))[0]
+    return len(filled) < filled[-1] - filled[0] + 1
+
+
+def test_keep_sections_does_not_cut_a_thin_post() -> None:
+    """M12b completeness: at some volumes nearest-neighbour scaling drops a thin post entirely (the 6378-1 chair at
+    the usable volume: 13 empty layers between base and seat). Before the fix ``thinnest_section`` skipped the empty
+    layers, so such a scale scored as thick and was chosen."""
+    split = np.zeros((5, 3, 3), dtype=bool)
+    split[:2] = split[4] = True
+    assert thinnest_section(split) == 0 and thinnest_section(split[:2]) == 9
+    occupied = np.zeros((20, 12, 12), dtype=bool)  # a stool: a base, a 1 x 2 post, a seat
+    occupied[:3, 3:9, 3:9] = True
+    occupied[3:15, 6, 5:7] = True
+    occupied[15:] = True
+    plain_cut = 0
+    for cells in range(300, 1200, 5):
+        plain = scaled_to(occupied, cells)
+        plain_cut += _cut(plain)
+        kept = scaled_to(occupied, cells, keep_sections=True)
+        assert not _cut(kept), cells
+        assert abs(int(kept.sum()) - cells) <= max(2 * SECTION_BAND * cells, abs(int(plain.sum()) - cells))
+    assert plain_cut  # the post does vanish at some of these volumes
+
+
+def test_overhang_moment() -> None:
+    stool = np.zeros((6, 5, 5), dtype=bool)  # a base, a 1 x 1 post, a 5 x 5 seat of 50 cells
+    stool[:2] = stool[4:] = True
+    stool[2:4, 2, 2] = True
+    assert overhang_moment(stool) == 0  # the post under the seat's centre
+    stool[2:4, 2, 2] = False
+    stool[2:4, 0, 2] = True
+    assert overhang_moment(stool) == 50 * 1.5  # the seat's centre 2.5 studs from the post's centre, 1.5 beyond it
+    table = np.zeros((4, 6, 6), dtype=bool)
+    table[:3, 0, 0] = table[:3, 0, 5] = table[:3, 5, 0] = table[:3, 5, 5] = True
+    table[3] = True
+    assert overhang_moment(table) == 0  # the top's centre within the legs' hull
+
+
+def test_fit_scale_prefers_the_post_under_its_load() -> None:
+    """M12b completeness: nearest-neighbour scaling puts a thin post under its load's centre at one factor and off
+    it at a neighbouring one (the 5891-1 chair at 0.9 of its volume: 47 of 50 builds over real clutch). Among
+    equally thick factors in the band, the one with the smallest overhang moment."""
+    occupied = np.zeros((20, 9, 9), dtype=bool)  # a stool: a base, a 1 x 1 post under the seat's centre, a seat
+    occupied[:3, 2:7, 2:7] = True
+    occupied[3:15, 4, 4] = True
+    occupied[15:] = True
+
+    def at(f: float) -> np.ndarray:
+        return resample(occupied, (f, f, f))
+
+    better = 0
+    for cells in range(400, 800, 10):
+        args = (lambda f: int(at(f).sum()), cells, 3)
+        plain = fit_scale(*args, section=lambda f: thinnest_section(at(f)))
+        kept = fit_scale(*args, section=lambda f: thinnest_section(at(f)), moment=lambda f: overhang_moment(at(f)))
+        assert thinnest_section(at(kept)) == thinnest_section(at(plain))
+        assert overhang_moment(at(kept)) <= overhang_moment(at(plain))
+        better += overhang_moment(at(kept)) < overhang_moment(at(plain))
+    assert better  # e.g. 460 cells: the post off-centre at f 1.003 (moment 229), centred at f 0.978
 
 def test_usable_parts_fit_somewhere_inside() -> None:
     lane = np.ones((1, 2, 5), dtype=bool)  # one plate layer, 2 x 5 studs
