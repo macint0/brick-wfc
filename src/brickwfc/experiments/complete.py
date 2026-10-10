@@ -965,8 +965,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--per-pair", type=int, default=10, help="trace: builds replayed per pair (selected first)")
     parser.add_argument("--workers", type=int, default=5)
     parser.add_argument("--n", type=int, default=50, help="sweep: candidates per run")
-    parser.add_argument("--arms", nargs="+", choices=list(ARMS), help="sweep, sweep-report: these arms (default: all)")
-    parser.add_argument("--report-name", default="sweep", help="sweep-report: file names (<name>.md, .json, sheets)")
     parser.add_argument("--arm", default="usable80", help="holes: the sweep arm whose selected builds to diagnose")
     parser.add_argument("--arms", nargs="+", choices=list(ARMS), help="sweep, sweep-report: these arms (default: all; "
                         "the small-part comparison: " + " ".join(SMALL_ARMS) + ")")
