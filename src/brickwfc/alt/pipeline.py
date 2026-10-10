@@ -42,19 +42,19 @@ import os
 import time
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Sequence
 
 import numpy as np
 
-from brickwfc.alt.candidates import GENERATORS, VERIFY_VERSION, Candidate, Context, generate
+from brickwfc.alt.candidates import BUILDER_VERSION, GENERATORS, VERIFY_VERSION, Candidate, Context, generate
 from brickwfc.alt.features import completeness, feature_vector, occupancy
 from brickwfc.alt.inputs import (CATALOGS, DATA_DIR, SETS_FILE, STYLE_DIR, STYLE_FILES, STYLE_VERSION, Source,
                                  learned_style, load_source)
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
 from brickwfc.alt.target import Target, load_target, takes_supports
-from brickwfc.bricks.inventory import SIZINGS, inventory_cells, target_volume, utilization
+from brickwfc.bricks.inventory import SIZINGS, inventory_cells, target_volume, unusable, utilization
 from brickwfc.bricks.shapes import SHAPES, fill, iou
 from brickwfc.bricks.style import StyleStats, events, matched_divergence
 from brickwfc.bricks.symmetry import SYMMETRIZE_MIN_SCORE
@@ -98,15 +98,19 @@ class AltConfig:
     # chair's caster hub without towers under a table top (results/m12b_brickgpt.md)
     open_tops: bool = True  # with a target shape: studless top cells only under empty target cells
     order: str = "random"  # d2: cells of a layer visited in random or raster order
-    sizing: str = "fillable"  # target volume: slopes count their stud cells x 1 layer, and the scale keeps thin parts
-    # thick ("box": both as before M12b sizing)
+    sizing: str | None = None  # target volume; None: usable with a 3D target, fillable otherwise (``resolve``).
+    # fillable: slopes count their stud cells x 1 layer, and the scale keeps thin parts thick; box: both as before
+    # M12b sizing; usable: fillable without the parts that fit nowhere in the target (M12b completeness)
+    fill_slack: float = 1.0  # target volume = this x the sizing's volume (1: as if every part were used)
     proposal: str | None = None  # d2: learned proposal model (.npz from training/, vocab.json next to it)
     skin: bool = False  # d2 with a target: largest parts first on the target's skin (M12b step 3)
     skin_power: float | None = None  # with skin: soft preference, choice weights x cells ** this (None: hard sort)
     symmetric: bool = False  # d2 with a target: mirror-preserving scale + symmetric decoding (M12b step 3)
     symmetrize_min_score: float = SYMMETRIZE_MIN_SCORE  # with symmetric: a plane this good symmetrizes the object
-    holes: bool = False  # d2: hole-filling pass after the main pass and each connect round (M12b holes)
-    hang: bool = False  # d2 with holes: the hole pass may hang parts from parts above by their studs
+    holes: bool | None = None  # d2: hole-filling pass after the main pass and each connect round (M12b holes);
+    # None: on with a 3D target (``resolve``)
+    hang: bool | None = None  # d2 with holes: the hole pass may hang parts from parts above by their studs; None: as
+    # holes with a 3D target
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = 1111.0  # physics: keep builds needing at most this clutch per stud, in plate-cell weights;
     # 1111 is a real stud (calibrated in results/m12b_overhangs_tables.md); inf: no limit
@@ -144,19 +148,68 @@ def cube_grid(cells: float, room: float) -> tuple[int, int, int]:
     return (max(1, math.ceil(volume / side**2)), side, side)
 
 
+USABLE_ROUNDS = 5  # usable sizing: most rescaling rounds (a fixpoint is usually reached in 2 or 3)
+
+
+def resolve(config: AltConfig) -> AltConfig:
+    """``config`` with its target-dependent defaults filled in. With a 3D target (a model, BrickGPT structure or mesh:
+    ``takes_supports``, as for support columns): usable sizing and, for d2, the hole pass with hanging support (cf,
+    2026-10-10, from the M12b completeness sweep: hanging support raised fill on 9/9 pairs, usable sizing on the one
+    pair where it leaves a part out and changed nothing on the other 8). Otherwise fillable sizing and no hole pass.
+    Settings given explicitly stay as they are."""
+    three_d = config.shape is not None and takes_supports(config.shape)
+    on = three_d and config.generator == "d2"
+    holes = on if config.holes is None else config.holes
+    hang = holes and on if config.hang is None else config.hang
+    sizing = ("usable" if three_d else "fillable") if config.sizing is None else config.sizing
+    return replace(config, holes=holes, hang=hang, sizing=sizing)
+
+
 def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -> Target | None:
+    return sized_target(source, config, data_dir)[0]
+
+
+def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -> tuple[Target | None, dict]:
+    """The target scaled to ``fill_slack`` x the inventory's volume under ``sizing``, and how it was sized.
+
+    Usable sizing (M12b completeness) starts from the fillable volume, then leaves out every part that fits nowhere
+    inside the scaled target (``inventory.unusable``: any orientation and position, every rule but the shape off),
+    rescales, and repeats until the left-out parts no longer change: a smaller target can leave out more parts. The
+    left-out parts stay in the inventory (they just cannot go in). The details: the volume the target was scaled to
+    and, with usable sizing, the left-out parts (name -> count), their cells, the rounds and whether they settled."""
     if config.shape is None:
-        return None
-    return load_target(config.shape, target_volume(source.inventory, config.sizing), source.colors,
-                       Path(config.height_map) if config.height_map else None,
-                       Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
-                       config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
-                       hollow=config.hollow, supports=config.supports and takes_supports(config.shape),
-                       support_height=config.support_height, symmetric=config.symmetric,
-                       keep_sections=config.sizing == "fillable", symmetrize_min_score=config.symmetrize_min_score)
+        return None, {}
+    config = resolve(config)
+    if not 0 < config.fill_slack <= 1:
+        raise ValueError(f"fill_slack must be in (0, 1], not {config.fill_slack}")
+    left_out: dict[str, int] = {}  # the parts left out of the volume the target is scaled to
+    settled = False
+    for round_ in range(1, USABLE_ROUNDS + 1):
+        kept = {k: n for k, n in source.inventory.items() if k[0] not in left_out}
+        volume = config.fill_slack * target_volume(kept, config.sizing)
+        target = load_target(config.shape, volume, source.colors,
+                             Path(config.height_map) if config.height_map else None,
+                             Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
+                             config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
+                             hollow=config.hollow, supports=config.supports and takes_supports(config.shape),
+                             support_height=config.support_height, symmetric=config.symmetric,
+                             keep_sections=config.sizing != "box", symmetrize_min_score=config.symmetrize_min_score)
+        if config.sizing != "usable":
+            return target, {"volume": volume}
+        now = unusable(source.inventory, target.mask)
+        if now == left_out:
+            settled = True
+            break
+        if round_ == USABLE_ROUNDS:  # not settled: keep this target, sized without ``left_out``
+            break
+        left_out = now
+    dropped = {k: n for k, n in source.inventory.items() if k[0] in left_out}
+    return target, {"volume": volume, "left_out": left_out, "left_out_cells": target_volume(dropped, "fillable"),
+                    "rounds": round_, "settled": settled}
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
+    config = resolve(config)
     if target is None:
         grid = (cube_grid(inventory_cells(source.inventory), config.room) if config.height is None
                 else grid_for(source.inventory, config.height, config.room))
@@ -184,9 +237,12 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
         "preferred": None if context.preferred is None else context.preferred.tolist(),
         "empty_weight_per_part": context.empty_weight_per_part, "strength": context.strength,
         "generator": context.generator, "balanced": context.balanced, "bridge": context.bridge,
-        "connect": context.connect, "connect_rounds": context.connect_rounds,        "verify_version": VERIFY_VERSION, "max_clutch": context.max_clutch,
+        "connect": context.connect, "connect_rounds": context.connect_rounds, "verify_version": VERIFY_VERSION,
+        "max_clutch": context.max_clutch,
         "wfc_time_limit_s": context.wfc_time_limit_s,
     }
+    if context.generator == "d2":  # candidates built before version 2 (no field) are not reused
+        key["builder_version"] = BUILDER_VERSION
     if context.open_tops:  # only when on, so caches from before the rule stay valid
         key["open_tops"] = True
     if context.order != "random":  # likewise
@@ -395,7 +451,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                         "the ground (with --hang, down to the ground by hanging; see bricks/bottomup.py)")
     parser.add_argument("--sizing", choices=SIZINGS, default=defaults.sizing,
                         help="target sizing: fillable (a slope counts its stud cells x 1 layer toward the volume, and "
-                        "the scale keeps thin parts thick) or box (as before)")
+                        "the scale keeps thin parts thick), box (as before) or usable (fillable, without the parts "
+                        "that fit nowhere inside the scaled target; rescaled until those settle); default usable "
+                        "with a 3D target, fillable otherwise")
+    parser.add_argument("--fill-slack", type=float, default=defaults.fill_slack,
+                        help="with a target: scale it to this share of the sizing's volume (1: as if every part "
+                        "were used)")
     parser.add_argument("--proposal", help="d2: learned proposal model (.npz, vocab.json next to it; see training/)")
     parser.add_argument("--skin", action="store_true",
                         help="d2 with a target shape: try the largest parts first on the target's outer surface")
@@ -407,12 +468,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--symmetrize-min-score", type=float, default=defaults.symmetrize_min_score,
                         help="with --symmetric: a mirror plane covering at least this share of the target makes it "
                         "exactly symmetric (adds the mirror image of its cells)")
-    parser.add_argument("--holes", action="store_true",
+    parser.add_argument("--holes", action=argparse.BooleanOptionalAction, default=defaults.holes,
                         help="d2: a hole-filling pass after the main pass and each connect round (every free target "
-                        "cell, every remaining part, largest first)")
-    parser.add_argument("--hang", action="store_true",
+                        "cell, every remaining part, largest first); on by default with a 3D target")
+    parser.add_argument("--hang", action=argparse.BooleanOptionalAction, default=defaults.hang,
                         help="with --holes: the hole pass may also hang a part from a part above by its studs "
-                        "(fills the lowest layer of overhangs)")
+                        "(fills the lowest layer of overhangs); on by default with a 3D target")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -452,13 +513,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.generator != "d2" and (args.proposal or args.order != "random" or args.skin or args.symmetric
                                    or args.holes or args.hang):
         parser.error("--order, --proposal, --skin, --symmetric, --holes and --hang apply to --generator d2 only")
-    if args.hang and not args.holes:
-        parser.error("--hang goes with --holes")
     if args.skin_power is not None and not args.skin:
         parser.error("--skin-power goes with --skin")
 
     start = time.perf_counter()
-    config = AltConfig(
+    config = resolve(AltConfig(
         n=args.n, k=args.k, seed=args.seed, generator=args.generator, height=args.height, room=args.room,
         balanced=not args.no_balance, bridge=not args.no_balance and not args.no_bridge,
         connect=not args.no_connect, connect_rounds=args.connect_rounds,
@@ -467,11 +526,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         hollow=args.hollow, supports=args.supports, support_height=args.support_height, open_tops=not args.no_open_tops,
         order=args.order, proposal=args.proposal, skin=args.skin, skin_power=args.skin_power,
         symmetric=args.symmetric, symmetrize_min_score=args.symmetrize_min_score, sizing=args.sizing,
+        fill_slack=args.fill_slack,
         holes=args.holes, hang=args.hang,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
-    )
+    ))
+    if config.hang and not config.holes:
+        parser.error("--hang goes with --holes")
     source = load_source(args.input, args.data, catalog=args.catalog)
     stats, style_label = learned_style(source.name, args.style_dir, args.sets_file, args.style_version)
     out = args.out or Path("out/alt") / source.name
@@ -480,9 +542,12 @@ def main(argv: Sequence[str] | None = None) -> int:
           + (f" (most common: {', '.join(f'{p} x{n}' for p, n in ignored_top[:5])})" if ignored_top else ""))
     print(f"style: {style_label}")
 
-    target = make_target(source, config, args.data)
+    target, sizing = sized_target(source, config, args.data)
     if target is not None:
         print(f"shape: {target.description}, {int(target.mask.sum())} cells, grid {target.mask.shape} (Y, Z, X)")
+    if sizing.get("left_out"):
+        print(f"usable sizing: left out {sizing['left_out_cells']} cells of parts that fit nowhere in the target "
+              f"({', '.join(f'{name} x{n}' for name, n in sizing['left_out'].items())}), {sizing['rounds']} rounds")
     context = make_context(source, stats, config, target)
     cache = out / "candidates.jsonl"
     if args.fresh and cache.exists():
@@ -508,7 +573,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                   "colors": [c.name for c in source.colors], "inventory_cells": inventory_cells(source.inventory)},
         "style": style_label, "config": asdict(config), "grid_YZX": list(context.grid),
         "shape": None if target is None else target.description,
-        "shape_cells": None if context.mask is None else int(context.mask.sum()),
+        "shape_cells": None if context.mask is None else int(context.mask.sum()), "sizing": sizing,
         "requested": report.requested, "stages": [asdict(s) for s in report.stages],
         "check_failures": report.check_failures, "size_floor_events": report.size_floor,
         "judge_size_events": report.judge_size,

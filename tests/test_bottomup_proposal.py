@@ -111,8 +111,10 @@ DEFAULT_FINGERPRINTS = {
     "d2_shape": ["44bc8c39d7c165f0", "0efb4a3036be2cba", "08115d588122bdcd"],
     "d2_style": ["c552123fd0214a6c", "d1088215fb2bde0a", "a4d349a6328d2f6a"],
     "d2_style_shape": ["f3e8a221d211371e", "c52bdadf59bcf7e3", "07170a18d49fcf91"],
-    "pipeline": ["b172e2ed010f934d", "6507019aeffecdb3", "e849578bebe70ced"],
-    "pipeline_shape": ["02d0c016e767da2f", "300f7a945c90dc52", "5831dd22e317483b"],
+    # seed 2 changed with the _fit_key fix (M12b completeness: a failed tile no longer blocks the plate of its box
+    # in the connect rounds, where kept parts above make tiles fail); the builders without connect are unchanged
+    "pipeline": ["b172e2ed010f934d", "6507019aeffecdb3", "6b566588eba5060e"],
+    "pipeline_shape": ["02d0c016e767da2f", "300f7a945c90dc52", "19bf6c54aa208be5"],  # seed 2: as "pipeline"
 }
 
 

@@ -131,6 +131,9 @@ def theirs(structure: brickgpt.Structure, out: Path) -> dict:
     }
 
 
+PRE_HOLES = ["--no-holes", "--sizing", "fillable"]  # the M12b tables predate the 3D-target defaults (cf, 2026-10-10)
+
+
 def variant_args(variant: str) -> list[str]:
     """Pipeline arguments of a target variant. Before open tops (M12b 1d (iii)), as the first 1a runs:
     "exact", "columns" (the heightfield inputs of M12). With open tops: "opentops" (exact cells), "hollow<N>",
@@ -170,7 +173,7 @@ def run_ours(set_number: str, structure: brickgpt.Structure, out: Path, n: int, 
              variant: str = "exact") -> Path:
     directory = out / set_number / f"{short(structure)}_{variant}"
     args = [set_number, "--shape", BRICKGPT_PREFIX + structure.structure_id, "--n", str(n), "--k", "1",
-            "--out", str(directory), *variant_args(variant)]
+            "--out", str(directory), *variant_args(variant), *PRE_HOLES]
     args += ["--workers", str(workers)] if workers else []
     alt_main(args)
     return directory

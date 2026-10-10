@@ -47,6 +47,8 @@ from brickwfc.wfc import Bias, run
 GENERATORS = ("d2", "wfc")
 CHECKS = ("generate", "integrity", "inventory", "support", "shape", "physics", "disconnected")
 VERIFY_VERSION = 3  # bump when the checks change, so cached candidates are not reused
+BUILDER_VERSION = 2  # bump when D2 builds something else for the same seed and setup (2: _fit_key counts studs,
+# M12b completeness), so cached candidates are not reused
 WFC_MAX_ATTEMPTS, WFC_MAX_BACKTRACKS = 20, 1000
 
 
@@ -113,16 +115,19 @@ def load_proposal(path: str) -> Proposal:
     return Proposal.load(Path(path))
 
 
+def d2_builder(context: Context, parts: PartSet, bias: StyleBias) -> BottomUpBuilder:
+    """The D2 builder of ``context``'s setup."""
+    return BottomUpBuilder(parts, any_offset=True, style=bias, balanced=context.balanced, bridge=context.bridge,
+                           connect=context.connect, connect_rounds=context.connect_rounds,
+                           open_tops=context.open_tops, order=context.order,
+                           proposal=load_proposal(context.proposal) if context.proposal else None,
+                           skin=context.skin, skin_power=context.skin_power, holes=context.holes, hang=context.hang)
+
+
 def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.ndarray | None:
     """One grid of tile ids for ``seed``, or None if the generator gave up."""
     if context.generator == "d2":
-        builder = BottomUpBuilder(parts, any_offset=True, style=bias, balanced=context.balanced,
-                                  bridge=context.bridge, connect=context.connect,
-                                  connect_rounds=context.connect_rounds, open_tops=context.open_tops,
-                                  order=context.order,
-                                  proposal=load_proposal(context.proposal) if context.proposal else None,
-                                  skin=context.skin, skin_power=context.skin_power, holes=context.holes,
-                                  hang=context.hang)
+        builder = d2_builder(context, parts, bias)
         return builder.build(context.grid, np.random.default_rng(seed), context.inventory, context.mask,
                              context.preferred, context.plane)
     constraints = [SupportConstraint(parts), InventoryConstraint(parts, context.inventory)]

@@ -1,5 +1,7 @@
 # M12b sizing — slopes, thin parts and support columns
 
+*Note (2026-10-10): the builds here predate the `_fit_key` fix (60b3a3b, `builder_version` 2: a tile that failed at a cell no longer makes the builder skip the plate of its box). On 9 set x object pairs the fix moves mean fill by -0.9 to +2.5 points (mean +0.5; within 1.2 SE on 8 pairs, +2.6 SE on the 4956-1 car; old vs fixed base in [`m12b_complete.md`](m12b_complete.md)); a rerun would give different individual builds. Since 49d5739 the thin-aware scale also keeps a thin post under its load, which gives the 5891-1 chair a different target under fillable sizing (2859 -> 2784 cells).*
+
 The 88-part rerun (`m12b_brickgpt.md`) left two failures: on slope-heavy sets the target was too large to fill
 (5891-1: object fill down 5–24 points), and narrow stems starved (the 4956-1 table: 45 of 50 builds stopped inside
 its post). Fixing the first exposed two more: support columns on a fixed lattice land in different places at

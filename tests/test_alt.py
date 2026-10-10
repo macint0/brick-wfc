@@ -11,7 +11,7 @@ from brickwfc.alt.candidates import Candidate, generate
 from brickwfc.alt.features import feature_vector, height_map
 from brickwfc.alt.inputs import all_from_folds, learned_style, load_source
 from brickwfc.alt.output import layer_steps
-from brickwfc.alt.pipeline import AltConfig, cache_key, generate_all, main, make_context
+from brickwfc.alt.pipeline import AltConfig, cache_key, generate_all, main, make_context, resolve
 from brickwfc.bricks.inventory import inventory_from_csv
 from brickwfc.bricks.parts import BY_FILE
 from brickwfc.bricks.style import StyleStats, merged
@@ -221,3 +221,24 @@ def test_order_and_proposal_reach_the_builder_and_the_cache_key(tiny_ldr: Path, 
     with pytest.raises(SystemExit):
         main([str(tiny_ldr), "--generator", "wfc", "--order", "raster", "--out", str(tmp_path / "w"),
               "--style-dir", str(style_dir[0]), "--sets-file", str(style_dir[1])])
+
+
+def test_3d_target_defaults() -> None:
+    """With a 3D target (a model, BrickGPT structure or mesh), d2 builds with the hole pass, hanging support and usable
+    sizing by default (cf, 2026-10-10); with a 2D target or none, without them and with fillable sizing. Settings
+    given explicitly stay."""
+    for shape in ("brickgpt:a712684f", "chair.stl", "model.ldr"):
+        config = resolve(AltConfig(shape=shape))
+        assert config.holes and config.hang and config.sizing == "usable", shape
+        assert resolve(config) == config
+    for shape in (None, "pyramid", "silhouette.png"):
+        config = resolve(AltConfig(shape=shape))
+        assert not config.holes and not config.hang and config.sizing == "fillable", shape
+    wfc = resolve(AltConfig(shape="brickgpt:a712684f", generator="wfc"))
+    assert not wfc.holes and not wfc.hang and wfc.sizing == "usable"
+    plain = resolve(AltConfig(shape="brickgpt:a712684f", holes=False, sizing="fillable"))
+    assert not plain.holes and not plain.hang and plain.sizing == "fillable"
+    no_hang = resolve(AltConfig(shape="brickgpt:a712684f", hang=False))
+    assert no_hang.holes and not no_hang.hang
+    flat = resolve(AltConfig(shape="pyramid", holes=True))
+    assert flat.holes and not flat.hang  # the hole pass on a 2D target when asked; hanging stays a 3D default
