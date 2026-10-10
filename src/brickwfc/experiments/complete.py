@@ -678,7 +678,16 @@ ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed a
     "usable": ("usable + hang", ["--sizing", "usable", *HANG]),
     "usable90": ("usable 0.9 + hang", ["--sizing", "usable", "--fill-slack", "0.9", *HANG]),
     "usable80": ("usable 0.8 + hang", ["--sizing", "usable", "--fill-slack", "0.8", *HANG]),
+    # small parts kept for the hole pass (M12b completeness, cf 2026-10-10), at the defaults (usable 1.0 + hang) and
+    # at slack 0.8; compared with "usable" and "usable80"
+    "reserve": ("reserve-small", ["--sizing", "usable", *HANG, "--reserve-small"]),
+    "small1": ("small-last 1", ["--sizing", "usable", *HANG, "--small-last", "1"]),
+    "small2": ("small-last 2", ["--sizing", "usable", *HANG, "--small-last", "2"]),
+    "reserve80": ("reserve-small 0.8", ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--reserve-small"]),
+    "small1_80": ("small-last 1, 0.8", ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--small-last", "1"]),
+    "small2_80": ("small-last 2, 0.8", ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--small-last", "2"]),
 }
+SMALL_ARMS = ("usable", "reserve", "small1", "small2", "usable80", "reserve80", "small1_80", "small2_80")
 
 
 def arm_dir(out: Path, arm: str, set_number: str, obj: str, runs: Path) -> Path:
@@ -703,7 +712,7 @@ def same_target(arm: str, other: str, set_number: str, obj: str) -> bool:
 def step_sweep(args: argparse.Namespace) -> None:
     """The arms' pipeline runs, one after another (each on ``--workers``); resumable (the pipeline's cache). The
     usable arm is run only where usable sizing changes the target: elsewhere it is the hang arm."""
-    for arm in ARMS:
+    for arm in args.arms or ARMS:
         if arm == "old":
             continue
         for obj in OBJECTS:
@@ -749,7 +758,7 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
         chosen = next(c for c in candidates if c.seed == selected["seed"])
         cell["selected"] = rows[selected["seed"]] | {"seed": selected["seed"], "parts": selected["parts"],
                                                      "utilization_pct": selected["utilization_pct"],
-                                                     "clutch": selected["clutch"]}
+                                                     "clutch": selected["clutch"], "judge": selected["judge"]}
         cell["selected"]["complete"] = complete(cell["selected"])
         cell["preview"] = (directory / selected["png"]).as_posix()
         path = args.out / "sweep_missing" / f"{obj}_{set_number}_{arm}.png"
@@ -760,8 +769,8 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
 def sweep_report(cells: list[dict]) -> str:
     lines = ["| object | set | arm | target cells | object cells | valid | complete | fill % (sel / mean) | "
              "holes (sel / mean) | largest hole (sel / mean) | surface % (sel / mean) | parts (sel) | used % (sel) | "
-             "s / candidate |",
-             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+             "judge (sel) | s / candidate |",
+             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for c in cells:
         s = c.get("selected", {})
         title = ARMS[c["arm"]][0] + (f" (= {ARMS[c['same_as']][0]})" if c["same_as"] else "")
@@ -771,11 +780,11 @@ def sweep_report(cells: list[dict]) -> str:
             f"{s.get('fill_pct', math.nan):.1f} / {c['mean_fill_pct']:.1f} | "
             f"{s.get('holes', 0)} / {c['mean_holes']:.1f} | {s.get('largest_hole', 0)} / {c['mean_largest_hole']:.0f} | "
             f"{s.get('surface_pct', math.nan):.1f} / {c['mean_surface_pct']:.1f} | {s.get('parts', 0)} | "
-            f"{s.get('utilization_pct', math.nan):.0f} | {c['s_per_candidate']:.1f} |")
+            f"{s.get('utilization_pct', math.nan):.0f} | {s.get('judge', math.nan):.4f} | {c['s_per_candidate']:.1f} |")
     return "\n".join(lines)
 
 
-def sweep_sheets(cells: list[dict], out: Path) -> list[Path]:
+def sweep_sheets(cells: list[dict], out: Path, arms: Sequence[str] = tuple(ARMS), name: str = "sweep") -> list[Path]:
     """Two sheets, pairs as rows and arms as columns: the selected builds' previews, and their missing maps."""
     from PIL import Image
 
@@ -784,11 +793,11 @@ def sweep_sheets(cells: list[dict], out: Path) -> list[Path]:
     blank.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (8, 8), (255, 255, 255)).save(blank)
     paths = []
-    for which, name in (("preview", "sweep_previews.png"), ("missing_png", "sweep_missing.png")):
+    for which, sheet in (("preview", f"{name}_previews.png"), ("missing_png", f"{name}_missing.png")):
         images, labels = [], []
         for obj in OBJECTS:
             for set_number in SWEEP_SETS:
-                for arm in ARMS:
+                for arm in arms:
                     c = by_key.get((obj, set_number, arm))
                     if c is None or which not in c:
                         images.append(blank)
@@ -798,21 +807,23 @@ def sweep_sheets(cells: list[dict], out: Path) -> list[Path]:
                     images.append(Path(c[which]))
                     labels.append(f"{obj} {set_number}, {ARMS[arm][0]}\nfill {s['fill_pct']:.0f}%, surface "
                                   f"{s['surface_pct']:.0f}%\nlargest hole {s['largest_hole']}, {s['parts']} parts")
-        path = out / name
-        labeled_sheet(images, labels, path, columns=len(ARMS), width=500)
+        path = out / sheet
+        labeled_sheet(images, labels, path, columns=len(arms), width=500)
         paths.append(path)
     return paths
 
 
 def step_sweep_report(args: argparse.Namespace) -> None:
-    cells = [c for obj in OBJECTS for set_number in SWEEP_SETS for arm in ARMS
+    arms = args.arms or list(ARMS)
+    name = args.report_name
+    cells = [c for obj in OBJECTS for set_number in SWEEP_SETS for arm in arms
              if (c := sweep_cell(args, arm, set_number, obj)) is not None]
-    (args.out / "sweep.json").write_text(json.dumps(cells, indent=2), encoding="utf-8")
-    sheets = sweep_sheets(cells, args.out)
+    (args.out / f"{name}.json").write_text(json.dumps(cells, indent=2), encoding="utf-8")
+    sheets = sweep_sheets(cells, args.out, arms, name)
     text = sweep_report(cells) + "\n"
-    (args.out / "sweep.md").write_text(text, encoding="utf-8")
+    (args.out / f"{name}.md").write_text(text, encoding="utf-8")
     print(text)
-    print("wrote sweep.json, sweep.md, " + ", ".join(p.name for p in sheets))
+    print(f"wrote {name}.json, {name}.md, " + ", ".join(p.name for p in sheets))
 
 
 def step_old_vs_base(args: argparse.Namespace) -> None:
@@ -853,6 +864,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--workers", type=int, default=5)
     parser.add_argument("--n", type=int, default=50, help="sweep: candidates per run")
     parser.add_argument("--arm", default="usable80", help="holes: the sweep arm whose selected builds to diagnose")
+    parser.add_argument("--arms", nargs="+", choices=list(ARMS), help="sweep, sweep-report: these arms (default: all; "
+                        "the small-part comparison: " + " ".join(SMALL_ARMS) + ")")
+    parser.add_argument("--report-name", default="sweep", help="sweep-report: file names (<name>.md, .json, sheets)")
     args = parser.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
     if "final" in args.steps:
