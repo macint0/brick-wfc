@@ -498,6 +498,22 @@ python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --ste
   49d5739. Every other cell's target is byte-identical at 49d5739 and the builder is unchanged, so a run from scratch
   at 49d5739 gives the same table.
 
+The small-part arms (fourth part; `m12b_complete_sweep_small.json`, `m12b_complete_sweep_small_previews.png`,
+`m12b_complete_sweep_small_missing.png`, `m12b_complete_holes_reserve80.json`), at e0f97d8 or later, after the sweep
+above (the `usable` and `usable80` runs are the defaults they are compared with):
+
+```
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps sweep --n 50 --workers 5 --arms reserve small1 small2 reserve80 small1_80 small2_80
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps sweep-report --arms usable reserve small1 small2 usable80 reserve80 small1_80 small2_80 --report-name sweep_small
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps holes --arm reserve80 --workers 1
+```
+
+- The sweep step runs 6 arms x 9 pairs, 50 candidates each (54 runs; resumable as above). 21 CPU hours, about 5 hours
+  on 5 workers; give it the machine.
+- sweep-report writes `sweep_small.md`, `sweep_small.json` and the two sheets (downscaled to 30% for `results/`).
+  About 15 minutes.
+- holes writes `holes_reserve80.md` and `.json`; about 5 minutes on one process.
+
 ### `results/m12b_connected.md` (M12b connected growth on the completeness sweep), with `m12b_connected_sweep.json`, `m12b_connected_sweep_previews.png`, `m12b_connected_sweep_missing.png`, `m12b_connected_stall_map.png`
 
 The three connected arms run on the 9 sweep pairs, then a report joins them to the default (usable) arms at the same
