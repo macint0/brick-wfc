@@ -7,8 +7,9 @@ from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.parts import CATALOG, PLATES, part_tileset
 from brickwfc.bricks.shapes import mushroom
-from brickwfc.experiments.complete import (CAUSES, FINAL_CAUSES, Trace, completeness, complete, final_causes,
-                                           holes_of)
+from brickwfc.experiments.complete import (CAUSES, FINAL_CAUSES, Trace, completeness, complete, covered_by,
+                                           final_causes, holes_of, small_only, small_supply,
+                                           strip_width)
 
 
 def test_completeness_metrics() -> None:
@@ -160,3 +161,40 @@ def test_small_weights() -> None:
     assert factor == pytest.approx({"plate1x1": 1 / 16, "plate1x3": 9 / 16, "plate2x2": 1.0})
     with pytest.raises(ValueError):
         BottomUpBuilder(parts, any_offset=True, small_reserve=True, small_power=1.0)
+
+
+def test_covered_by_matches_brute_force() -> None:
+    """covered_by: the cells some placement of the kernel inside the mask covers, against trying every position."""
+    rng = np.random.default_rng(0)
+    for _ in range(30):
+        mask = rng.random((4, 6, 7)) < 0.7
+        kernel = rng.random(tuple(rng.integers(1, 4, size=3))) < 0.7
+        kernel[0, 0, 0] = True
+        kernel = kernel[tuple(slice(0, i + 1) for i in np.argwhere(kernel).max(axis=0))]  # tight, as a shape's
+        brute = np.zeros_like(mask)
+        cells = np.argwhere(kernel)
+        for corner in np.ndindex(*mask.shape):
+            at = cells + np.array(corner)
+            if (at < np.array(mask.shape)).all() and mask[tuple(at.T)].all():
+                brute[tuple(at.T)] = True
+        assert (covered_by(mask, kernel) == brute).all()
+
+
+def test_small_only_cells() -> None:
+    """A 2 x 2 pad with a 1-cell spur: with 2 x 2 plates in the set, only the spur needs a small part."""
+    mask = np.zeros((1, 3, 3), dtype=bool)
+    mask[0, :2, :2] = True
+    mask[0, 2, 0] = True
+    inventory = {("plate2x2", "red"): 1, ("plate1x1", "red"): 2}
+    assert small_only(mask, inventory).sum() == 1 and small_only(mask, inventory)[0, 2, 0]
+    assert (small_only(mask, {("plate1x2", "red"): 4}) == mask).all()  # a 1 x 2 is small itself
+    assert small_supply(inventory) == {"parts": 2, "cells": 2}
+
+
+def test_strip_width() -> None:
+    """The narrower free run through a cell in its layer: a 1-wide strip, a 2-wide one, open floor (3+)."""
+    free = np.zeros((1, 5, 6), dtype=bool)
+    free[0, 0, :] = True  # a 1 x 6 strip
+    free[0, 2:4, :2] = True  # a 2 x 2 block
+    free[0, 2:5, 3:6] = True  # a 3 x 3 block
+    assert strip_width(free, (0, 0, 2)) == 1 and strip_width(free, (0, 2, 0)) == 2 and strip_width(free, (0, 3, 4)) == 3

@@ -514,6 +514,19 @@ python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --ste
   About 15 minutes.
 - holes writes `holes_reserve80.md` and `.json`; about 5 minutes on one process.
 
+The small-part budget and the remnant bound (fifth part; `m12b_complete_small_only.json`, `m12b_complete_remnants.json`),
+after the two hole diagnoses (`holes_usable80.json`, `holes_reserve80.json`); replays only, no generation:
+
+```
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps small-only --workers 1
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps remnants --workers 1
+```
+
+- small-only sizes the 9 targets at 9 slacks and replays the 18 diagnosed builds; writes `small_only.md` and `.json`.
+  About 50 minutes on one process (the sizing dominates).
+- remnants replays each of the 18 builds twice (the second stops at each placement that left a remnant); writes
+  `remnants.md` and `.json`. About 25 minutes on one process.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
