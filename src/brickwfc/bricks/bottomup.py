@@ -89,8 +89,9 @@ tiles and 1 x 1 bricks, the 2 x 2 corner plate) for where nothing larger fits: a
 only after every larger part has failed there (under every rule, the inventory included), so a cell only a small part
 fits, such as a 1-wide post, still gets one in the main pass; the hole pass is unchanged. ``small_power`` a is the soft
 form: in the main pass a small part's choice weight is multiplied by (cells / (SMALL_CELLS + 1)) ** a (a 1 x 1 plate's
-divided by 4 ** a), so small parts tend to come last at a cell but stay in the draw. Both act on the layer-by-layer
-main pass (random or raster order), not on connected growth.
+divided by 4 ** a), so small parts tend to come last at a cell but stay in the draw. Both act on the main pass: the
+layer-by-layer one (random or raster order) and, in the connected order, the growth (its seed and its sweeps, which
+order a cell's parts the same way); never on the hole pass.
 
 Connected growth (M12b, ``order="connected"``; for target shapes). The main pass grows one piece instead of
 building layer by layer: the first part goes on the ground in the largest connected region of the target's
@@ -155,8 +156,6 @@ class BottomUpBuilder:
             raise ValueError("hang needs holes=True")
         if small_reserve and small_power is not None:
             raise ValueError("small_reserve and small_power are alternatives")
-        if (small_reserve or small_power is not None) and order == "connected":
-            raise ValueError("small_reserve and small_power act on the layer-by-layer main pass, not connected growth")
         if order not in ("random", "raster", "connected"):
             raise ValueError(f"order must be 'random', 'raster' or 'connected', not {order!r}")
         self.order = order
@@ -452,14 +451,21 @@ class BottomUpBuilder:
 
     def _try_cell(self, state: "_State", y: int, z: int, x: int, rng: np.random.Generator, allowed: np.ndarray,
                   preferred: np.ndarray | None, fit_map: "_FitMap", largest_first: bool, joined: bool) -> bool:
-        """Place the first part that fits covering free cell (y, z, x), in the sampled order (``largest_first``:
-        sorted largest first; else the skin's hard sort where it applies); whether one was placed."""
+        """Place the first part that fits covering free cell (y, z, x), in the sampled order; whether one was placed.
+        ``largest_first`` (the hole pass): sorted largest first. Otherwise (connected growth, the main pass) as in
+        ``_fill``: the skin's hard sort where it applies, and the small-part options."""
         p = self._cell_p(state, y, z, x, preferred, True)
+        if not largest_first and self.small_weights is not None:  # soft: small parts tend to come last
+            p = p * self.small_weights
+            p = p / p.sum()
         order = rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p)
         if largest_first:
             order = order[np.argsort(-self.choice_size[order], kind="stable")]
-        elif state.skin is not None and state.skin[y, z, x] and self.skin_weights is None:
-            order = order[np.argsort(-self.choice_cells[order], kind="stable")]
+        else:
+            if state.skin is not None and state.skin[y, z, x] and self.skin_weights is None:
+                order = order[np.argsort(-self.choice_cells[order], kind="stable")]
+            if self.small_reserve:  # small parts only after every larger one failed here
+                order = order[np.argsort(self.choice_small[order], kind="stable")]
         failed: set = set()
         for choice in order:
             part_shape, color = self.choices[choice]
