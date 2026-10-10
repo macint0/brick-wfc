@@ -83,6 +83,14 @@ part carry another under it. A hung part joins the cluster of the parts it hangs
 the build is then supported in the sense of ``support.is_stable(hanging=True)``: every part is joined to the
 ground through stud joints. Physics needs no change: the LP already lets a stud joint hold a part up (clutch).
 
+Small parts (M12b completeness), off by default. The hole pass found most unfilled cells wanting a small plate the
+main pass had used up. ``reserve_small`` keeps small parts (at most ``SMALL_CELLS`` cells: 1 x 1, 1 x 2, 1 x 3 plates,
+tiles and 1 x 1 bricks, the 2 x 2 corner plate) for where nothing larger fits: at each main-pass cell they are tried
+only after every larger part has failed there (under every rule, the inventory included), so a cell only a small part
+fits, such as a 1-wide post, still gets one in the main pass; the hole pass is unchanged. ``small_power`` a is the soft
+form: in the main pass a small part's choice weight is multiplied by (cells / (SMALL_CELLS + 1)) ** a (a 1 x 1 plate's
+divided by 4 ** a), so small parts tend to come last at a cell but stay in the draw.
+
 Diagnosis (M12b completeness): a ``trace`` object set on the builder hears about every cell visit of the main pass
 that places nothing (``skipped``: the solid-share draw passed the cell over; ``failed``: no part fits there) and
 about every connect repair (``repaired``, with the state before it); of the hole pass it hears only when each
@@ -109,6 +117,7 @@ if TYPE_CHECKING:
     from brickwfc.bricks.style import StyleBias
 
 PREFERRED_BOOST = 1e6  # weight factor for parts of a cell's preferred color: in practice, tried first
+SMALL_CELLS = 3  # small_reserve / small_power: parts of at most this many cells (see the module docstring)
 
 
 class BottomUpBuilder:
@@ -116,13 +125,16 @@ class BottomUpBuilder:
                  balanced: bool = False, bridge: bool = False, connect: bool = False,
                  connect_rounds: int = 1, open_tops: bool = False, order: str = "random",
                  proposal: Proposal | None = None, proposal_strength: float = 1.0, skin: bool = False,
-                 skin_power: float | None = None, holes: bool = False, hang: bool = False) -> None:
+                 skin_power: float | None = None, holes: bool = False, hang: bool = False,
+                 small_reserve: bool = False, small_power: float | None = None) -> None:
         if bridge and not (balanced and any_offset):
             raise ValueError("bridge needs balanced=True and any_offset=True")
         if holes and not any_offset:
             raise ValueError("holes needs any_offset=True")
         if hang and not holes:
             raise ValueError("hang needs holes=True")
+        if small_reserve and small_power is not None:
+            raise ValueError("small_reserve and small_power are alternatives")
         if order not in ("random", "raster"):
             raise ValueError(f"order must be 'random' or 'raster', not {order!r}")
         self.order = order
@@ -130,6 +142,8 @@ class BottomUpBuilder:
         self.skin_power = skin_power  # None: hard largest-first sort on the skin; a: weights x cells ** a
         self.holes = holes
         self.hang = hang  # holes: parts may also hang from a part above by their studs
+        self.small_reserve = small_reserve  # main pass: small parts only where no larger part fits
+        self.small_power = small_power  # main pass: small parts' weights x (cells / (SMALL_CELLS + 1)) ** this
         self.proposal = proposal
         self.proposal_strength = proposal_strength
         self.parts = parts
@@ -162,6 +176,9 @@ class BottomUpBuilder:
         self.choice_color_names = np.array([color.name for _, color in self.choices])
         self.choice_cells = np.array([shape.cells for shape, _ in self.choices])
         self.skin_weights = None if skin_power is None else self.choice_cells.astype(float) ** skin_power
+        self.choice_small = self.choice_cells <= SMALL_CELLS
+        self.small_weights = None if small_power is None else np.where(
+            self.choice_small, (self.choice_cells / (SMALL_CELLS + 1)) ** small_power, 1.0)
         # Hole pass order: largest footprint first, then most cells (a 1 x 1 brick before a 1 x 1 plate).
         self.choice_size = np.array([len(shape.footprint) * 1000 + shape.cells for shape, _ in self.choices])
         self.shape_colors: dict[Shape, list[BrickColor]] = {}  # colors each shape has tiles in, in choice order
@@ -252,10 +269,15 @@ class BottomUpBuilder:
                 # only on its _fit_key, so once one fails here, other parts with that key are skipped.
                 failed: set[tuple[int, int, int]] = set()
                 p = self._cell_p(state, y, z, x, preferred, bool(reachable[z, x]))
+                if self.small_weights is not None:  # soft: small parts tend to come last
+                    p = p * self.small_weights
+                    p = p / p.sum()
                 on_skin = state.skin is not None and bool(state.skin[y, z, x])
                 order = rng.choice(len(self.choices), size=len(self.choices), replace=False, p=p)
                 if on_skin and self.skin_weights is None:  # hard: largest first on the skin
                     order = order[np.argsort(-self.choice_cells[order], kind="stable")]
+                if self.small_reserve:  # small parts only after every larger one failed here
+                    order = order[np.argsort(self.choice_small[order], kind="stable")]
                 for choice in order:
                     part_shape, color = self.choices[choice]
                     key = (part_shape.part.name, color.name)

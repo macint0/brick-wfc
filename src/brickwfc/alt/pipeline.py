@@ -111,6 +111,8 @@ class AltConfig:
     # None: on with a 3D target (``resolve``)
     hang: bool | None = None  # d2 with holes: the hole pass may hang parts from parts above by their studs; None: as
     # holes with a 3D target
+    reserve_small: bool = False  # d2: the main pass tries parts of <= 3 cells only where no larger part fits
+    small_last: float | None = None  # d2: the main pass weighs parts of <= 3 cells down, by (cells / 4) ** this
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = 1111.0  # physics: keep builds needing at most this clutch per stud, in plate-cell weights;
     # 1111 is a real stud (calibrated in results/m12b_overhangs_tables.md); inf: no limit
@@ -223,7 +225,7 @@ def make_context(source: Source, stats: StyleStats, config: AltConfig, target: T
                    config.bridge, config.connect, config.connect_rounds, config.open_tops and target is not None,
                    config.order, config.proposal or "", config.skin and target is not None,
                    target.plane if target is not None and config.symmetric else None, config.skin_power,
-                   config.holes, config.hang)
+                   config.holes, config.hang, config.reserve_small, config.small_last)
 
 
 # Generation, resumable ---------------------------------------------------------------------------
@@ -257,6 +259,10 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
         key["holes"] = True
     if context.hang:  # likewise
         key["hang"] = True
+    if context.reserve_small:  # likewise
+        key["reserve_small"] = True
+    if context.small_last is not None:  # likewise
+        key["small_last"] = context.small_last
     if context.proposal:  # the model by content, so retrained weights are not mixed with old candidates
         key["proposal"] = hashlib.sha256(Path(context.proposal).read_bytes()).hexdigest()[:16]
     return json.loads(json.dumps(key))
@@ -473,6 +479,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--hang", action=argparse.BooleanOptionalAction, default=defaults.hang,
                         help="with --holes: the hole pass may also hang a part from a part above by its studs "
                         "(fills the lowest layer of overhangs); on by default with a 3D target")
+    parser.add_argument("--reserve-small", action="store_true",
+                        help="d2: the main pass tries parts of at most 3 cells (1 x 1 to 1 x 3 plates and tiles, 1 x 1 "
+                        "bricks, corner plates) only where no larger part fits, keeping them for the hole pass")
+    parser.add_argument("--small-last", type=float, metavar="A",
+                        help="d2: the main pass weighs parts of at most 3 cells down by (cells / 4) ** A (a soft "
+                        "--reserve-small)")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -510,8 +522,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--fresh", action="store_true", help="discard cached candidates")
     args = parser.parse_args(argv)
     if args.generator != "d2" and (args.proposal or args.order != "random" or args.skin or args.symmetric
-                                   or args.holes or args.hang):
-        parser.error("--order, --proposal, --skin, --symmetric, --holes and --hang apply to --generator d2 only")
+                                   or args.holes or args.hang or args.reserve_small or args.small_last is not None):
+        parser.error("--order, --proposal, --skin, --symmetric, --holes, --hang, --reserve-small and --small-last "
+                     "apply to --generator d2 only")
+    if args.reserve_small and args.small_last is not None:
+        parser.error("--reserve-small and --small-last are alternatives")
     if args.skin_power is not None and not args.skin:
         parser.error("--skin-power goes with --skin")
 
@@ -526,7 +541,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         order=args.order, proposal=args.proposal, skin=args.skin, skin_power=args.skin_power,
         symmetric=args.symmetric, symmetrize_min_score=args.symmetrize_min_score, sizing=args.sizing,
         fill_slack=args.fill_slack,
-        holes=args.holes, hang=args.hang,
+        holes=args.holes, hang=args.hang, reserve_small=args.reserve_small, small_last=args.small_last,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
