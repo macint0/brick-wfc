@@ -231,6 +231,7 @@ class Trace:
         self.maps: tuple | None = None  # (epoch, parts placed, layer, full fit map, space fit map)
         self.at_holes: dict | None = None  # inventory left when the last hole pass started
         self.final = None  # the builder's final state
+        self.used_up: set[str] = set()  # the last classify's parts that fit under every rule but are used up
 
     def skipped(self, state, y: int, z: int, x: int) -> None:
         if self.watch[y, z, x]:
@@ -271,6 +272,7 @@ class Trace:
             return "support"
         full, space = self.fit_maps(builder, state, allowed, y, hang)
         hang_bottom = state.open_bottom if hang else None
+        self.used_up = set()
         open_bottom = state.open_bottom if builder.open_bottoms else None
         remaining = state.remaining
         fits_space = tips = used_up = False
@@ -300,6 +302,7 @@ class Trace:
                     if left:
                         return "missed"
                     used_up = True
+                    self.used_up.add(shape.part.name)
                     break  # this shape would do; try the others (a remaining one may fit)
                 tips = True
         if used_up:
@@ -321,7 +324,8 @@ def replay_setup(directory: str) -> tuple[Context, object, StyleBias]:
     """The run's context (rebuilt from its stats.json; its cache key must equal the cached one), tileset and bias."""
     key, stats, _ = load_run(Path(directory))
     known = {f.name for f in fields(AltConfig)}
-    config = AltConfig(**{k: v for k, v in stats["config"].items() if k in known})
+    saved = {"holes": False, "hang": False, "sizing": "box"} | stats["config"]  # as before these settings existed
+    config = AltConfig(**{k: v for k, v in saved.items() if k in known})
     source = load_source(key["source"])
     style, label = learned_style(source.name)
     context = make_context(source, style, config, make_target(source, config))
@@ -506,10 +510,12 @@ def small_parts(size: int) -> list:
     return sorted((part for part in CATALOG.values() if part_cells(part) <= size), key=lambda p: (part_cells(p), p.name))
 
 
-def final_causes(builder: BottomUpBuilder, trace: Trace, mask: np.ndarray) -> np.ndarray:
-    """Per unfilled target cell of the traced build's final state, its index into FINAL_CAUSES; -1 elsewhere."""
+def final_causes(builder: BottomUpBuilder, trace: Trace, mask: np.ndarray) -> tuple[np.ndarray, dict]:
+    """(per unfilled target cell of the traced build's final state, its index into FINAL_CAUSES, -1 elsewhere; per
+    inventory cell, the names of the parts that would fit there under every rule but are used up)."""
     state = trace.final
     cause = np.full(mask.shape, -1, dtype=np.int8)
+    wanted = {}
     for y in np.unique(np.argwhere(mask & ~state.filled)[:, 0]):
         reach = builder._reachable(state.studs, y)
         if builder.hang:
@@ -522,15 +528,18 @@ def final_causes(builder: BottomUpBuilder, trace: Trace, mask: np.ndarray) -> np
                 name = trace.classify(builder, state, mask, anywhere, y, z, x, hang=builder.hang)
                 if name == "missed" and y == 0:
                     name = "ground"
+                if name == "inventory":
+                    wanted[(int(y), z, x)] = sorted(trace.used_up)
             cause[y, z, x] = FINAL_CAUSES.index(name)
-    return cause
+    return cause, wanted
 
 
 def holes_of(filled: np.ndarray, mask: np.ndarray, cause: np.ndarray, at_holes: dict | None,
-             remaining: dict | None) -> tuple[list[dict], list[dict]]:
+             remaining: dict | None, wanted: dict | None = None) -> tuple[list[dict], list[dict]]:
     """(per size bin: holes and cells, per hole of at most SMALL_HOLE cells: the smallest catalog parts that fit
-    inside it, how many parts that fit it the inventory had when the last hole pass started and at the end, and
-    its cells' causes)."""
+    inside its space, how many parts that fit its space the inventory had when the last hole pass started and at
+    the end, the used-up parts that would fit its cells under every rule, how many of those the inventory had when
+    the last hole pass started, and its cells' causes)."""
     labels, count = ndimage.label(mask & ~filled)
     sizes = np.bincount(labels.ravel(), minlength=count + 1)[1:]
     bins = []
@@ -551,8 +560,11 @@ def holes_of(filled: np.ndarray, mask: np.ndarray, cause: np.ndarray, at_holes: 
             return None if inventory is None else sum(n for (name, _), n in inventory.items() if name in names)
 
         cells = np.argwhere(labels == index)
+        needed = sorted({name for c in cells.tolist() for name in (wanted or {}).get(tuple(c), [])})
         small.append({"size": int(sizes[index - 1]), "smallest": smallest, "fitting": sorted(names),
-                      "at_holes": held(at_holes), "at_end": held(remaining),
+                      "at_holes": held(at_holes), "at_end": held(remaining), "wanted": needed,
+                      "wanted_at_holes": None if at_holes is None else
+                      sum(n for (name, _), n in at_holes.items() if name in needed),
                       "causes": sorted(FINAL_CAUSES[cause[tuple(c)]] for c in cells),
                       "layers": sorted({int(c[0]) for c in cells})})
     return bins, small
@@ -574,16 +586,22 @@ def replay_final(directory: str, seed: int) -> dict:
     if sorted(map(placement, placed)) != sorted(map(placement, cached.placed)) or \
             not np.array_equal(trace.final.filled, final):
         raise SystemExit(f"{directory} seed {seed}: the traced replay differs from the cached build")
-    cause = final_causes(builder, trace, mask)
+    cause, wanted = final_causes(builder, trace, mask)
     skin = exposed(mask)
-    bins, small = holes_of(final, mask, cause, trace.at_holes, trace.final.remaining)
+    bins, small = holes_of(final, mask, cause, trace.at_holes, trace.final.remaining, wanted)
     left = trace.final.remaining
+    needed = Counter(name for names in wanted.values() for name in names)
+
+    def count(inventory: dict | None, name: str) -> int | None:
+        return None if inventory is None else sum(n for (part, _), n in inventory.items() if part == name)
     return {"seed": seed, "unfilled": int((cause >= 0).sum()),
             "causes": {c: int((cause == i).sum()) for i, c in enumerate(FINAL_CAUSES)},
             "on_surface": {c: int(((cause == i) & skin).sum()) for i, c in enumerate(FINAL_CAUSES)},
             "parts_left_at_holes": None if trace.at_holes is None else sum(trace.at_holes.values()),
             "parts_left_at_end": None if left is None else sum(left.values()),
-            "bins": bins, "small": small, "completeness": completeness(final, mask)}
+            "bins": bins, "small": small, "completeness": completeness(final, mask),
+            "wanted": [{"part": name, "cells": cells, "in_set": count(context.inventory, name),
+                        "at_holes": count(trace.at_holes, name)} for name, cells in needed.most_common()]}
 
 
 def holes_report(rows: list[dict]) -> str:
@@ -607,16 +625,26 @@ def holes_report(rows: list[dict]) -> str:
         lines.append(f"| {r['object']} | {r['set']} | {sum(b['holes'] for b in r['bins'])} | {cells} |")
     lines += ["", f"Holes of 1-{SMALL_HOLE} cells: the smallest catalog part that fits inside each, whether the inventory "
               "had a part that fits it when the last hole pass started and at the end, and why its cells stayed empty:",
-              "", "| object | set | small holes | smallest part (holes) | had one at hole pass start | had one at end "
-              "| causes of their cells |", "|---|---|---:|---|---:|---:|---|"]
+              "", "| object | set | small holes | smallest part (holes) | had a part that fits the space, at hole pass "
+              "start / end | used-up part that fits under every rule (holes) | had it at hole pass start | causes of "
+              "their cells |", "|---|---|---:|---|---:|---|---:|---|"]
     for r in rows:
         small = r["small"]
         smallest = Counter("/".join(h["smallest"]) or "none" for h in small)
         causes = Counter(c for h in small for c in h["causes"])
+        needed = Counter("/".join(h["wanted"]) for h in small if h["wanted"])
         lines.append(f"| {r['object']} | {r['set']} | {len(small)} | "
                      f"{', '.join(f'{k} ({v})' for k, v in smallest.most_common())} | "
-                     f"{sum(bool(h['at_holes']) for h in small)} | {sum(bool(h['at_end']) for h in small)} | "
+                     f"{sum(bool(h['at_holes']) for h in small)} / {sum(bool(h['at_end']) for h in small)} | "
+                     f"{', '.join(f'{k} ({v})' for k, v in needed.most_common()) or '-'} | "
+                     f"{sum(bool(h['wanted_at_holes']) for h in small)} | "
                      f"{', '.join(f'{k} {v}' for k, v in causes.most_common())} |")
+    lines += ["", "Inventory cells: the parts that would fit there under every rule but were used up (cells naming the "
+              "part; the set's count; left when the last hole pass started), the five most named:", "",
+              "| object | set | inventory cells | parts |", "|---|---|---:|---|"]
+    for r in rows:
+        parts = "; ".join(f"{w['part']} {w['cells']} ({w['in_set']}; {w['at_holes']})" for w in r["wanted"][:5])
+        lines.append(f"| {r['object']} | {r['set']} | {r['causes']['inventory']} | {parts} |")
     return "\n".join(lines)
 
 
@@ -651,10 +679,11 @@ SWEEP_SETS = ("6378-1", "5891-1", "4956-1")
 STRUCTURES = {"chair": "a712684f-8e79-4ecd-81de-11aef42b50d4", "table": "858f0955-846e-4138-84d9-df66b66eddc2",
               "car": "4b15b71c-f400-4e54-a118-f0c2afba6e17"}
 HANG = ["--holes", "--hang"]
-ARMS = {  # name: (title, pipeline flags); "old" is the cached pre-fix run (run_dir), not run again
+ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed after the sweep); "old" is the
+    # cached pre-fix run (run_dir), not run again
     "old": ("old base (pre-fix)", []),
-    "base": ("base", []),
-    "hang": ("hang", HANG),
+    "base": ("base", ["--sizing", "fillable", "--no-holes"]),
+    "hang": ("hang", ["--sizing", "fillable", *HANG]),
     "usable": ("usable + hang", ["--sizing", "usable", *HANG]),
     "usable90": ("usable 0.9 + hang", ["--sizing", "usable", "--fill-slack", "0.9", *HANG]),
     "usable80": ("usable 0.8 + hang", ["--sizing", "usable", "--fill-slack", "0.8", *HANG]),
@@ -890,11 +919,40 @@ def step_sweep_report(args: argparse.Namespace) -> None:
     print(f"wrote {name}.json, {name}.md, " + ", ".join(p.name for p in sheets))
 
 
+def step_old_vs_base(args: argparse.Namespace) -> None:
+    """Old (cached, pre-fix) vs fixed base on the sweep's pairs, same seeds and targets: the valid candidates' mean
+    fill +- SE, the difference in SE units, valid counts. A pair whose base target has changed since (the 5891-1
+    chair: the moment key, 49d5739) takes its base run from ``sweep_premoment/base``, run before that change."""
+    rows = []
+    for obj in OBJECTS:
+        for set_number in SWEEP_SETS:
+            base = args.out / "sweep_premoment" / "base" / set_number / obj
+            if not base.exists():
+                base = arm_dir(args.out, "base", set_number, obj, args.runs)
+            row, masks = {"object": obj, "set": set_number}, []
+            for arm, directory in (("old", run_dir(args.runs, set_number, obj)), ("base", base)):
+                key, _, candidates = load_run(directory)
+                mask = key_mask(key)
+                masks.append(mask)
+                fills = np.array([completeness(occupancy(c.placed, mask.shape), mask)["fill_pct"]
+                                  for c in candidates if c.valid])
+                row[arm] = {"run": directory.as_posix(), "valid": len(fills), "n": len(candidates),
+                            "mean": float(fills.mean()), "se": float(fills.std(ddof=1) / math.sqrt(len(fills)))}
+            if masks[0].shape != masks[1].shape or not (masks[0] == masks[1]).all():
+                raise SystemExit(f"{obj} {set_number}: the old and base runs have different targets")
+            row["delta"] = row["base"]["mean"] - row["old"]["mean"]
+            row["z"] = row["delta"] / math.hypot(row["base"]["se"], row["old"]["se"])
+            rows.append(row)
+            print(f"{obj} {set_number}: {row['old']['mean']:.1f} -> {row['base']['mean']:.1f} ({row['z']:+.1f} SE)",
+                  flush=True)
+    (args.out / "old_vs_base.json").write_text(json.dumps(rows, indent=1), encoding="utf-8")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.complete", description=__doc__.splitlines()[0])
     parser.add_argument("--runs", type=Path, default=Path("out"), help="folder holding m12b_sizing_fig and m12b_sizing")
     parser.add_argument("--out", type=Path, default=Path("out/m12b_complete"))
-    parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report", "sweep", "sweep-report", "holes"])
+    parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report", "sweep", "sweep-report", "holes", "old-vs-base"])
     parser.add_argument("--per-pair", type=int, default=10, help="trace: builds replayed per pair (selected first)")
     parser.add_argument("--workers", type=int, default=5)
     parser.add_argument("--n", type=int, default=50, help="sweep: candidates per run")
@@ -915,6 +973,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         step_sweep_report(args)
     if "holes" in args.steps:
         step_holes(args)
+    if "old-vs-base" in args.steps:
+        step_old_vs_base(args)
     return 0
 
 

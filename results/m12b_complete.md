@@ -2,7 +2,8 @@
 
 Mac (2026-10-10): the builds are recognizable but incomplete; a smaller complete object beats a larger partial one.
 This write-up measures completeness on the runs that already exist (no generation) and, in a second part, why
-target cells stay empty as the builder saw them.
+target cells stay empty as the builder saw them. A third part fixes what that found (a builder bug, two scale
+failures), sweeps hanging support, usable sizing and fill slack on 9 pairs, and says what still blocks completeness.
 
 **Runs.** Pipeline defaults at 3985e76 (fillable sizing, thin-aware scale, covering support columns up to 6 cells, open
 tops, clutch cap 1111): the chair (a712684f) and table (858f0955) on the six M12 demo sets
@@ -167,3 +168,186 @@ there blocks the studded plate of the same box. In that build every missed visit
 after a 1x1 tile failed, the plain 1x1 plate being used up. 1768 of 170,214 unfilled cells (1%) are missed; cars
 show the most (2–8%). Fixed on this branch (below); every number before the fix, `m12b_brickgpt`, `m12b_sizing`,
 `m12b_skins` included, was produced with the bug.
+
+## Fixes
+
+### `_fit_key` counts studs (60b3a3b)
+
+A rectangular part's key is now its box and whether it has studs, in the main pass and in the hole pass alike
+(`test_failed_tile_does_not_block_plate_of_same_box`). Builds change only where a tile can fail and a plate of its box
+fit: open tops and connect repair rounds; plain D and D2 builds are identical, three golden fingerprints of connect
+builds changed. Cached runs are keyed by `builder_version` 2 now, so a pre-fix cache is refused instead of reused.
+
+Old (cached, pre-fix) vs fixed base, the same 50 seeds and the same targets, mean fill of the valid candidates ± SE
+(the 5891-1 chair's fixed base is the run before the moment key below, on the old target):
+
+| object | set | old fill % | fixed fill % | Δ points | Δ / SE | old valid | fixed valid |
+|---|---|---:|---:|---:|---:|---:|---:|
+| chair | 6378-1 | 64.7 ± 0.9 | 65.3 ± 0.8 | +0.7 | +0.6 | 50/50 | 50/50 |
+| chair | 5891-1 | 67.7 ± 1.1 | 69.0 ± 0.8 | +1.3 | +1.0 | 46/50 | 49/50 |
+| chair | 4956-1 | 69.0 ± 0.7 | 68.7 ± 0.6 | -0.3 | -0.3 | 36/50 | 42/50 |
+| table | 6378-1 | 53.7 ± 1.8 | 56.2 ± 1.1 | +2.5 | +1.2 | 48/50 | 49/50 |
+| table | 5891-1 | 58.5 ± 2.0 | 59.2 ± 1.5 | +0.8 | +0.3 | 34/50 | 38/50 |
+| table | 4956-1 | 60.8 ± 1.0 | 59.9 ± 1.1 | -0.9 | -0.6 | 42/50 | 36/50 |
+| car | 6378-1 | 70.2 ± 0.4 | 70.2 ± 0.4 | -0.0 | -0.1 | 50/50 | 50/50 |
+| car | 5891-1 | 76.8 ± 0.3 | 76.5 ± 0.2 | -0.3 | -0.9 | 50/50 | 50/50 |
+| car | 4956-1 | 72.4 ± 0.3 | 73.4 ± 0.3 | +1.0 | +2.6 | 49/50 | 47/50 |
+
+Mean Δ +0.5 points; 8 of 9 pairs within 1.2 SE, the 4956-1 car +1.0 point at 2.6 SE. Valid counts move both ways
+(4956-1 chair +6, 4956-1 table −6). The earlier write-ups (`m12b_brickgpt`, `m12b_sizing`, `m12b_skins`,
+`m12b_symmetry_threshold`, `m12b_skins_soft`) are not rerun (cf, 2026-10-10); each carries a note that its builds
+predate the fix.
+
+### Usable sizing and fill slack (60b3a3b)
+
+`--sizing usable`: fillable sizing, then leave out every part that fits nowhere inside the scaled target (in any
+orientation, `inventory.fits_inside`), rescale to the parts left, and repeat until nothing more is left out (at most 5
+rounds). `--fill-slack s` scales to s × that volume. On the sweep's 9 pairs only the 6378-1 chair leaves anything out
+at 1.0 (4 × plate 6x14, 336 cells; the scaled target is 11 × 12 studs across), and the 4956-1 chair 2 × brick 1x16 at
+0.9 and 0.8; every pair settles within 2 rounds.
+
+### The scale cut a thin post (0dbb3b6)
+
+The sweep's first pass gave the 6378-1 chair 9.3% fill at usable 1.0 and 17.1% at 0.8, with every build valid:
+nearest-neighbour resampling had dropped the chair's 2-cell post entirely (13 and 11 empty layers between base and
+seat), so the builder built the base and nothing joined the seat. The thin-aware scale did not prevent it because
+`shapes.thinnest_section` skipped empty layers, so a factor that deleted the post scored as thick. Now an empty layer
+between the lowest and highest filled layer is a section of 0, and if every factor in the 5% band cuts the shape, the
+band widens once to 10% (`test_keep_sections_does_not_cut_a_thin_post`). Of the sweep's 90 sized targets (5 arms × 9
+pairs, with and without support columns) only those two change.
+
+### The scale put a post off its load (49d5739)
+
+At usable 0.9 the 5891-1 chair gave 3 valid builds of 50 (the hang arm, at 1.0: 50/50). Not inventory (nothing left
+out), not the cut above (the post is 2 cells on all 16 layers), not tip-over: all 47 failures need more than real
+clutch (1124–3202 per stud, median 1554, cap 1111; hang's median 144). The support cover never reaches the seat (the
+seat starts 26 layers up; support columns stop at 6), so at every scale the seat and back hang on a 1 × 2 post. What
+changes at 0.9 is where resampling puts that post under them:
+
+| 5891-1 chair | post | cells above it | their centre of mass from the post's centre | lever | moment (cells × lever) | clutch failures |
+|---|---|---:|---:|---:|---:|---:|
+| 1.0 (hang) | 1 × 2, y10–26 | 2387 | dz +0.28, dx −0.07 | 0.29 | 696 | 0/50 |
+| usable 0.9 | 1 × 2, y10–25 | 2158 | dz +1.22, dx −0.55 | 1.34 | 2890 | 47/50 |
+| usable 0.8 | 1 × 2, y10–24 | 1894 | dz +0.37, dx −0.56 | 0.67 | 1273 | 6/50 |
+
+(The post is 1 stud wide in z, so at 0.9 the load's centre lies 0.72 studs beyond it.) Which joints bind: the duals
+of the clutch LP's limits over the 47 failed builds put 66% of the binding weight on the seat-on-post joint (y26–28,
+e.g. a 6 × 10 plate on the post's top 1 × 2 brick), 14% inside the post and 18% in the base under it (y4–9). This is
+the first evidence that the scale's resampling phase, not the inventory or the builder, decides whether a build can
+stand: two factors 5% apart give the same chair a 4.2× larger moment on one stud joint.
+
+Fix: `shapes.overhang_moment` is, per layer and per piece of the shape at and above it, the cells above times the
+distance of their centre of mass beyond the convex hull of the piece's cells in that layer; the largest over the
+shape (a build needs its worst joint's clutch, and a post carries the same moment through every layer, so a sum
+would grow with the post's length). `fit_scale` now picks, among the factors with the thickest thinnest section, the
+smallest moment, then the closest volume (`test_fit_scale_prefers_the_post_under_its_load`). Of the 90 sized targets 8
+change: the 5891-1 chair at 1.0 (base, hang and usable: 2859 → 2784 cells) and at usable 0.9 (2603 → 2621), and the
+6378-1 chair at usable 1.0 (1341 → 1326). The 5891-1 chair at 0.8 keeps its target (the load's centre lies
+over the post's top, dz 0.37 within its half-width 0.5, and no factor in the band does better), so its 6 clutch
+failures are not this effect; the 4956-1 chair keeps its targets too.
+
+## Sweep: hanging support, usable sizing, slack
+
+**Decision (cf, 2026-10-10, against the pre-stated rule below; Mac can reverse):** with a 3D target the hole pass with hanging support (`--holes --hang`) and usable sizing are the pipeline defaults, scoped as `--supports` is (`alt.pipeline.resolve`; `--no-holes`, `--no-hang` and `--sizing fillable` give the old setup); no slack default (`--fill-slack` stays a flag, since none makes a build complete). The hang and usable arms below are the new defaults' numbers; nothing was rerun. The drivers of the earlier M12b tables (`experiments/brickgpt.py`, `skins.py`) and this sweep's arms pass the old setup explicitly.
+
+Chair, table and car × 6378-1, 5891-1, 4956-1; 50 candidates, seeds 0–49, 5 workers, the same seeds in every arm; pipeline defaults otherwise (`experiments/complete.py --steps sweep`, at 49d5739 for the cells the two scale fixes changed, 59cbfdc for the rest, whose targets are byte-identical at 49d5739):
+- **old base**: the cached pre-fix runs above (fillable 1.0, no flags);
+- **base**: the same with the `_fit_key` fix;
+- **hang**: base + `--holes --hang` (main e910ad2);
+- **usable**, **usable 0.9**, **usable 0.8**: hang + `--sizing usable` at fill slack 1.0, 0.9, 0.8. Usable 1.0 differs from hang only where a part is left out (the 6378-1 chair); elsewhere it is not run and shown as hang's.
+
+Surface here is the share of the target's exposed faces' cells that are filled, ground faces not counted (`features.exposed`, main's definition since e910ad2); the final-state table above used `shapes.surface`.
+
+Selected build: fill % / largest hole (cells) / surface % (valid candidates of 50). **No arm gives a complete build on any pair** (fill ≥ 97, largest hole ≤ 4, surface ≥ 98), nor any complete valid candidate.
+
+| object | set | old base (pre-fix) | base | hang | usable | usable 0.9 | usable 0.8 |
+|---|---|---:|---:|---:|---:|---:|---:|
+| chair | 6378-1 | 69.3 / 211 / 66.0 (50) | 72.1 / 195 / 71.0 (50) | 75.6 / 192 / 72.0 (50) | 88.6 / 34 / 87.0 (49) | 88.1 / 38 / 85.7 (50) | 90.6 / 35 / 89.1 (50) |
+| chair | 5891-1 | 79.0 / 235 / 73.0 (46) | 77.5 / 268 / 70.4 (47) | 84.9 / 172 / 81.5 (50) | 84.9 / 172 / 81.5 (50) = | 87.5 / 76 / 84.5 (47) | 88.0 / 49 / 85.1 (44) |
+| chair | 4956-1 | 75.2 / 475 / 71.5 (36) | 72.8 / 495 / 69.1 (42) | 77.7 / 363 / 72.6 (41) | 77.7 / 363 / 72.6 (41) = | 80.8 / 302 / 77.9 (39) | 83.0 / 122 / 78.7 (38) |
+| table | 6378-1 | 67.6 / 489 / 68.4 (48) | 67.2 / 427 / 65.1 (49) | 78.5 / 96 / 76.4 (48) | 78.5 / 96 / 76.4 (48) = | 80.5 / 92 / 77.7 (50) | 83.9 / 92 / 79.1 (49) |
+| table | 5891-1 | 67.7 / 764 / 62.8 (34) | 66.6 / 736 / 60.6 (38) | 87.1 / 108 / 81.3 (39) | 87.1 / 108 / 81.3 (39) = | 88.5 / 114 / 82.7 (42) | 93.3 / 29 / 91.1 (43) |
+| table | 4956-1 | 68.0 / 1149 / 63.1 (42) | 73.1 / 902 / 64.5 (36) | 81.5 / 253 / 78.4 (39) | 81.5 / 253 / 78.4 (39) = | 78.4 / 689 / 76.9 (42) | 84.9 / 351 / 85.4 (41) |
+| car | 6378-1 | 75.9 / 263 / 72.8 (50) | 72.7 / 301 / 68.5 (50) | 75.8 / 194 / 74.0 (50) | 75.8 / 194 / 74.0 (50) = | 81.6 / 44 / 75.4 (50) | 84.1 / 49 / 82.0 (50) |
+| car | 5891-1 | 80.8 / 305 / 73.0 (50) | 81.5 / 320 / 76.8 (50) | 84.8 / 75 / 81.4 (50) | 84.8 / 75 / 81.4 (50) = | 87.5 / 34 / 84.5 (50) | 87.2 / 22 / 85.4 (50) |
+| car | 4956-1 | 75.4 / 944 / 70.6 (49) | 75.3 / 792 / 73.1 (47) | 76.8 / 527 / 73.0 (46) | 76.8 / 527 / 73.0 (46) = | 78.3 / 255 / 72.6 (49) | 81.4 / 260 / 79.5 (50) |
+
+(= : the hang run; usable sizing leaves nothing out there.) Means over the valid candidates, the run times (CPU seconds per candidate) and parts used are in `m12b_complete_sweep.json` (old vs fixed base: `m12b_complete_old_vs_base.json`; the hole diagnosis below: `m12b_complete_holes.json`). Sheets: `m12b_complete_sweep_previews.png` (the selected builds) and `m12b_complete_sweep_missing.png` (their unfilled target cells in red), pairs as rows, arms as columns.
+
+**Hanging support** (hang vs base): selected fill up on 9/9 pairs (+1.5 to +20.5 points, mean +7.1), largest hole down on 9/9, surface up on 8/9; valid counts within ±3 of base on every pair.
+
+**Usable sizing at 1.0** changes one pair's target, the 6378-1 chair (4 × plate 6x14 left out): selected fill 75.6 → 88.6, largest hole 192 → 34, surface 72.0 → 87.0, valid 50 → 49 (one clutch failure). On the other 8 pairs it is hang exactly.
+
+**Slack** (usable 0.8 vs hang): selected fill +2.4 to +15.0 points (mean +6.0), largest hole down on 8/9, surface up on 9/9. Slack buys little: 20% less volume than the parts could fill moves the selected build 2–15 fill points and leaves 17–55 holes per build. One selected build per cell is noisy (4956-1 table, largest hole 253 → 689 → 351 from 1.0 to 0.9 to 0.8); the valid candidates' mean fill rises from hang to 0.9 to 0.8 on 7/9 pairs (not the 5891-1 chair, where hang's 83.6 beats both, nor the 4956-1 chair, flat at 76).
+
+### Adoption (cf's rule)
+
+- *Usable sizing becomes the default if every pair's selected build improves on completeness over hang without losing validity.* Not met as written: it improves the one pair where it changes the target and is identical on the other eight (nothing to improve: no part is left out). It never makes a build worse, and on the 6378-1 chair it is the largest single gain in the sweep. Recommendation: adopt it (identical builds where every part fits, better where one does not); the decision is cf's.
+- *The largest slack at which every selected build is complete becomes the default.* None: no slack makes any selected build complete. Best: the 5891-1 table at usable 0.8, 93.3 / 29 / 91.1.
+
+## What still blocks completeness: the usable 0.8 + hang builds
+
+Each pair's selected build at usable 0.8 + hang, replayed with the trace (identity asserted, 9/9) to its final state, after the last hole pass (`--steps holes --arm usable80`). Every unfilled target cell is classified as the hole pass would see it then, under its rules (hanging support included) and with the inventory left:
+- **inventory**: a part of the set would fit there under every rule, but it is used up;
+- **support**: within reach (a stud below, or a part above to hang from), but no part covering the cell rests or hangs there;
+- **unreachable**: no stud below and no part above within reach;
+- **balance**, **geometry** as in the trace above; **ground**: a part fits on the ground layer, which the last connect round's hole pass does not visit.
+
+Share of unfilled cells (on the outer surface in brackets); unreachable, balance and missed are 0 on every pair:
+
+| object | set | fill % | unfilled | inventory | support | geometry | ground | parts left at the last hole pass |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| chair | 6378-1 | 90.6 | 107 | 28 (26) | 72 (72) | 0 (0) | 0 (0) | 52 |
+| chair | 5891-1 | 88.0 | 278 | 59 (53) | 33 (32) | 6 (5) | 1 (1) | 155 |
+| chair | 4956-1 | 83.0 | 593 | 56 (45) | 41 (40) | 1 (1) | 2 (2) | 237 |
+| table | 6378-1 | 83.9 | 217 | 52 (42) | 41 (41) | 0 (0) | 7 (7) | 36 |
+| table | 5891-1 | 93.3 | 155 | 66 (48) | 24 (22) | 10 (9) | 0 (0) | 155 |
+| table | 4956-1 | 84.9 | 546 | 56 (14) | 44 (40) | 0 (0) | 0 (0) | 186 |
+| car | 6378-1 | 84.1 | 219 | 70 (42) | 30 (17) | 0 (0) | 0 (0) | 34 |
+| car | 5891-1 | 87.2 | 302 | 75 (40) | 20 (15) | 6 (2) | 0 (0) | 166 |
+| car | 4956-1 | 81.4 | 654 | 76 (38) | 23 (10) | 1 (0) | 0 (0) | 217 |
+
+Holes by size: holes; share of the unfilled cells:
+
+| object | set | holes | 1 cells | 2-4 cells | 5-16 cells | 17-64 cells | 65+ cells |
+|---|---|---:|---:|---:|---:|---:|---:|
+| chair | 6378-1 | 17 | 8; 7% | 6; 14% | 0; 0% | 3; 79% | 0; 0% |
+| chair | 5891-1 | 43 | 9; 3% | 19; 19% | 12; 39% | 3; 39% | 0; 0% |
+| chair | 4956-1 | 53 | 10; 2% | 24; 12% | 11; 15% | 6; 33% | 2; 38% |
+| table | 6378-1 | 36 | 10; 5% | 18; 23% | 6; 21% | 1; 9% | 1; 42% |
+| table | 5891-1 | 36 | 18; 12% | 12; 23% | 4; 31% | 2; 34% | 0; 0% |
+| table | 4956-1 | 29 | 6; 1% | 9; 5% | 10; 17% | 3; 13% | 1; 64% |
+| car | 6378-1 | 32 | 9; 4% | 11; 14% | 9; 38% | 3; 44% | 0; 0% |
+| car | 5891-1 | 55 | 13; 4% | 21; 21% | 17; 48% | 4; 26% | 0; 0% |
+| car | 4956-1 | 43 | 11; 2% | 17; 7% | 9; 11% | 4; 19% | 2; 62% |
+
+Holes of 1–4 cells, and which parts the inventory cells want:
+
+| object | set | holes of 1–4 cells | wanting a used-up part | that part left at the last hole pass | parts the inventory cells want: cells naming it (the set's count) |
+|---|---|---:|---:|---:|---|
+| chair | 6378-1 | 14 | 14 | 0 | plate1x1 25 (10); plate1x1_6141 25 (12); plate1x2 13 (5); brick1x1 9 (19) |
+| chair | 5891-1 | 28 | 28 | 0 | plate1x1 143 (7); plate1x1_6141 143 (40); plate1x2 113 (14); plate1x3 77 (11) |
+| chair | 4956-1 | 34 | 34 | 0 | plate1x1 232 (2); plate1x1_6141 232 (38); plate1x2 229 (18); plate1x4 165 (15) |
+| table | 6378-1 | 28 | 28 | 0 | plate1x1 108 (10); plate1x1_6141 108 (12); plate1x2 96 (5); plate1x3 76 (6) |
+| table | 5891-1 | 30 | 25 | 0 | plate1x1 92 (7); plate1x1_6141 92 (40); plate1x2 68 (14); plate2x2_corner 59 (1) |
+| table | 4956-1 | 15 | 13 | 0 | plate1x2 262 (18); plate1x1 251 (2); plate1x1_6141 251 (38); plate2x2_corner 232 (6) |
+| car | 6378-1 | 20 | 20 | 0 | plate1x1 112 (10); plate1x1_6141 112 (12); plate1x2 108 (5); plate1x3 73 (6) |
+| car | 5891-1 | 34 | 29 | 0 | plate1x1 186 (7); plate1x1_6141 186 (40); plate1x2 163 (14); plate1x3 115 (11) |
+| car | 4956-1 | 28 | 27 | 0 | plate1x2 383 (18); plate1x1 351 (2); plate1x1_6141 351 (38); plate2x2_corner 259 (6) |
+
+**Answer.** The missing 7–19% of each target is mostly **out of small parts**, then **support**; not reach, and only slightly the shape at this scale:
+- *Out of small parts* (inventory, 28–76% of the empty cells, at least 52% on 8 of 9 pairs): a part of the set fits there under every rule, and it is always a small plate (1 × 1 plain or round, 1 × 2, 1 × 3, corner 2 × 2), but none is left, and none was left when the last hole pass started, on any pair: the main pass used them all. Every hole of 1–4 cells takes a 1 × 1 plate, and 13–34 of them per build want one. Meanwhile 34–237 parts are left over that fit nowhere free. The sets are short of 1 × 1 plates in particular (4956-1 has 2 plain and 38 round ones). So the sizing should count small parts, or the build should keep them for the holes: slack shrinks the target but the main pass still spends the small plates first.
+- *Support* (20–72%; 72% on the 6378-1 chair): within reach, yet no part covering the cell rests or hangs there. On the missing sheet the larger holes are the chairs' caster tips, the table tops' rims and the cars' undersides; the 6378-1 chair's three holes of 17–64 cells hold 79% of its empty cells.
+- *Unreachable* is 0 on every pair: hanging reaches every empty cell, so the reach is not the lever. *Geometry* (shape-impossible at this scale) is at most 10% (the 5891-1 table), *ground* at most 7%.
+
+Per pair, the usable 0.8 + hang selected build against the bar (fill ≥ 97, largest hole ≤ 4, surface ≥ 98):
+
+- chair 6378-1: 90.6 / 35 / 89.1; 107 cells empty, 28% out of small parts, 72% support; holes over 16 cells hold 79% of them.
+- chair 5891-1: 88.0 / 49 / 85.1; 278 cells empty, 59% out of small parts, 33% support; holes over 16 cells hold 39% of them.
+- chair 4956-1: 83.0 / 122 / 78.7; 593 cells empty, 56% out of small parts, 41% support; holes over 16 cells hold 71% of them.
+- table 6378-1: 83.9 / 92 / 79.1; 217 cells empty, 52% out of small parts, 41% support; holes over 16 cells hold 52% of them.
+- table 5891-1: 93.3 / 29 / 91.1; 155 cells empty, 66% out of small parts, 24% support; holes over 16 cells hold 34% of them.
+- table 4956-1: 84.9 / 351 / 85.4; 546 cells empty, 56% out of small parts, 44% support; holes over 16 cells hold 77% of them.
+- car 6378-1: 84.1 / 49 / 82.0; 219 cells empty, 70% out of small parts, 30% support; holes over 16 cells hold 44% of them.
+- car 5891-1: 87.2 / 22 / 85.4; 302 cells empty, 75% out of small parts, 20% support; holes over 16 cells hold 26% of them.
+- car 4956-1: 81.4 / 260 / 79.5; 654 cells empty, 76% out of small parts, 23% support; holes over 16 cells hold 81% of them.

@@ -448,7 +448,7 @@ python -m brickwfc.experiments.skins --steps compare --sets 5891-1 --objects cha
 - `chair_5891-1.json` and `_sheet.png` are copied to `results/m12b_symmetry_threshold_chair.json` and `.png`.
 - The chair section and the notes at the end of the write-up are written by hand (from `chair_5891-1.md`); the threshold step rewrites the file, so copy them back.
 
-### `results/m12b_complete.md` (M12b completeness: fill, holes, surface, missing maps, causes), with `m12b_complete_final.json`, `m12b_complete_missing.png`, `m12b_complete_trace.json`
+### `results/m12b_complete.md` (M12b completeness: fill, holes, surface, missing maps, causes, fixes, sweep), with `m12b_complete_final.json`, `m12b_complete_missing.png`, `m12b_complete_trace.json` and the sweep's files
 
 The final-state pass reads the sizing runs (`out/m12b_sizing_fig`, `out/m12b_sizing`; see `m12b_sizing.md`). It runs no
 generation and takes about a minute:
@@ -472,6 +472,31 @@ python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --ste
   and stops if a replay differs from its cached build.
 - The report step writes `trace.md` and `trace.json` (copied to `results/m12b_complete_trace.json`); the trace section
   of the write-up holds its tables.
+
+The sweep (third part of the write-up; `m12b_complete_sweep.json`, `m12b_complete_sweep_previews.png`,
+`m12b_complete_sweep_missing.png`, `m12b_complete_holes.json`, `m12b_complete_old_vs_base.json`), at 49d5739 or later:
+
+```
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps sweep --n 50 --workers 5
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps sweep-report
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps holes --arm usable80 --workers 1
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps old-vs-base
+```
+
+- The sweep step runs the pipeline for 5 arms x 9 pairs, 50 candidates each, one run after another (37 runs: usable
+  1.0 only where it leaves a part out). It is resumable: a finished run is skipped, a partial one continues from its
+  cache. 17 CPU hours, about 4 hours on 5 workers; give it the machine.
+- The "old" arm is the cached pre-fix sizing runs (above); nothing is generated for it.
+- sweep-report replays nothing. It writes `sweep.md`, `sweep.json` and the two sheets (downscaled to 40% for
+  `results/`). About 10 minutes.
+- holes replays the 9 selected builds of the usable 0.8 arm with the trace (identity asserted) and writes
+  `holes_usable80.md` and `.json`. 6-20 minutes on one process.
+- old-vs-base compares the old arm with the fixed base. The 5891-1 chair's base must be the run made before the moment
+  key changed its target (49d5739): run `--steps sweep` at 0dbb3b6 first and move
+  `sweep/base/5891-1/chair` to `sweep_premoment/base/5891-1/chair`.
+- The sweep in the write-up was run in stages, 59cbfdc first, then the cells each scale fix changed at 0dbb3b6 and
+  49d5739. Every other cell's target is byte-identical at 49d5739 and the builder is unchanged, so a run from scratch
+  at 49d5739 gives the same table.
 
 ## Not run yet
 

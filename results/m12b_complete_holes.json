@@ -1,0 +1,9741 @@
+[
+ {
+  "object": "chair",
+  "set": "6378-1",
+  "arm": "usable80",
+  "seed": 18,
+  "unfilled": 107,
+  "causes": {
+   "inventory": 30,
+   "balance": 0,
+   "support": 77,
+   "unreachable": 0,
+   "geometry": 0,
+   "ground": 0,
+   "missed": 0
+  },
+  "on_surface": {
+   "inventory": 28,
+   "balance": 0,
+   "support": 77,
+   "unreachable": 0,
+   "geometry": 0,
+   "ground": 0,
+   "missed": 0
+  },
+  "parts_left_at_holes": 52,
+  "parts_left_at_end": 41,
+  "bins": [
+   {
+    "bin": "1",
+    "holes": 8,
+    "cells": 8
+   },
+   {
+    "bin": "2-4",
+    "holes": 6,
+    "cells": 15
+   },
+   {
+    "bin": "5-16",
+    "holes": 0,
+    "cells": 0
+   },
+   {
+    "bin": "17-64",
+    "holes": 3,
+    "cells": 84
+   },
+   {
+    "bin": "65+",
+    "holes": 0,
+    "cells": 0
+   }
+  ],
+  "small": [
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     3
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     3
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     3,
+     4,
+     5
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     7
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     20,
+     21
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 4,
+    "at_end": 2,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     20,
+     21
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     31
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     32
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     33
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     34,
+     35
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     36
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     37,
+     38
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     37
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 4,
+    "at_end": 2,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     38
+    ]
+   }
+  ],
+  "completeness": {
+   "fill_pct": 90.59753954305799,
+   "holes": 17,
+   "largest_hole": 35,
+   "unfilled": 107,
+   "surface_pct": 89.0738813735692,
+   "unfilled_on_surface_pct": 98.13084112149532
+  },
+  "wanted": [
+   {
+    "part": "plate1x1",
+    "cells": 25,
+    "in_set": 10,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x1_6141",
+    "cells": 25,
+    "in_set": 12,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x2",
+    "cells": 13,
+    "in_set": 5,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1",
+    "cells": 9,
+    "in_set": 19,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_3062b",
+    "cells": 9,
+    "in_set": 8,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_4070",
+    "cells": 9,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x2",
+    "cells": 9,
+    "in_set": 16,
+    "at_holes": 2
+   },
+   {
+    "part": "plate2x2_corner",
+    "cells": 3,
+    "in_set": 1,
+    "at_holes": 1
+   },
+   {
+    "part": "tile1x1",
+    "cells": 3,
+    "in_set": 2,
+    "at_holes": 0
+   }
+  ]
+ },
+ {
+  "object": "chair",
+  "set": "5891-1",
+  "arm": "usable80",
+  "seed": 42,
+  "unfilled": 278,
+  "causes": {
+   "inventory": 165,
+   "balance": 0,
+   "support": 92,
+   "unreachable": 0,
+   "geometry": 17,
+   "ground": 4,
+   "missed": 0
+  },
+  "on_surface": {
+   "inventory": 146,
+   "balance": 0,
+   "support": 90,
+   "unreachable": 0,
+   "geometry": 14,
+   "ground": 4,
+   "missed": 0
+  },
+  "parts_left_at_holes": 155,
+  "parts_left_at_end": 155,
+  "bins": [
+   {
+    "bin": "1",
+    "holes": 9,
+    "cells": 9
+   },
+   {
+    "bin": "2-4",
+    "holes": 19,
+    "cells": 52
+   },
+   {
+    "bin": "5-16",
+    "holes": 12,
+    "cells": 108
+   },
+   {
+    "bin": "17-64",
+    "holes": 3,
+    "cells": 109
+   },
+   {
+    "bin": "65+",
+    "holes": 0,
+    "cells": 0
+   }
+  ],
+  "small": [
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 7,
+    "at_end": 7,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     4,
+     5,
+     6
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     7,
+     8
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 7,
+    "at_end": 7,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     25
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 7,
+    "at_end": 7,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2_corner"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     25
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 7,
+    "at_end": 7,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "plate2x2_corner"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     25
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 7,
+    "at_end": 7,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     25
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     27,
+     28,
+     29
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 7,
+    "at_end": 7,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory"
+    ],
+    "layers": [
+     27
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     27,
+     28,
+     29
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     28,
+     29
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     30
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 7,
+    "at_end": 7,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     32,
+     33
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     35
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     35,
+     36,
+     37
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     35,
+     36
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 7,
+    "at_end": 7,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     36,
+     37
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     39,
+     40
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     39
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     39,
+     40,
+     41
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     41
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 7,
+    "at_end": 7,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     41
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     42
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     43
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     43
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2",
+     "plate2x2_4032a",
+     "plate2x2_4032b",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile2x2"
+    ],
+    "at_holes": 7,
+    "at_end": 7,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2",
+     "plate2x2_4032a",
+     "plate2x2_corner"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     45
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 7,
+    "at_end": 7,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory"
+    ],
+    "layers": [
+     45
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     49
+    ]
+   }
+  ],
+  "completeness": {
+   "fill_pct": 88.03271631510977,
+   "holes": 43,
+   "largest_hole": 49,
+   "unfilled": 278,
+   "surface_pct": 85.05002942907592,
+   "unfilled_on_surface_pct": 91.36690647482014
+  },
+  "wanted": [
+   {
+    "part": "plate1x1",
+    "cells": 143,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x1_6141",
+    "cells": 143,
+    "in_set": 40,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x2",
+    "cells": 113,
+    "in_set": 14,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x3",
+    "cells": 77,
+    "in_set": 11,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2_corner",
+    "cells": 63,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x4",
+    "cells": 50,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2",
+    "cells": 36,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2_4032a",
+    "cells": 36,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x3",
+    "cells": 20,
+    "in_set": 11,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1",
+    "cells": 15,
+    "in_set": 14,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_3062b",
+    "cells": 15,
+    "in_set": 12,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_4070",
+    "cells": 15,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x6",
+    "cells": 13,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x4",
+    "cells": 8,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "tile1x1_2555",
+    "cells": 3,
+    "in_set": 1,
+    "at_holes": 0
+   }
+  ]
+ },
+ {
+  "object": "chair",
+  "set": "4956-1",
+  "arm": "usable80",
+  "seed": 14,
+  "unfilled": 593,
+  "causes": {
+   "inventory": 333,
+   "balance": 0,
+   "support": 244,
+   "unreachable": 0,
+   "geometry": 3,
+   "ground": 13,
+   "missed": 0
+  },
+  "on_surface": {
+   "inventory": 265,
+   "balance": 0,
+   "support": 235,
+   "unreachable": 0,
+   "geometry": 3,
+   "ground": 12,
+   "missed": 0
+  },
+  "parts_left_at_holes": 237,
+  "parts_left_at_end": 237,
+  "bins": [
+   {
+    "bin": "1",
+    "holes": 10,
+    "cells": 10
+   },
+   {
+    "bin": "2-4",
+    "holes": 24,
+    "cells": 72
+   },
+   {
+    "bin": "5-16",
+    "holes": 11,
+    "cells": 88
+   },
+   {
+    "bin": "17-64",
+    "holes": 6,
+    "cells": 195
+   },
+   {
+    "bin": "65+",
+    "holes": 2,
+    "cells": 228
+   }
+  ],
+  "small": [
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     4,
+     5
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     4,
+     5,
+     6,
+     7
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     29,
+     30,
+     31
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     32
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     32
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     35
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     35
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     35
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     35,
+     36
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     35
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     35,
+     36
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     35,
+     36
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     35
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     35
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     35
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     37
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     37,
+     38
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     37
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     37,
+     38,
+     39
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     38
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     40,
+     41
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     41,
+     42
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     42,
+     43,
+     44
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     42,
+     43,
+     44
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory"
+    ],
+    "layers": [
+     44,
+     45
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     44,
+     45,
+     46
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     44,
+     45
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     46
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     47,
+     48,
+     49
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     48,
+     49,
+     50
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     49,
+     50
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 41,
+    "at_end": 41,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     49,
+     50
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     52,
+     53,
+     54
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 40,
+    "at_end": 40,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     52
+    ]
+   }
+  ],
+  "completeness": {
+   "fill_pct": 82.95977011494253,
+   "holes": 53,
+   "largest_hole": 122,
+   "unfilled": 593,
+   "surface_pct": 78.67494824016563,
+   "unfilled_on_surface_pct": 86.84654300168634
+  },
+  "wanted": [
+   {
+    "part": "plate1x1",
+    "cells": 232,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x1_6141",
+    "cells": 232,
+    "in_set": 38,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x2",
+    "cells": 229,
+    "in_set": 18,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x4",
+    "cells": 165,
+    "in_set": 15,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x6",
+    "cells": 142,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2_corner",
+    "cells": 127,
+    "in_set": 6,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x4",
+    "cells": 100,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2",
+    "cells": 95,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x3",
+    "cells": 95,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x8",
+    "cells": 87,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x6",
+    "cells": 77,
+    "in_set": 3,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1",
+    "cells": 52,
+    "in_set": 22,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_3062b",
+    "cells": 52,
+    "in_set": 21,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_4070",
+    "cells": 52,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x10",
+    "cells": 47,
+    "in_set": 6,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x8",
+    "cells": 40,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x2",
+    "cells": 36,
+    "in_set": 19,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x3",
+    "cells": 23,
+    "in_set": 20,
+    "at_holes": 0
+   },
+   {
+    "part": "slope45inv_2x1",
+    "cells": 20,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x4",
+    "cells": 17,
+    "in_set": 23,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x6",
+    "cells": 12,
+    "in_set": 13,
+    "at_holes": 0
+   },
+   {
+    "part": "brick2x2_corner",
+    "cells": 6,
+    "in_set": 17,
+    "at_holes": 0
+   }
+  ]
+ },
+ {
+  "object": "table",
+  "set": "6378-1",
+  "arm": "usable80",
+  "seed": 30,
+  "unfilled": 217,
+  "causes": {
+   "inventory": 113,
+   "balance": 0,
+   "support": 89,
+   "unreachable": 0,
+   "geometry": 0,
+   "ground": 15,
+   "missed": 0
+  },
+  "on_surface": {
+   "inventory": 91,
+   "balance": 0,
+   "support": 89,
+   "unreachable": 0,
+   "geometry": 0,
+   "ground": 15,
+   "missed": 0
+  },
+  "parts_left_at_holes": 36,
+  "parts_left_at_end": 31,
+  "bins": [
+   {
+    "bin": "1",
+    "holes": 10,
+    "cells": 10
+   },
+   {
+    "bin": "2-4",
+    "holes": 18,
+    "cells": 49
+   },
+   {
+    "bin": "5-16",
+    "holes": 6,
+    "cells": 46
+   },
+   {
+    "bin": "17-64",
+    "holes": 1,
+    "cells": 20
+   },
+   {
+    "bin": "65+",
+    "holes": 1,
+    "cells": 92
+   }
+  ],
+  "small": [
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     36
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "plate1x4",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3",
+     "tile1x4"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "plate1x4"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     36
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     36
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     36,
+     37
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     36
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     36
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     36,
+     37
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     37
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     38
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     38,
+     39
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     38,
+     39
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     39
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     39
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     39
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     39
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     39,
+     40
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     39
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     40
+    ]
+   }
+  ],
+  "completeness": {
+   "fill_pct": 83.85416666666666,
+   "holes": 36,
+   "largest_hole": 92,
+   "unfilled": 217,
+   "surface_pct": 79.14438502673798,
+   "unfilled_on_surface_pct": 89.86175115207374
+  },
+  "wanted": [
+   {
+    "part": "plate1x1",
+    "cells": 108,
+    "in_set": 10,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x1_6141",
+    "cells": 108,
+    "in_set": 12,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x2",
+    "cells": 96,
+    "in_set": 5,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x3",
+    "cells": 76,
+    "in_set": 6,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x4",
+    "cells": 48,
+    "in_set": 12,
+    "at_holes": 0
+   },
+   {
+    "part": "tile1x1",
+    "cells": 37,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "tile1x2",
+    "cells": 36,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2_corner",
+    "cells": 31,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x6",
+    "cells": 12,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2",
+    "cells": 4,
+    "in_set": 9,
+    "at_holes": 0
+   }
+  ]
+ },
+ {
+  "object": "table",
+  "set": "5891-1",
+  "arm": "usable80",
+  "seed": 6,
+  "unfilled": 155,
+  "causes": {
+   "inventory": 102,
+   "balance": 0,
+   "support": 37,
+   "unreachable": 0,
+   "geometry": 16,
+   "ground": 0,
+   "missed": 0
+  },
+  "on_surface": {
+   "inventory": 75,
+   "balance": 0,
+   "support": 34,
+   "unreachable": 0,
+   "geometry": 14,
+   "ground": 0,
+   "missed": 0
+  },
+  "parts_left_at_holes": 155,
+  "parts_left_at_end": 140,
+  "bins": [
+   {
+    "bin": "1",
+    "holes": 18,
+    "cells": 18
+   },
+   {
+    "bin": "2-4",
+    "holes": 12,
+    "cells": 36
+   },
+   {
+    "bin": "5-16",
+    "holes": 4,
+    "cells": 48
+   },
+   {
+    "bin": "17-64",
+    "holes": 2,
+    "cells": 53
+   },
+   {
+    "bin": "65+",
+    "holes": 0,
+    "cells": 0
+   }
+  ],
+  "small": [
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     5
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     6
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry"
+    ],
+    "layers": [
+     27
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry"
+    ],
+    "layers": [
+     29
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "support",
+     "support"
+    ],
+    "layers": [
+     44,
+     45,
+     46
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 12,
+    "at_end": 9,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     44
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "support",
+     "support",
+     "support"
+    ],
+    "layers": [
+     44,
+     45,
+     46,
+     47
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     44
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 12,
+    "at_end": 9,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     44
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 12,
+    "at_end": 9,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     44,
+     45
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     44
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 12,
+    "at_end": 9,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     44
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry"
+    ],
+    "layers": [
+     45
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     47
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2",
+     "plate2x2_4032a",
+     "plate2x2_4032b",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile2x2"
+    ],
+    "at_holes": 12,
+    "at_end": 9,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2",
+     "plate2x2_4032a",
+     "plate2x2_corner"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     47
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 12,
+    "at_end": 9,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     47
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     48,
+     49,
+     50
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     48,
+     49,
+     50
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     48,
+     49,
+     50
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     48
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     48,
+     49,
+     50
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     48
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     48
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     49
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     49
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     50
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     50
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     50
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     50
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     50
+    ]
+   }
+  ],
+  "completeness": {
+   "fill_pct": 93.34192439862544,
+   "holes": 36,
+   "largest_hole": 29,
+   "unfilled": 155,
+   "surface_pct": 91.06753812636165,
+   "unfilled_on_surface_pct": 79.35483870967742
+  },
+  "wanted": [
+   {
+    "part": "plate1x1",
+    "cells": 92,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x1_6141",
+    "cells": 92,
+    "in_set": 40,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x2",
+    "cells": 68,
+    "in_set": 14,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2_corner",
+    "cells": 59,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x3",
+    "cells": 47,
+    "in_set": 11,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2",
+    "cells": 40,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2_4032a",
+    "cells": 40,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x4",
+    "cells": 26,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x3",
+    "cells": 24,
+    "in_set": 11,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x6",
+    "cells": 14,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1",
+    "cells": 14,
+    "in_set": 14,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_3062b",
+    "cells": 14,
+    "in_set": 12,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_4070",
+    "cells": 14,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x4",
+    "cells": 12,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x8",
+    "cells": 8,
+    "in_set": 11,
+    "at_holes": 1
+   },
+   {
+    "part": "tile1x1_2555",
+    "cells": 6,
+    "in_set": 1,
+    "at_holes": 0
+   }
+  ]
+ },
+ {
+  "object": "table",
+  "set": "4956-1",
+  "arm": "usable80",
+  "seed": 8,
+  "unfilled": 546,
+  "causes": {
+   "inventory": 304,
+   "balance": 0,
+   "support": 240,
+   "unreachable": 0,
+   "geometry": 2,
+   "ground": 0,
+   "missed": 0
+  },
+  "on_surface": {
+   "inventory": 75,
+   "balance": 0,
+   "support": 221,
+   "unreachable": 0,
+   "geometry": 1,
+   "ground": 0,
+   "missed": 0
+  },
+  "parts_left_at_holes": 186,
+  "parts_left_at_end": 186,
+  "bins": [
+   {
+    "bin": "1",
+    "holes": 6,
+    "cells": 6
+   },
+   {
+    "bin": "2-4",
+    "holes": 9,
+    "cells": 25
+   },
+   {
+    "bin": "5-16",
+    "holes": 10,
+    "cells": 92
+   },
+   {
+    "bin": "17-64",
+    "holes": 3,
+    "cells": 72
+   },
+   {
+    "bin": "65+",
+    "holes": 1,
+    "cells": 351
+   }
+  ],
+  "small": [
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     10
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry"
+    ],
+    "layers": [
+     44
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     52,
+     53,
+     54
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     52,
+     53,
+     54
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     55
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     55,
+     56
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry"
+    ],
+    "layers": [
+     55
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     55
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     55,
+     56,
+     57
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     56,
+     57
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     56,
+     57,
+     58
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     58
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x2",
+     "tile1x2_2412b"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     58
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     58
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     58
+    ]
+   }
+  ],
+  "completeness": {
+   "fill_pct": 84.94623655913979,
+   "holes": 29,
+   "largest_hole": 351,
+   "unfilled": 546,
+   "surface_pct": 85.43403629230014,
+   "unfilled_on_surface_pct": 54.395604395604394
+  },
+  "wanted": [
+   {
+    "part": "plate1x2",
+    "cells": 262,
+    "in_set": 18,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x1",
+    "cells": 251,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x1_6141",
+    "cells": 251,
+    "in_set": 38,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2_corner",
+    "cells": 232,
+    "in_set": 6,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2",
+    "cells": 202,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x4",
+    "cells": 202,
+    "in_set": 15,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x3",
+    "cells": 182,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x4",
+    "cells": 170,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x6",
+    "cells": 147,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x6",
+    "cells": 124,
+    "in_set": 3,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x8",
+    "cells": 103,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x8",
+    "cells": 76,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x10",
+    "cells": 70,
+    "in_set": 6,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x12",
+    "cells": 68,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1",
+    "cells": 33,
+    "in_set": 22,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_3062b",
+    "cells": 33,
+    "in_set": 21,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_4070",
+    "cells": 33,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x2",
+    "cells": 23,
+    "in_set": 19,
+    "at_holes": 0
+   },
+   {
+    "part": "slope45inv_2x1",
+    "cells": 18,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "tile1x1",
+    "cells": 7,
+    "in_set": 56,
+    "at_holes": 0
+   },
+   {
+    "part": "tile1x2",
+    "cells": 5,
+    "in_set": 9,
+    "at_holes": 0
+   },
+   {
+    "part": "tile1x2_2412b",
+    "cells": 5,
+    "in_set": 3,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x3",
+    "cells": 3,
+    "in_set": 20,
+    "at_holes": 0
+   }
+  ]
+ },
+ {
+  "object": "car",
+  "set": "6378-1",
+  "arm": "usable80",
+  "seed": 29,
+  "unfilled": 219,
+  "causes": {
+   "inventory": 154,
+   "balance": 0,
+   "support": 65,
+   "unreachable": 0,
+   "geometry": 0,
+   "ground": 0,
+   "missed": 0
+  },
+  "on_surface": {
+   "inventory": 91,
+   "balance": 0,
+   "support": 38,
+   "unreachable": 0,
+   "geometry": 0,
+   "ground": 0,
+   "missed": 0
+  },
+  "parts_left_at_holes": 34,
+  "parts_left_at_end": 18,
+  "bins": [
+   {
+    "bin": "1",
+    "holes": 9,
+    "cells": 9
+   },
+   {
+    "bin": "2-4",
+    "holes": 11,
+    "cells": 30
+   },
+   {
+    "bin": "5-16",
+    "holes": 9,
+    "cells": 83
+   },
+   {
+    "bin": "17-64",
+    "holes": 3,
+    "cells": 97
+   },
+   {
+    "bin": "65+",
+    "holes": 0,
+    "cells": 0
+   }
+  ],
+  "small": [
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     3
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     3
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     3,
+     4
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     4
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     6,
+     7
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     9
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     10
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     10,
+     11
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     10
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     11
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     11
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     11
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     12,
+     13,
+     14
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     14
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     14
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     15,
+     16
+    ]
+   }
+  ],
+  "completeness": {
+   "fill_pct": 84.1304347826087,
+   "holes": 32,
+   "largest_hole": 49,
+   "unfilled": 219,
+   "surface_pct": 82.03342618384401,
+   "unfilled_on_surface_pct": 58.9041095890411
+  },
+  "wanted": [
+   {
+    "part": "plate1x1",
+    "cells": 112,
+    "in_set": 10,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x1_6141",
+    "cells": 112,
+    "in_set": 12,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x2",
+    "cells": 108,
+    "in_set": 5,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x3",
+    "cells": 73,
+    "in_set": 6,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x4",
+    "cells": 47,
+    "in_set": 12,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1",
+    "cells": 46,
+    "in_set": 19,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_3062b",
+    "cells": 46,
+    "in_set": 8,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_4070",
+    "cells": 46,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2_corner",
+    "cells": 43,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x2",
+    "cells": 36,
+    "in_set": 16,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x6",
+    "cells": 24,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x3",
+    "cells": 24,
+    "in_set": 8,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x4",
+    "cells": 9,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "tile1x1",
+    "cells": 8,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "tile1x2",
+    "cells": 8,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2",
+    "cells": 6,
+    "in_set": 9,
+    "at_holes": 1
+   },
+   {
+    "part": "plate2x3",
+    "cells": 6,
+    "in_set": 12,
+    "at_holes": 9
+   }
+  ]
+ },
+ {
+  "object": "car",
+  "set": "5891-1",
+  "arm": "usable80",
+  "seed": 33,
+  "unfilled": 302,
+  "causes": {
+   "inventory": 225,
+   "balance": 0,
+   "support": 59,
+   "unreachable": 0,
+   "geometry": 18,
+   "ground": 0,
+   "missed": 0
+  },
+  "on_surface": {
+   "inventory": 122,
+   "balance": 0,
+   "support": 46,
+   "unreachable": 0,
+   "geometry": 5,
+   "ground": 0,
+   "missed": 0
+  },
+  "parts_left_at_holes": 166,
+  "parts_left_at_end": 145,
+  "bins": [
+   {
+    "bin": "1",
+    "holes": 13,
+    "cells": 13
+   },
+   {
+    "bin": "2-4",
+    "holes": 21,
+    "cells": 63
+   },
+   {
+    "bin": "5-16",
+    "holes": 17,
+    "cells": 146
+   },
+   {
+    "bin": "17-64",
+    "holes": 4,
+    "cells": 80
+   },
+   {
+    "bin": "65+",
+    "holes": 0,
+    "cells": 0
+   }
+  ],
+  "small": [
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     4,
+     5,
+     6
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     4
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 4,
+    "at_end": 3,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     4,
+     5
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 4,
+    "at_end": 3,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     5
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     6
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     6,
+     7
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     8
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 4,
+    "at_end": 3,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     9,
+     10,
+     11
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     9,
+     10,
+     11
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     10,
+     11,
+     12
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     11,
+     12,
+     13
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     11
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 4,
+    "at_end": 3,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory"
+    ],
+    "layers": [
+     11
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 4,
+    "at_end": 3,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "inventory"
+    ],
+    "layers": [
+     11
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 4,
+    "at_end": 3,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "slope31_1x1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     12,
+     13
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2_corner",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 4,
+    "at_end": 3,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "geometry",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     12,
+     13
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 4,
+    "at_end": 3,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     12,
+     13,
+     14
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry"
+    ],
+    "layers": [
+     13
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     13
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 4,
+    "at_end": 3,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2_corner"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     14
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry",
+     "support"
+    ],
+    "layers": [
+     14,
+     15
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     14,
+     15,
+     16,
+     17
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     15,
+     16
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 4,
+    "at_end": 3,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support",
+     "support"
+    ],
+    "layers": [
+     16,
+     17
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     17,
+     18,
+     19
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 0,
+    "at_end": 0,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "tile1x1_2555"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     20
+    ]
+   }
+  ],
+  "completeness": {
+   "fill_pct": 87.18710224862113,
+   "holes": 55,
+   "largest_hole": 22,
+   "unfilled": 302,
+   "surface_pct": 85.37616229923923,
+   "unfilled_on_surface_pct": 57.284768211920536
+  },
+  "wanted": [
+   {
+    "part": "plate1x1",
+    "cells": 186,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x1_6141",
+    "cells": 186,
+    "in_set": 40,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x2",
+    "cells": 163,
+    "in_set": 14,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x3",
+    "cells": 115,
+    "in_set": 11,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2_corner",
+    "cells": 103,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2",
+    "cells": 77,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2_4032a",
+    "cells": 77,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x4",
+    "cells": 60,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x3",
+    "cells": 51,
+    "in_set": 11,
+    "at_holes": 2
+   },
+   {
+    "part": "plate2x4",
+    "cells": 32,
+    "in_set": 7,
+    "at_holes": 4
+   },
+   {
+    "part": "brick1x1",
+    "cells": 30,
+    "in_set": 14,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_3062b",
+    "cells": 30,
+    "in_set": 12,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_4070",
+    "cells": 30,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x6",
+    "cells": 14,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x2",
+    "cells": 13,
+    "in_set": 31,
+    "at_holes": 0
+   },
+   {
+    "part": "slope31_1x1x2",
+    "cells": 12,
+    "in_set": 5,
+    "at_holes": 0
+   },
+   {
+    "part": "brick2x2",
+    "cells": 4,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "brick2x2_6143",
+    "cells": 4,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "brick2x2_corner",
+    "cells": 4,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "tile1x1_2555",
+    "cells": 3,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x3",
+    "cells": 3,
+    "in_set": 26,
+    "at_holes": 0
+   }
+  ]
+ },
+ {
+  "object": "car",
+  "set": "4956-1",
+  "arm": "usable80",
+  "seed": 38,
+  "unfilled": 654,
+  "causes": {
+   "inventory": 499,
+   "balance": 0,
+   "support": 149,
+   "unreachable": 0,
+   "geometry": 6,
+   "ground": 0,
+   "missed": 0
+  },
+  "on_surface": {
+   "inventory": 250,
+   "balance": 0,
+   "support": 68,
+   "unreachable": 0,
+   "geometry": 2,
+   "ground": 0,
+   "missed": 0
+  },
+  "parts_left_at_holes": 217,
+  "parts_left_at_end": 217,
+  "bins": [
+   {
+    "bin": "1",
+    "holes": 11,
+    "cells": 11
+   },
+   {
+    "bin": "2-4",
+    "holes": 17,
+    "cells": 43
+   },
+   {
+    "bin": "5-16",
+    "holes": 9,
+    "cells": 71
+   },
+   {
+    "bin": "17-64",
+    "holes": 4,
+    "cells": 126
+   },
+   {
+    "bin": "65+",
+    "holes": 2,
+    "cells": 403
+   }
+  ],
+  "small": [
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [],
+    "wanted_at_holes": 0,
+    "causes": [
+     "geometry"
+    ],
+    "layers": [
+     0
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     4
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     5,
+     6
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     8
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     8
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     9
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     9,
+     10
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     10,
+     11
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     10
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     10
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     10,
+     11
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     10
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     10
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     10
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     10
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     10
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     11
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     11
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     12,
+     13,
+     14
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     12,
+     13
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "plate1x4",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3",
+     "tile1x4"
+    ],
+    "at_holes": 34,
+    "at_end": 34,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x4"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate1x3",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile1x3"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 2,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     12
+    ]
+   },
+   {
+    "size": 1,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory"
+    ],
+    "layers": [
+     13
+    ]
+   },
+   {
+    "size": 3,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "brick1x1",
+     "brick1x1_3062a",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "slope31_1x1x2",
+     "slope45double_1x1x2",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "brick1x1",
+     "brick1x1_3062b",
+     "brick1x1_4070",
+     "plate1x1",
+     "plate1x1_6141"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "support"
+    ],
+    "layers": [
+     13,
+     14,
+     15
+    ]
+   },
+   {
+    "size": 4,
+    "smallest": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "tile1x1",
+     "tile1x1_2555"
+    ],
+    "fitting": [
+     "plate1x1",
+     "plate1x1_4073",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2",
+     "plate2x2_4032a",
+     "plate2x2_4032b",
+     "plate2x2_corner",
+     "tile1x1",
+     "tile1x1_2555",
+     "tile1x2",
+     "tile1x2_2412a",
+     "tile1x2_2412b",
+     "tile2x2"
+    ],
+    "at_holes": 29,
+    "at_end": 29,
+    "wanted": [
+     "plate1x1",
+     "plate1x1_6141",
+     "plate1x2",
+     "plate2x2",
+     "plate2x2_corner"
+    ],
+    "wanted_at_holes": 0,
+    "causes": [
+     "inventory",
+     "inventory",
+     "inventory",
+     "inventory"
+    ],
+    "layers": [
+     15
+    ]
+   }
+  ],
+  "completeness": {
+   "fill_pct": 81.37813211845103,
+   "holes": 43,
+   "largest_hole": 260,
+   "unfilled": 654,
+   "surface_pct": 79.46084724005135,
+   "unfilled_on_surface_pct": 48.92966360856269
+  },
+  "wanted": [
+   {
+    "part": "plate1x2",
+    "cells": 383,
+    "in_set": 18,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x1",
+    "cells": 351,
+    "in_set": 2,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x1_6141",
+    "cells": 351,
+    "in_set": 38,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2_corner",
+    "cells": 259,
+    "in_set": 6,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x4",
+    "cells": 245,
+    "in_set": 15,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x6",
+    "cells": 179,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x2",
+    "cells": 171,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x3",
+    "cells": 146,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x4",
+    "cells": 120,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x6",
+    "cells": 114,
+    "in_set": 3,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1",
+    "cells": 108,
+    "in_set": 22,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_3062b",
+    "cells": 108,
+    "in_set": 21,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x1_4070",
+    "cells": 108,
+    "in_set": 7,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x2",
+    "cells": 102,
+    "in_set": 19,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x8",
+    "cells": 98,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "slope45inv_2x1",
+    "cells": 70,
+    "in_set": 4,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x3",
+    "cells": 63,
+    "in_set": 20,
+    "at_holes": 0
+   },
+   {
+    "part": "plate2x8",
+    "cells": 54,
+    "in_set": 1,
+    "at_holes": 0
+   },
+   {
+    "part": "plate1x10",
+    "cells": 44,
+    "in_set": 6,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x4",
+    "cells": 37,
+    "in_set": 23,
+    "at_holes": 0
+   },
+   {
+    "part": "brick2x2_corner",
+    "cells": 31,
+    "in_set": 17,
+    "at_holes": 0
+   },
+   {
+    "part": "brick1x6",
+    "cells": 20,
+    "in_set": 13,
+    "at_holes": 0
+   },
+   {
+    "part": "brick2x3",
+    "cells": 12,
+    "in_set": 5,
+    "at_holes": 0
+   },
+   {
+    "part": "brick2x2",
+    "cells": 10,
+    "in_set": 11,
+    "at_holes": 0
+   },
+   {
+    "part": "slope45inv_2x2",
+    "cells": 10,
+    "in_set": 2,
+    "at_holes": 0
+   }
+  ]
+ }
+]

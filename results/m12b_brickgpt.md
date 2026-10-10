@@ -1,6 +1,6 @@
 # M12b step 1 — true 3D targets, and a head-to-head on BrickGPT's data
 
-*Note (2026-10-10): the builds here predate the `_fit_key` fix (60b3a3b, `builder_version` 2: a tile that failed at a cell no longer makes the builder skip the plate of its box). The fix moves pair means by less than 2 SE (old vs fixed base on 9 pairs in [`m12b_complete.md`](m12b_complete.md)); a rerun would give different individual builds.*
+*Note (2026-10-10): the builds here predate the `_fit_key` fix (60b3a3b, `builder_version` 2: a tile that failed at a cell no longer makes the builder skip the plate of its box). On 9 set x object pairs the fix moves mean fill by -0.9 to +2.5 points (mean +0.5; within 1.2 SE on 8 pairs, +2.6 SE on the 4956-1 car; old vs fixed base in [`m12b_complete.md`](m12b_complete.md)); a rerun would give different individual builds. Since 49d5739 the thin-aware scale also keeps a thin post under its load, which gives the 5891-1 chair a different target under fillable sizing (2859 -> 2784 cells).*
 
 **Steps 1a–1d done; 1d's tables in [`m12b_overhangs_tables.md`](m12b_overhangs_tables.md).** Targets can now be true
 3D shapes instead of extruded heightfields:

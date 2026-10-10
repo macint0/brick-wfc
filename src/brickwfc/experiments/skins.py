@@ -273,7 +273,8 @@ def run_arm(set_number: str, structure: brickgpt.Structure, arm: str, args: argp
     if args.symmetrize_min_score is not None and "--symmetric" in arm_flags(arm):
         forced = ["--symmetrize-min-score", str(args.symmetrize_min_score)]
     alt_main([set_number, "--shape", BRICKGPT_PREFIX + structure.structure_id, "--n", str(args.n), "--k", "1",
-              "--out", str(directory), "--workers", str(args.workers), *arm_flags(arm), *forced])
+              "--out", str(directory), "--workers", str(args.workers), *arm_flags(arm), *forced,
+              "--no-holes", "--sizing", "fillable"])  # the M12b skins tables predate the 3D-target defaults (cf, 2026-10-10)
     return directory
 
 
