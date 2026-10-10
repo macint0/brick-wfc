@@ -79,6 +79,8 @@ class Context:
     skin_power: float | None = None  # d2 with skin: soft preference, weights x cells ** this (None: hard sort)
     holes: bool = False  # d2: hole-filling pass after the main pass and each connect round (M12b, see bottomup)
     hang: bool = False  # d2 with holes: the hole pass may hang parts from parts above (support then hanging=True)
+    reserve_small: bool = False  # d2: main pass tries small parts only where no larger one fits (see bottomup)
+    small_last: float | None = None  # d2: main pass weighs small parts down by (cells / 4) ** this (see bottomup)
 
 
 @dataclass(frozen=True)
@@ -121,7 +123,8 @@ def d2_builder(context: Context, parts: PartSet, bias: StyleBias) -> BottomUpBui
                            connect=context.connect, connect_rounds=context.connect_rounds,
                            open_tops=context.open_tops, order=context.order,
                            proposal=load_proposal(context.proposal) if context.proposal else None,
-                           skin=context.skin, skin_power=context.skin_power, holes=context.holes, hang=context.hang)
+                           skin=context.skin, skin_power=context.skin_power, holes=context.holes, hang=context.hang,
+                           small_reserve=context.reserve_small, small_power=context.small_last)
 
 
 def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.ndarray | None:

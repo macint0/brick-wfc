@@ -3,7 +3,7 @@
 Mac (2026-10-10): the builds are recognizable but incomplete; a smaller complete object beats a larger partial one.
 This write-up measures completeness on the runs that already exist (no generation) and, in a second part, why
 target cells stay empty as the builder saw them. A third part fixes what that found (a builder bug, two scale
-failures), sweeps hanging support, usable sizing and fill slack on 9 pairs, and says what still blocks completeness.
+failures), sweeps hanging support, usable sizing and fill slack on 9 pairs, and says what still blocks completeness. A fourth keeps small parts for the hole pass (two builder options, 6 arms) and diagnoses the best arm.
 
 **Runs.** Pipeline defaults at 3985e76 (fillable sizing, thin-aware scale, covering support columns up to 6 cells, open
 tops, clutch cap 1111): the chair (a712684f) and table (858f0955) on the six M12 demo sets
@@ -351,3 +351,97 @@ Per pair, the usable 0.8 + hang selected build against the bar (fill ≥ 97, lar
 - car 6378-1: 84.1 / 49 / 82.0; 219 cells empty, 70% out of small parts, 30% support; holes over 16 cells hold 44% of them.
 - car 5891-1: 87.2 / 22 / 85.4; 302 cells empty, 75% out of small parts, 20% support; holes over 16 cells hold 26% of them.
 - car 4956-1: 81.4 / 260 / 79.5; 654 cells empty, 76% out of small parts, 23% support; holes over 16 cells hold 81% of them.
+
+## Small parts kept for the hole pass
+
+The diagnosis above found the hole pass short of small plates, all spent in the main pass. Two builder options (8584bed, off by default; `bottomup.SMALL_CELLS = 3`: 1 × 1 to 1 × 3 plates and tiles, 1 × 1 bricks, the 2 × 2 corner plate):
+- **reserve** (`--reserve-small`): at each main-pass cell small parts are tried only after every larger part has failed there, under every rule including the inventory, so a cell only a small part fits (a 1-wide post) still gets one;
+- **small-last a** (`--small-last a`): in the main pass a small part's choice weight × (cells / 4)^a; a = 1, 2.
+
+Each at the defaults (usable 1.0 + hang) and at usable 0.8 + hang, 9 pairs, 50 candidates, seeds 0–49, 5 workers, the same seeds as the default arms (at e0f97d8; `--arms reserve small1 small2 reserve80 small1_80 small2_80`). The default arms are the sweep's `usable` (hang's run on the 8 pairs where usable sizing leaves nothing out) and `usable80`. **Rule** (cf, stated before the run): an arm is adopted if every pair's selected build is more complete than the default's without losing validity; here: fill up, largest hole not larger, surface up, valid candidates not fewer. Between passing arms, the smaller judge cost.
+
+**No arm completes any build** (0 complete candidates of 2700), and **no arm passes the rule** at either slack.
+
+### At 1.0
+
+Default: selected fill % / largest hole / surface % (valid of 50). Arms: change vs the default (fill points / hole cells / surface points; valid), ✓ where all four hold.
+
+| object | set | default | reserve | small-last 1 | small-last 2 |
+|---|---|---|---|---|---|
+| chair | 6378-1 | 88.6 / 34 / 87.0 (49) | +4.4 / -14 / +5.1; 50 (+1) ✓ | +4.3 / -16 / +5.1; 50 (+1) ✓ | +0.3 / +19 / +0.4; 50 (+1) |
+| chair | 5891-1 | 84.9 / 172 / 81.5 (50) | +6.9 / -135 / +8.3; 50 (+0) ✓ | +2.0 / -85 / +3.3; 50 (+0) ✓ | +3.9 / -95 / +4.8; 50 (+0) ✓ |
+| chair | 4956-1 | 77.7 / 363 / 72.6 (41) | -1.4 / +76 / +0.8; 48 (+7) | +1.6 / -35 / +3.5; 46 (+5) ✓ | +1.7 / -182 / +1.6; 46 (+5) ✓ |
+| table | 6378-1 | 78.5 / 96 / 76.4 (48) | -3.2 / +162 / -1.8; 48 (+0) | -5.3 / +120 / -4.4; 50 (+2) | +1.0 / +4 / +2.0; 50 (+2) |
+| table | 5891-1 | 87.1 / 108 / 81.3 (39) | +3.9 / -72 / +7.4; 41 (+2) ✓ | +3.0 / -42 / +4.6; 42 (+3) ✓ | +0.8 / +1 / +2.0; 43 (+4) |
+| table | 4956-1 | 81.5 / 253 / 78.4 (39) | -0.6 / +543 / +0.2; 39 (+0) | -0.3 / +331 / -4.1; 32 (-7) | -0.8 / +108 / +2.8; 37 (-2) |
+| car | 6378-1 | 75.8 / 194 / 74.0 (50) | +2.6 / -46 / +1.8; 50 (+0) ✓ | +1.6 / +37 / -1.8; 50 (+0) | +0.1 / -33 / -1.9; 50 (+0) |
+| car | 5891-1 | 84.8 / 75 / 81.4 (50) | +3.3 / -29 / +4.5; 50 (+0) ✓ | +1.5 / +10 / -0.7; 50 (+0) | +1.9 / +7 / +4.8; 50 (+0) |
+| car | 4956-1 | 76.8 / 527 / 73.0 (46) | +3.3 / -236 / +2.4; 47 (+1) ✓ | +2.3 / -174 / +0.5; 46 (+0) ✓ | +2.3 / -329 / +6.2; 47 (+1) ✓ |
+
+| of 9 pairs | reserve | small-last 1 | small-last 2 |
+|---|---:|---:|---:|
+| pairs passing (rule: 9) | 6 | 5 | 3 |
+| selected fill up | 6 | 7 | 8 |
+| largest hole larger | 3 | 4 | 5 |
+| valid lost | 0 | 1 | 1 |
+| mean change, selected fill | +2.1 | +1.2 | +1.2 |
+| mean change, selected judge | -0.0102 | -0.0032 | +0.0009 |
+| valid candidates: mean fill up | 8 | 7 | 9 |
+| valid candidates: fewer holes | 9 | 8 | 9 |
+| valid candidates: mean largest hole larger | 5 | 5 | 7 |
+| s / candidate vs the default | × 0.69 | × 0.81 | × 0.77 |
+
+### At 0.8
+
+Default: selected fill % / largest hole / surface % (valid of 50). Arms: change vs the default (fill points / hole cells / surface points; valid), ✓ where all four hold.
+
+| object | set | default | reserve | small-last 1 | small-last 2 |
+|---|---|---|---|---|---|
+| chair | 6378-1 | 90.6 / 35 / 89.1 (50) | +1.8 / +0 / +2.1; 49 (-1) | +0.5 / +0 / +0.6; 50 (+0) ✓ | +0.5 / +0 / +0.5; 49 (-1) |
+| chair | 5891-1 | 88.0 / 49 / 85.1 (44) | +6.0 / +1 / +7.1; 46 (+2) | -4.8 / +62 / -4.8; 44 (+0) | +0.8 / -5 / +3.2; 45 (+1) ✓ |
+| chair | 4956-1 | 83.0 / 122 / 78.7 (38) | +3.0 / +19 / +4.2; 36 (-2) | -0.6 / +115 / -0.9; 42 (+4) | -1.3 / +79 / -1.4; 45 (+7) |
+| table | 6378-1 | 83.9 / 92 / 79.1 (49) | +1.6 / -16 / +3.5; 50 (+1) ✓ | +2.2 / +0 / +4.0; 50 (+1) ✓ | +5.7 / -16 / +6.5; 50 (+1) ✓ |
+| table | 5891-1 | 93.3 / 29 / 91.1 (43) | +2.6 / -13 / +2.9; 45 (+2) ✓ | -0.3 / +0 / -1.0; 44 (+1) | -1.5 / -2 / -2.2; 46 (+3) |
+| table | 4956-1 | 84.9 / 351 / 85.4 (41) | -0.7 / +172 / -5.6; 41 (+0) | +4.6 / -240 / +2.6; 41 (+0) ✓ | +1.8 / -242 / +0.9; 39 (-2) |
+| car | 6378-1 | 84.1 / 49 / 82.0 (50) | +1.6 / +0 / +0.7; 50 (+0) ✓ | -1.3 / +33 / -1.3; 50 (+0) | +0.9 / +3 / +1.1; 50 (+0) |
+| car | 5891-1 | 87.2 / 22 / 85.4 (50) | +2.7 / +6 / +0.8; 50 (+0) | +3.6 / +23 / +4.6; 50 (+0) | +0.0 / +31 / +0.0; 50 (+0) |
+| car | 4956-1 | 81.4 / 260 / 79.5 (50) | +4.3 / +4 / +1.4; 49 (-1) | +1.9 / -64 / -0.3; 48 (-2) | +1.5 / -62 / -2.2; 50 (+0) |
+
+| of 9 pairs | reserve | small-last 1 | small-last 2 |
+|---|---:|---:|---:|
+| pairs passing (rule: 9) | 3 | 3 | 2 |
+| selected fill up | 8 | 5 | 6 |
+| largest hole larger | 5 | 4 | 3 |
+| valid lost | 3 | 1 | 2 |
+| mean change, selected fill | +2.5 | +0.7 | +0.9 |
+| mean change, selected judge | -0.0067 | +0.0004 | -0.0001 |
+| valid candidates: mean fill up | 9 | 8 | 9 |
+| valid candidates: fewer holes | 9 | 7 | 9 |
+| valid candidates: mean largest hole larger | 7 | 4 | 6 |
+| s / candidate vs the default | × 0.70 | × 0.80 | × 0.82 |
+
+Judge: higher is better; its changes are within ±0.026 and mixed in sign. Means, holes and the selected builds' parts are in `m12b_complete_sweep_small.json` (`sweep_small.md` in the run directory); sheets `m12b_complete_sweep_small_previews.png`, `m12b_complete_sweep_small_missing.png` (pairs as rows; arms as columns: default, reserve, small-last 1, 2 at 1.0, then the same at 0.8).
+
+**Reading.** Reserve is the strongest arm at both slacks: the selected build's fill is up on 6/9 pairs at 1.0 and 8/9 at 0.8, and over all valid candidates mean fill is up on 8/9 and 9/9 with fewer holes on 9/9; it is also the fastest arm (0.7× the default's time per candidate). It fails the rule on the largest hole (the selected build's grows on 3/9 pairs at 1.0, by up to 543 cells on the 4956-1 table, and on 5/9 at 0.8) and, at 0.8, on validity (−1 to −2 valid on 3 pairs). The pattern is the same for every arm: many small holes close, the large ones stay or merge. Small-last 1 and 2 do less of both.
+
+### What still blocks completeness: reserve at 0.8
+
+No arm passes, so (cf) only the best arm at 0.8, reserve, is diagnosed: its 9 selected builds replayed with the trace to their final state (identity asserted 9/9; `--steps holes --arm reserve80`), next to the usable 0.8 diagnosis above. Cause shares of the unfilled cells:
+
+| object | set | fill % (usable 0.8 → reserve) | unfilled | inventory % | support % | geometry % | ground % | holes of 1–4 cells | small parts left at the last hole pass |
+|---|---|---|---|---|---|---|---|---|---|
+| chair | 6378-1 | 90.6 → 92.4 | 107 → 87 | 28 → 34 | 72 → 66 | 0 → 0 | 0 → 0 | 14 → 13 | 0 → 0 |
+| chair | 5891-1 | 88.0 → 94.0 | 278 → 139 | 59 → 50 | 33 → 38 | 6 → 10 | 1 → 1 | 28 → 14 | 0 → 0 |
+| chair | 4956-1 | 83.0 → 85.9 | 593 → 490 | 56 → 64 | 41 → 34 | 1 → 1 | 2 → 0 | 34 → 13 | 0 → 0 |
+| table | 6378-1 | 83.9 → 85.5 | 217 → 195 | 52 → 50 | 41 → 44 | 0 → 0 | 7 → 6 | 28 → 11 | 0 → 0 |
+| table | 5891-1 | 93.3 → 96.0 | 155 → 94 | 66 → 61 | 24 → 15 | 10 → 9 | 0 → 16 | 30 → 26 | 0 → 0 |
+| table | 4956-1 | 84.9 → 84.3 | 546 → 570 | 56 → 89 | 44 → 10 | 0 → 1 | 0 → 0 | 15 → 9 | 0 → 9 |
+| car | 6378-1 | 84.1 → 85.7 | 219 → 197 | 70 → 80 | 30 → 20 | 0 → 0 | 0 → 0 | 20 → 15 | 0 → 0 |
+| car | 5891-1 | 87.2 → 89.9 | 302 → 238 | 75 → 56 | 20 → 39 | 6 → 5 | 0 → 0 | 34 → 22 | 0 → 0 |
+| car | 4956-1 | 81.4 → 85.7 | 654 → 503 | 76 → 79 | 23 → 20 | 1 → 1 | 0 → 0 | 28 → 8 | 0 → 0 |
+
+(Small parts left: holes of 1–4 cells whose wanted part was still in the inventory when the last hole pass started.)
+
+**Answer.** Reserving does not keep the small plates for the hole pass: **0 are left at the last hole pass on 8 of 9 pairs**, as without it (the 4956-1 table: 9, used up during that pass; its 523-cell hole under the top wants larger plates, 1 × 2 to 2 × 4, all used up). Holes of 1–4 cells drop from 231 to 131 over the 9 builds, and inventory stays the main cause (34–89% of the empty cells). Under reserve the main pass places a small part only where no larger part fits at that moment, and those cells (rims, stepped curves, thin posts) still take them all. The supply is the limit: the three sets hold 6378-1: 77 small parts, 171 cells; 5891-1: 136 small parts, 266 cells; 4956-1: 182 small parts, 324 cells (tiles only on top, 1 × 1 bricks 3 layers), all of it spent where nothing larger fit, and the empty cells a used-up part would still fill number 30–509 per selected build on top of that (the 4956-1 car's 396 alone exceed its set's 324 small-part cells). Support stays 10–66%: the large holes on the sheet are the same caster tips, table rims and car undersides.
+
+**Verdict.** Against the rule: no arm passes at either slack (best: reserve, 6/9 at 1.0, 3/9 at 0.8); nothing is adopted and the options stay off. Against the bar: no build, selected or candidate, is complete (best selected: the 5891-1 table under reserve at 0.8, 96.0 / 16 / 94.0; connected growth's 5891-1 chair at 0.8, 96.4 / 14 / 95.5, stays the closest). A small-part reserve cannot close the inventory gap on these sets, because the cells only small parts can fill outnumber what the sets' small parts cover. Ways around it are a sizing that counts the cells only small parts can fill against the small parts the set holds, or a smaller target; not more reordering.
