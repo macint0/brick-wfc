@@ -528,8 +528,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                      "apply to --generator d2 only")
     if args.reserve_small and args.small_last is not None:
         parser.error("--reserve-small and --small-last are alternatives")
-    if (args.reserve_small or args.small_last is not None) and args.order == "connected":
-        parser.error("--reserve-small and --small-last act on the layer-by-layer main pass, not --order connected")
     if args.skin_power is not None and not args.skin:
         parser.error("--skin-power goes with --skin")
 

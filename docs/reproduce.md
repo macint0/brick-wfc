@@ -527,7 +527,8 @@ python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --ste
 - remnants replays each of the 18 builds twice (the second stops at each placement that left a remnant); writes
   `remnants.md` and `.json`. About 25 minutes on one process.
 
-### `results/m12b_connected.md` (M12b connected growth on the completeness sweep), with `m12b_connected_sweep.json`, `m12b_connected_sweep_previews.png`, `m12b_connected_sweep_missing.png`, `m12b_connected_stall_map.png`
+
+### `results/m12b_connected.md` (M12b connected growth on the completeness sweep), with `m12b_connected_sweep.json`, `m12b_connected_sweep_previews.png`, `m12b_connected_sweep_missing.png`, `m12b_connected_stall_map.png`, `m12b_connected_sweep_connected_small.json`, `m12b_connected_sweep_connected_small_previews.png`, `m12b_connected_sweep_connected_small_missing.png`, `m12b_connected_complete_chair.png`
 
 The three connected arms run on the 9 sweep pairs, then a report joins them to the default (usable) arms at the same
 slack. The default arms must be in `out/m12b_complete/sweep/`; see `m12b_complete.md`. Commands, at m12b-connected
@@ -552,6 +553,24 @@ python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-re
   with the builder's grown state captured (wrapping `_grow_from_seed` and `_standing_prefix`), then try every
   placement at the layer above the grown top, with the inventory left and with any catalog part. The write-up states
   what they measured.
+
+The small-part arms inside connected growth (section "Connected growth with the small parts kept"), at 901af33 or
+later, after the runs above and ee's small-part sweep (`m12b_complete.md`):
+
+```
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report \
+    --arms creserve csmall1 creserve80 csmall1_80 --workers 5 --report-name sweep_connected_small
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-report \
+    --arms usable connected creserve csmall1 usable80 connected80 creserve80 csmall1_80 --report-name sweep_connected_small
+```
+
+- **Runtime:** 36 runs of 50 candidates on 5 workers, about 2.5 hours; resumable. The second command overwrites the
+  first's 4-arm report with the joined one, in about 15 minutes.
+- **Report outputs:** `sweep_connected_small.json` is copied to `results/m12b_connected_sweep_connected_small.json`,
+  and the two sheets are scaled to 40% under the same names.
+- **Stall causes and `m12b_connected_complete_chair.png`:** one-off scripts, as above. The stall rebuild passes the
+  arm's small-part option. The figure writes seed 1 and seed 43 of `sweep/creserve80/5891-1/chair` with their
+  missing-cell maps (`alt.output.write_build`, `complete.missing_png`).
 
 ## Not run yet
 

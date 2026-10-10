@@ -1,9 +1,10 @@
 """The connected-order arms of the completeness sweep (experiments/complete.py): configs, tip cells, report."""
 
 import numpy as np
+import pytest
 
 from brickwfc.experiments.complete import (
-    ARMS, arm_config, compare_report, sweep_report, tip_cells, tips_filled_pct, top_layer,
+    ARMS, arm_config, compare_report, main, sweep_report, tip_cells, tips_filled_pct, top_layer,
 )
 from test_holes import table
 
@@ -17,6 +18,20 @@ def test_connected_arms_use_the_usable_targets_with_holes_and_hang() -> None:
         # The same target as the usable arm of that slack, so the two join pair by pair.
         usable = arm_config({1.0: "usable", 0.9: "usable90", 0.8: "usable80"}[slack], "chair")
         assert (usable.sizing, usable.fill_slack) == (config.sizing, config.fill_slack)
+
+
+def test_command_line_parses(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exit_:
+        main(["--help"])
+    assert exit_.value.code == 0 and "--arms" in capsys.readouterr().out
+
+
+def test_connected_small_part_arms_match_their_random_order_twins() -> None:
+    for arm, twin in (("creserve", "reserve"), ("csmall1", "small1"), ("csmall2", "small2"),
+                      ("creserve80", "reserve80"), ("csmall1_80", "small1_80"), ("csmall2_80", "small2_80")):
+        flags = ARMS[arm][1]
+        assert flags[flags.index("--order") + 1] == "connected"
+        assert [f for f in flags if f not in ("--order", "connected")] == ARMS[twin][1]  # the same options otherwise
 
 
 def test_tip_cells_are_the_far_ends_of_the_low_structure() -> None:
