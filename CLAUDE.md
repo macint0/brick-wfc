@@ -289,17 +289,21 @@ beats a larger partial one; completeness before size and looks. Working bar (cf)
   0 left on every pair while 34–237 larger parts fit nowhere), then support (20–72%: caster tips, table rims, car
   undersides); unreachable 0, shape-impossible ≤ 10%.
 - **Connected growth order** (`--order connected`, 0863884, 64; off by default): one piece from a ground seed, lowest
-  layer first, balance by the longest standing prefix. Reaches arm tips; 5–11 of 50 seeds stall at the top of the base
-  (the seed column covers its own studs, so the stair-stepped arms are unreachable; not the post, not the balance cut), a
-  stalled seed is still a valid candidate. 5891-1 chair 92% fill / hole 34. Sweep vs the default running
-  (`results/m12b_connected.md`, 64).
+  layer first, balance by the longest standing prefix. Sweep vs the default at 1.0 / 0.9 / 0.8 volume
+  (`results/m12b_connected.md`, merged 459e9af): the selected build is more complete on 7/9 pairs at the defaults (chairs
+  +6 to +8 fill points, tips filled 40 → 100%) and worse on two (6378-1 chair −2, the judge's pick keeps fewer casters;
+  4956-1 table −4, the top's underside over the post stays open), 8/9 at 0.8, where the 5891-1 chair reaches 96.4% fill,
+  largest hole 14, surface 95.5% (closest to the bar; 0 of 2700 candidates complete). Stalls (seed under 50% fill, 57 of
+  1350) are never the balance cut: 26 are a base block (the seed column covers its own studs, the stair-stepped arms are
+  unreachable), 31 ran out of small parts while climbing a thin leg (27–101 placements would fit with any catalog part).
+  **Stays a flag** (not better on every pair); the small-plate reserve inside growth is the combination to measure next.
 **Decisions (cf, 2026-10-10, against the pre-stated rule "every pair's selected build more complete, no validity lost";
 Mac can reverse):** with a 3D target the pipeline defaults are now `--holes --hang` and `--sizing usable`
 (`pipeline.resolve`; `--no-holes`, `--sizing fillable` restore the old path; the earlier drivers pass them explicitly, so
 their tables stay reproducible); no slack default. Merged e0933bb, 404 tests.
-**Next:** keep small plates for the hole pass (`--reserve-small` hard, `--small-last a` soft; ee, measuring on the 9 pairs
-at the defaults and at slack 0.8), then the connected verdict (64). Deferred until builds are complete: skin/symmetric
-defaults.
+**Next:** keep small plates for the hole pass (`--reserve-small`: parts of ≤ 3 cells tried last at every cell, so a thin
+post still gets them; `--small-last a`: their choice weight × (cells/4)^a; ee, 6 arms × 9 pairs at the defaults and at
+slack 0.8), then the same inside connected growth (64). Deferred until builds are complete: skin/symmetric defaults.
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
