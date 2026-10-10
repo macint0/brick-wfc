@@ -80,12 +80,14 @@ def test_final_causes_after_the_hole_pass() -> None:
         builder.trace = trace
         assert np.array_equal(plain, builder.build(mask.shape, np.random.default_rng(seed), inventory, mask))
         assert np.array_equal(trace.final.filled, filled) and trace.at_holes is not None
-        cause = final_causes(builder, trace, mask)
+        cause, wanted = final_causes(builder, trace, mask)
         assert np.array_equal(cause >= 0, mask & ~filled)
         found = {FINAL_CAUSES[i] for i in np.unique(cause[cause >= 0])}
         assert "missed" not in found
         seen |= found
-        bins, small = holes_of(filled, mask, cause, trace.at_holes, trace.final.remaining)
+        assert set(wanted) == {tuple(c) for c in np.argwhere(cause == FINAL_CAUSES.index("inventory")).tolist()}
+        assert all(names for names in wanted.values())  # an inventory cell names the used-up parts that fit
+        bins, small = holes_of(filled, mask, cause, trace.at_holes, trace.final.remaining, wanted)
         assert sum(b["cells"] for b in bins) == int((mask & ~filled).sum())
         for hole in small:
             assert hole["size"] <= 4 and len(hole["causes"]) == hole["size"]
