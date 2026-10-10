@@ -257,6 +257,50 @@ as the caveat. Nothing changes until Mac decides.
 `m12b_before_after.png`), every build still valid/stable/one piece (yes), the learned proposal is compared to
 statistics under the judge (yes, `m12b_proposal.md`, `m12b_proposal_shape.md`), and the per-set coverage rises (yes).
 
+### M12c — Complete objects (Mac, 2026-10-10)
+Mac's bar: "the build should be complete first, not a part of a chair but a complete chair." A smaller complete object
+beats a larger partial one; completeness before size and looks. Working bar (cf): fill ≥ 97%, no hole larger than 4 cells,
+≥ 98% of the exposed surface filled (`alt/features.completeness`; the pipeline prints fill, holes, largest hole, surface).
+**Status (2026-10-10, 09:00):** causes measured, four fixes merged, defaults changed; no build meets the bar yet (best
+93% fill). Everything below is in `results/m12b_complete.md` (+ `_trace/_sweep/_holes/_old_vs_base.json`, sheets).
+- **Cause trace** (`experiments/complete.py --steps final trace report`, 160 builds, a builder `trace` hook with no rng
+  draws): of the empty target cells, 66% had no stud below when visited (overhang undersides), 16% were tips discarded by
+  the one-piece repair, 11% ran out of parts or fit nothing, ~1% each balance/geometry/missed. Found on the way and fixed
+  (60b3a3b): `_fit_key` ignored studs, so a failed tile made the builder skip the plate of its box under open tops;
+  `builder_version: 2` in the cache key; effect on the earlier tables −0.9 to +2.5 fill points (dated notes on five
+  write-ups, no reruns).
+- **Hanging hole pass** (`--holes --hang`, e910ad2; `support.is_stable(hanging=)`, physics unchanged): after the main
+  pass, a part may hang by its studs from a part above. Selected build better on 9/9 pairs vs the base (fill +3 to +20,
+  5891-1 table 67 → 87%), largest hole smaller on 8/9, validity unchanged, clutch under the cap.
+- **Usable sizing** (`--sizing usable`): parts that fit nowhere inside the scaled target are left out of the volume
+  (`inventory.unusable`, erosion per orientation), rescale, fixpoint. Changes one pair (6378-1 chair: four 6×14 plates are
+  19% of its volume; 75.6 → 88.6% fill, largest hole 192 → 34), identical to fillable on the other eight.
+  `--fill-slack s` (target at s × the volume): 0.8 gains 2.4–15 fill points on the selected build (mean +6) but completes
+  nothing (best 5891-1 table 93.3% / hole 29), so slack is a flag, not a default.
+- **Thin-aware scale, two fixes** (`shapes.thinnest_section`, `fit_scale`, `overhang_moment`): an empty layer between
+  base and top counts as section 0 (resampling had dropped the 6378-1 chair's 2-cell post at two volumes, 9% fill, 50/50
+  "valid"), the band widens once to 10% if every factor cuts the shape; and among the thickest factors the one with the
+  smallest overhang moment (cells above a section × their centre-of-mass offset beyond its hull, max over layers) wins:
+  at 0.9 of the 5891-1 chair's volume the post landed 1.2 studs off the seat's centre of mass, 47/50 builds needed more
+  than real clutch (66% of the binding clutch at the seat-on-post joint); with the moment key 47/50 valid. First evidence
+  that the scale's resampling phase decides stability. Only 3 of 90 sized targets changed.
+- **Hole diagnosis** (`--steps holes`, usable 0.8 builds): the missing 7–19% is mostly out of small parts (≥ 52% of
+  empty cells on 8/9 pairs: 1×1, 1×2, 1×3 plates and 2×2 corners, all spent in the main pass before the hole pass starts,
+  0 left on every pair while 34–237 larger parts fit nowhere), then support (20–72%: caster tips, table rims, car
+  undersides); unreachable 0, shape-impossible ≤ 10%.
+- **Connected growth order** (`--order connected`, 0863884, 64; off by default): one piece from a ground seed, lowest
+  layer first, balance by the longest standing prefix. Reaches arm tips; 5–11 of 50 seeds stall at the top of the base
+  (the seed column covers its own studs, so the stair-stepped arms are unreachable; not the post, not the balance cut), a
+  stalled seed is still a valid candidate. 5891-1 chair 92% fill / hole 34. Sweep vs the default running
+  (`results/m12b_connected.md`, 64).
+**Decisions (cf, 2026-10-10, against the pre-stated rule "every pair's selected build more complete, no validity lost";
+Mac can reverse):** with a 3D target the pipeline defaults are now `--holes --hang` and `--sizing usable`
+(`pipeline.resolve`; `--no-holes`, `--sizing fillable` restore the old path; the earlier drivers pass them explicitly, so
+their tables stay reproducible); no slack default. Merged e0933bb, 404 tests.
+**Next:** keep small plates for the hole pass (`--reserve-small` hard, `--small-last a` soft; ee, measuring on the 9 pairs
+at the defaults and at slack 0.8), then the connected verdict (64). Deferred until builds are complete: skin/symmetric
+defaults.
+
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
   outputs where comparable (shape-only, no inventory). Apply the decision checkpoint above.
