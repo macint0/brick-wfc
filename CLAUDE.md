@@ -342,6 +342,13 @@ vs the default, the only arm that produced a complete build; costs: a larger lar
 per slack, judge −0.01); (3) whether `--fill-slack 0.8` joins it (the complete chair is at 0.8), or a sizing by remnant
 demand against the small-part supply (not built; the measured remnants are 200–770 cells per build vs 171–324 held).
 Deferred until builds are complete: skin/symmetric defaults.
+**cf's read, 2026-10-10 night (Mac: "ok nice"):** one complete build of 3600 is luck, not a method; the unused lever is size
+below 0.8 (remnant demand is 1.5–2× the small-part supply at 0.8–1.0; a rule "largest size the set can complete"); the
+every-pair adoption rule on one selected build per pair is noise-bound (weigh the mean over valid candidates too); fill
+is the wrong quantity (interior cells are invisible: measure surface completeness, re-measure hollow targets on it);
+looks have not moved (the complete chair is a colour mottle); nine pairs from three small sets is a narrow bench.
+Proposed order, pending Mac: completeness-first selection; size sweep to 0.6 with reserve-in-growth; surface-only bar
+with hollow targets; colour and symmetry; widen the bench before paper tables.
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
