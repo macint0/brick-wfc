@@ -261,8 +261,10 @@ statistics under the judge (yes, `m12b_proposal.md`, `m12b_proposal_shape.md`), 
 Mac's bar: "the build should be complete first, not a part of a chair but a complete chair." A smaller complete object
 beats a larger partial one; completeness before size and looks. Working bar (cf): fill ≥ 97%, no hole larger than 4 cells,
 ≥ 98% of the exposed surface filled (`alt/features.completeness`; the pipeline prints fill, holes, largest hole, surface).
-**Status (2026-10-10, 16:00):** causes measured, four fixes merged, defaults changed, two reorderings measured and kept
-as flags; no build meets the bar yet (best 96% fill). The limit is now measured: the sets' small-part supply.
+**Status (2026-10-10, 20:00):** causes measured, four fixes merged, defaults changed, three reorderings measured and kept
+as flags; **the first complete candidate exists** (5891-1 chair, reserve inside connected growth at 0.8: 98.7% fill, largest
+hole 4, surface 98.3%) and the judge did not select it. The limit for the rest is measured: the sets' small-part supply,
+spent on packing remnants that no order or placement rule avoids.
 Everything below is in `results/m12b_complete.md` (+ `_trace/_sweep/_holes/_old_vs_base.json`, sheets).
 - **Cause trace** (`experiments/complete.py --steps final trace report`, 160 builds, a builder `trace` hook with no rng
   draws): of the empty target cells, 66% had no stud below when visited (overhang undersides), 16% were tips discarded by
@@ -308,16 +310,38 @@ Everything below is in `results/m12b_complete.md` (+ `_trace/_sweep/_holes/_old_
   small parts left at the last hole pass on 8/9 pairs, as without it; the cells only small parts can fill (rims, stepped
   curves, thin posts) take the whole supply in the main pass (6378-1: 171 small-part cells, 5891-1: 266, 4956-1: 324),
   and the empty cells a used-up part would still fill number 30–509 per build on top. **The limit is the sets'
-  small-part supply, not the order**; reordering cannot close it. Next lever: a sizing that counts the cells only small
-  parts can fill against the small parts the set holds.
+  small-part supply, not the order**; reordering cannot close it.
+- **Small-part budget sizing: does not hold; remnants are packing** (`--steps small-only remnants`, merged 07e7b7b, ee).
+  Cells only a small part can fill (no placement of any larger inventory part covers them inside the target) are 0 at
+  every slack 1.0–0.6 on 7/9 pairs, at most 25 (0.15 × the supply) on the 6378-1 chair; none of the diagnosed
+  shortfall sits on such a cell, so a budget sizing would shrink nothing. The shortfall is remnants of 1–3 cells that
+  large parts at arbitrary offsets leave against each other and the boundary: 200–770 small-part cells wanted per build
+  vs 171–324 held. Replaying the 18 diagnosed builds, of 3447 remnant cells 49% had no alternative at the placement
+  that left them, 33% were fillable then and lost to demand elsewhere, and an alternative placement at the visited cell
+  could have covered or kept fillable 17% (8–32% per build, under half on every one), so no remnant-aware score is
+  built; every remnant has a width the set has a part for (1-wide 53%). Charged by pass: main 1837, connect 206, hole
+  passes 1400.
+- **Reserve inside connected growth** (e12b27f, 64; `--order connected --reserve-small` / `--small-last a` now allowed):
+  creserve, csmall1 at 1.0 and 0.8 vs connected and the default (`results/m12b_connected.md`, dated section, merged
+  after 83ad2ef). **No arm passes the rule** (creserve 4/9 vs connected, 5/9 vs the default; csmall1 1/9, 4/9), but
+  creserve's selected build fills more than the default's on 9/9 pairs at both slacks (mean selected fill at 1.0:
+  default 81.8, connected 84.2, creserve 87.8; largest hole 202 / 240 / 143; at 0.8: 86.3 / 90.1 / 91.4), judge −0.011
+  / −0.002 vs connected, 17 vs 23 s per candidate at 0.8. Out-of-small-parts stalls 18 → 5 (the 5 left: 6378-1 table,
+  83–87 parts left and none fits the leg); base-block stalls 25 → 32, not diagnosed. **First complete candidate** of
+  3600: creserve80, 5891-1 chair, seed 1 (98.7 / 4 / 98.3, tips 99%, valid), `m12b_connected_complete_chair.png`,
+  `out/m12b_complete/complete_candidates/chair_5891-1_creserve80_seed01.ldr`. The select stage ranked it 6th of 34
+  (z(judge) + z(fill); its judge is the lowest of the top 8) and picked seed 43 (98.5 / 7 / 98.0).
 **Decisions (cf, 2026-10-10, against the pre-stated rule "every pair's selected build more complete, no validity lost";
 Mac can reverse):** with a 3D target the pipeline defaults are now `--holes --hang` and `--sizing usable`
 (`pipeline.resolve`; `--no-holes`, `--sizing fillable` restore the old path; the earlier drivers pass them explicitly, so
 their tables stay reproducible); no slack default. Merged e0933bb, 404 tests.
-**Next:** the reserve inside connected growth (64, 4 arms × 9 pairs: creserve, csmall1 at 1.0 and 0.8, vs connected;
-same rule), and a small-part budget sizing (ee: first measure, per pair and scale, the target's cells no part > 3 cells
-can cover against the set's small-part cells; if the measured shortfall tracks it, `--sizing budget` shrinks until they
-fit, then the 9 pairs vs usable). Deferred until builds are complete: skin/symmetric defaults.
+**For Mac (2026-10-11 morning; nothing runs until then, PC resting):** (1) the select stage: rank candidates that meet
+the bar first (then judge + fill as now), which is the bar applied at selection and would have picked the complete chair;
+(2) `--order connected --reserve-small` as the default with a 3D target despite failing the strict rule (fill up on 9/9
+vs the default, the only arm that produced a complete build; costs: a larger largest hole or 1–3 fewer valid on 4 pairs
+per slack, judge −0.01); (3) whether `--fill-slack 0.8` joins it (the complete chair is at 0.8), or a sizing by remnant
+demand against the small-part supply (not built; the measured remnants are 200–770 cells per build vs 171–324 held).
+Deferred until builds are complete: skin/symmetric defaults.
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
