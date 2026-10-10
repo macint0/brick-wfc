@@ -55,10 +55,10 @@ from brickwfc.alt.features import exposed, occupancy
 from brickwfc.alt.inputs import learned_style, load_source
 from brickwfc.alt.pipeline import AltConfig, cache_key, make_context, make_target, sized_target
 from brickwfc.alt.pipeline import main as pipeline_main
-from brickwfc.bricks.bottomup import BottomUpBuilder, _FitMap
+from brickwfc.bricks.bottomup import SMALL_CELLS, BottomUpBuilder, _FitMap
 from brickwfc.bricks.build import placed_colors, slope_profiles
 from brickwfc.bricks.inventory import fits_inside, part_cells
-from brickwfc.bricks.parts import CATALOG, PlacedPart, extract_parts
+from brickwfc.bricks.parts import CATALOG, PlacedPart, extract_parts, shapes_of
 from brickwfc.bricks.shapes import surface
 from brickwfc.bricks.style import StyleBias, styled_tileset
 from brickwfc.bricks.support import studded
@@ -570,8 +570,9 @@ def holes_of(filled: np.ndarray, mask: np.ndarray, cause: np.ndarray, at_holes: 
     return bins, small
 
 
-def replay_final(directory: str, seed: int) -> dict:
-    """Replay one cached candidate with a trace; why its unfilled target cells stayed empty, and its holes."""
+def traced_replay(directory: str, seed: int) -> tuple[Context, BottomUpBuilder, Trace, Candidate, np.ndarray]:
+    """One cached candidate replayed with a trace, checked identical to the cached build: its context, the builder,
+    the trace, the cached candidate and its filled cells."""
     context, parts, bias = replay_setup(directory)
     _, _, candidates = load_run(Path(directory))
     cached = next(c for c in candidates if c.seed == seed)
@@ -586,6 +587,13 @@ def replay_final(directory: str, seed: int) -> dict:
     if sorted(map(placement, placed)) != sorted(map(placement, cached.placed)) or \
             not np.array_equal(trace.final.filled, final):
         raise SystemExit(f"{directory} seed {seed}: the traced replay differs from the cached build")
+    return context, builder, trace, cached, final
+
+
+def replay_final(directory: str, seed: int) -> dict:
+    """Replay one cached candidate with a trace; why its unfilled target cells stayed empty, and its holes."""
+    context, builder, trace, cached, final = traced_replay(directory, seed)
+    mask = context.mask
     cause, wanted = final_causes(builder, trace, mask)
     skin = exposed(mask)
     bins, small = holes_of(final, mask, cause, trace.at_holes, trace.final.remaining, wanted)
@@ -957,11 +965,397 @@ def step_old_vs_base(args: argparse.Namespace) -> None:
     (args.out / "old_vs_base.json").write_text(json.dumps(rows, indent=1), encoding="utf-8")
 
 
+# Small-part budget: cells only small parts can fill, against the set's small parts --------------------------
+
+BUDGET_SLACKS = tuple(round(1.0 - 0.05 * i, 2) for i in range(9))  # 1.0 .. 0.6
+BUDGET_ARMS = ("usable80", "reserve80")  # the diagnosed arms (holes_<arm>.json)
+
+
+def shape_kernel(shape) -> np.ndarray:
+    """A shape's cells in its bounding box (y, z, x), as ``inventory.fits_inside`` erodes with."""
+    kernel = np.zeros((shape.size_y, shape.size_z, shape.size_x), dtype=bool)
+    for dz, dx in shape.footprint:
+        kernel[:, dz, dx] = True
+    return kernel
+
+
+def covered_by(mask: np.ndarray, kernel: np.ndarray) -> np.ndarray:
+    """The cells of ``mask`` that some placement of ``kernel`` (any position, entirely inside ``mask``) covers. The
+    kernel's bounding box must be tight, as a shape's is."""
+    out = np.zeros_like(mask)
+    if any(k > n for k, n in zip(kernel.shape, mask.shape)):
+        return out
+    span = tuple(n - k + 1 for n, k in zip(mask.shape, kernel.shape))  # positions of the kernel's corner
+    offsets = [tuple(k) for k in np.argwhere(kernel)]
+    fits = np.ones(span, dtype=bool)
+    for y, z, x in offsets:
+        fits &= mask[y:y + span[0], z:z + span[1], x:x + span[2]]
+    for y, z, x in offsets:
+        out[y:y + span[0], z:z + span[1], x:x + span[2]] |= fits
+    return out
+
+
+def is_small(name: str) -> bool:
+    return part_cells(CATALOG[name]) <= SMALL_CELLS
+
+
+def small_only(mask: np.ndarray, inventory: dict) -> np.ndarray:
+    """The target cells no placement of a larger-than-``SMALL_CELLS`` part of the inventory covers inside the target
+    (every orientation; the shape check only, as ``inventory.unusable``)."""
+    covered = np.zeros_like(mask)
+    for name in sorted({part for part, _ in inventory}):
+        if not is_small(name):
+            for shape in shapes_of([CATALOG[name]]):
+                covered |= covered_by(mask, shape_kernel(shape))
+    return mask & ~covered
+
+
+def small_supply(inventory: dict) -> dict:
+    """The inventory's small parts (at most ``SMALL_CELLS`` cells): count and cells."""
+    small = {key: n for key, n in inventory.items() if is_small(key[0])}
+    return {"parts": sum(small.values()), "cells": sum(n * part_cells(CATALOG[key[0]]) for key, n in small.items())}
+
+
+def budget_targets() -> list[dict]:
+    """Per sweep pair and fill slack (usable sizing): target cells and small-only cells, with the set's supply."""
+    rows = []
+    for obj in OBJECTS:
+        for set_number in SWEEP_SETS:
+            source = load_source(set_number)
+            supply = small_supply(source.inventory)
+            for slack in BUDGET_SLACKS:
+                target, details = sized_target(source, AltConfig(shape="brickgpt:" + STRUCTURES[obj], sizing="usable",
+                                                                 fill_slack=slack))
+                rows.append({"object": obj, "set": set_number, "slack": slack, "target_cells": int(target.mask.sum()),
+                             "small_only": int(small_only(target.mask, source.inventory).sum()),
+                             "supply_cells": supply["cells"], "supply_parts": supply["parts"],
+                             "left_out": details.get("left_out", {})})
+                print(f"  {obj} {set_number} {slack}: {rows[-1]['target_cells']} cells, {rows[-1]['small_only']} "
+                      f"small-only", flush=True)
+    return rows
+
+
+def replay_budget(directory: str, seed: int) -> dict:
+    """One diagnosed build replayed: its empty cells that want a used-up small part, and where its small parts went,
+    against the target's small-only cells."""
+    context, builder, trace, cached, final = traced_replay(directory, seed)
+    mask = context.mask
+    cause, wanted = final_causes(builder, trace, mask)
+    only = small_only(mask, context.inventory)
+    want_small = [c for c, names in wanted.items() if any(is_small(name) for name in names)]
+    placed_small = occupancy([p for p in cached.placed if is_small(p.shape.part.name)], mask.shape)
+    return {"seed": seed, "target_cells": int(mask.sum()), "small_only": int(only.sum()),
+            "unfilled": int((cause >= 0).sum()), "inventory": int((cause == FINAL_CAUSES.index("inventory")).sum()),
+            "want_small": len(want_small), "want_small_in_small_only": sum(bool(only[c]) for c in want_small),
+            "small_placed_cells": int(placed_small.sum()),
+            "small_placed_in_small_only": int((placed_small & only).sum()),
+            "supply_cells": small_supply(context.inventory)["cells"]}
+
+
+def budget_report(result: dict) -> str:
+    rows = result["targets"]
+    slacks = sorted({r["slack"] for r in rows}, reverse=True)
+    by = {(r["object"], r["set"], r["slack"]): r for r in rows}
+    lines = ["Target cells / small-only cells (cells no placement of a part larger than "
+             f"{SMALL_CELLS} cells in the set covers inside the target), usable sizing at each fill slack:", "",
+             "| object | set | supply (cells) | " + " | ".join(f"{s:.2f}" for s in slacks) + " |",
+             "|---|---|---:|" + "---:|" * len(slacks)]
+    for obj in OBJECTS:
+        for set_number in SWEEP_SETS:
+            cells = [by[(obj, set_number, s)] for s in slacks]
+            lines.append(f"| {obj} | {set_number} | {cells[0]['supply_cells']} | " +
+                         " | ".join(f"{c['target_cells']} / {c['small_only']}" for c in cells) + " |")
+    lines += ["", "Diagnosed builds: empty cells wanting a used-up small part, small parts placed (cells), and how many "
+              "of either lie on small-only cells:", "",
+              "| arm | object | set | small-only | unfilled | inventory | want a small part (on small-only) | "
+              "small parts placed, cells (on small-only) | supply, cells |", "|---|---|---|---:|---:|---:|---:|---:|---:|"]
+    for r in result.get("replays", []):
+        lines.append(f"| {r['arm']} | {r['object']} | {r['set']} | {r['small_only']} | {r['unfilled']} | "
+                     f"{r['inventory']} | {r['want_small']} ({r['want_small_in_small_only']}) | "
+                     f"{r['small_placed_cells']} ({r['small_placed_in_small_only']}) | {r['supply_cells']} |")
+    return "\n".join(lines)
+
+
+def step_small_only(args: argparse.Namespace) -> None:
+    """The small-part budget test (no generation): small-only cells per pair and slack, and the diagnosed builds'
+    small-part demand replayed against them."""
+    result = {"targets": budget_targets(), "replays": []}
+    jobs = []
+    for arm in BUDGET_ARMS:
+        for r in json.loads((args.out / f"holes_{arm}.json").read_text(encoding="utf-8")):
+            jobs.append((arm, r["object"], r["set"], arm_dir(args.out, arm, r["set"], r["object"], args.runs).as_posix(),
+                         r["seed"]))
+    with ProcessPoolExecutor(args.workers) if args.workers > 1 else InlineExecutor() as pool:
+        futures = [(arm, obj, set_number, pool.submit(replay_budget, directory, seed))
+                   for arm, obj, set_number, directory, seed in jobs]
+        for arm, obj, set_number, future in futures:  # in job order
+            result["replays"].append({"arm": arm, "object": obj, "set": set_number} | future.result())
+            print(f"  {arm} {obj} {set_number}: {result['replays'][-1]}", flush=True)
+    (args.out / "small_only.json").write_text(json.dumps(result, indent=1), encoding="utf-8")
+    text = budget_report(result) + "\n"
+    (args.out / "small_only.md").write_text(text, encoding="utf-8")
+    print(text)
+
+
+# Remnants: could a placement that left an unfillable remnant have done otherwise? ---------------------------
+
+NEIGHBOURS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
+REMNANT_OUTCOMES = ("fillable after", "alternative covers it", "alternative leaves it fillable", "no alternative")
+
+
+class PassTrace(Trace):
+    """The trace, plus the pass each placement is made in: main or holes, and the connect round."""
+
+    def __init__(self, watch: np.ndarray) -> None:
+        super().__init__(watch)
+        self.round, self.phase = 0, "main"
+
+    def repaired(self, state) -> None:
+        super().repaired(state)
+        self.round, self.phase = self.round + 1, "main"
+
+    def holes(self, state) -> None:
+        super().holes(state)
+        self.phase = "holes"
+
+    def label(self) -> str:
+        return self.phase if self.round == 0 else f"{self.phase} {self.round}"
+
+
+class Snapshot:
+    """A build state's arrays and inventory (copied), optionally with one more part; no balance, so a fit checked
+    on it is optimistic about balance."""
+
+    def __init__(self, state, part: PlacedPart | None = None) -> None:
+        self.filled, self.studs = state.filled.copy(), state.studs.copy()
+        self.open_bottom, self.owner = state.open_bottom.copy(), state.owner.copy()
+        self.remaining = None if state.remaining is None else dict(state.remaining)
+        self.balance = None
+        if part is not None:
+            for cell in part.cells():
+                self.filled[cell] = True
+            for cell in part.stud_cells():
+                self.studs[cell] = True
+            for cell in set(part.bottom_cells()) - set(part.seated_cells()):
+                self.open_bottom[cell] = True
+            if self.remaining is not None:
+                self.remaining[(part.shape.part.name, part.color.name)] -= 1
+
+
+def held_shapes(builder: BottomUpBuilder, remaining: dict | None) -> list:
+    """(shape, a color of it the inventory still holds, its cells as (dy, dz, dx)), smallest shapes first."""
+    out = []
+    for shape, colors in builder.shape_colors.items():
+        left = [c for c in colors if remaining is None or remaining.get((shape.part.name, c.name), 0) > 0]
+        if left:
+            out.append((shape, left[0], np.argwhere(shape_kernel(shape))))
+    return sorted(out, key=lambda held: len(held[2]))
+
+
+def fillable(builder: BottomUpBuilder, state, mask: np.ndarray, cell: tuple, hang: bool) -> bool:
+    """Whether a part the inventory holds covers ``cell`` in a placement that passes every rule as ``state`` stands
+    (``hang``: hanging allowed, as in the later hole passes)."""
+    if state.filled[cell]:
+        return False
+    for shape, color, cells in held_shapes(builder, state.remaining):
+        for dy, dz, dx in cells:
+            if builder._fits_now(PlacedPart(shape, color, cell[0] - dy, cell[2] - dx, cell[1] - dz), state, mask, hang):
+                return True
+    return False
+
+
+def alternatives(builder: BottomUpBuilder, state, mask: np.ndarray, part: PlacedPart, visit: tuple,
+                 hang: bool) -> list[PlacedPart]:
+    """Every other placement the builder could have made at the visited cell then: any part the inventory held, any
+    offset covering the cell with the part's bottom layer, every rule as the builder checks it."""
+    y, z, x = visit
+    out = []
+    for shape, colors in builder.shape_colors.items():
+        left = [c for c in colors if state.remaining is None or state.remaining.get((shape.part.name, c.name), 0) > 0]
+        if not left:
+            continue
+        for dz, dx in shape.footprint:
+            alt = PlacedPart(shape, left[0], y, x - dx, z - dz)
+            if (alt.shape, alt.layer, alt.x, alt.z) != (part.shape, part.layer, part.x, part.z) and \
+                    builder._fits_now(alt, state, mask, hang):
+                out.append(alt)
+    return out
+
+
+def logged_replay(directory: str, seed: int, on_put=None) -> tuple:
+    """A cached build replayed with a ``PassTrace`` and a log of its new placements (part, visited cell, pass label),
+    checked identical to the cached build. ``on_put(index, state, part, visit, before)`` runs before and after each
+    new placement is recorded (it must not change the state or draw). (context, builder, trace, log, filled)."""
+    context, parts, bias = replay_setup(directory)
+    _, _, candidates = load_run(Path(directory))
+    cached = next(c for c in candidates if c.seed == seed)
+    mask = context.mask
+    final = occupancy(cached.placed, mask.shape)
+    trace = PassTrace(mask & ~final)
+    builder = d2_builder(context, parts, bias)
+    builder.trace = trace
+    log, last = [], {}
+    place, put = builder._place, builder._put
+
+    def logged_place(part_shape, color, y, z, x, *rest, **options):
+        part = place(part_shape, color, y, z, x, *rest, **options)
+        if part is not None:
+            last["part"], last["visit"] = part, (y, z, x)
+        return part
+
+    def logged_put(state, part, links=None):
+        new = last.get("part") is part  # else a kept part put back after a connect repair
+        if new:
+            log.append((part, last.pop("visit"), trace.label()))
+            last.clear()
+            if on_put is not None:
+                on_put(len(log) - 1, state, part, log[-1][1], True)
+        put(state, part, links)
+        if new and on_put is not None:
+            on_put(len(log) - 1, state, part, log[-1][1], False)
+
+    builder._place, builder._put = logged_place, logged_put
+    grid = builder.build(context.grid, np.random.default_rng(seed), context.inventory, mask, context.preferred,
+                         context.plane)
+    placed, _ = extract_parts(grid, parts)
+    if sorted(map(placement, placed)) != sorted(map(placement, cached.placed)):
+        raise SystemExit(f"{directory} seed {seed}: the logged replay differs from the cached build")
+    return context, builder, trace, log, final
+
+
+def pass_kind(label: str) -> str:
+    return "holes" if label.startswith("holes") else "main" if label == "main" else "connect"
+
+
+def strip_width(free: np.ndarray, cell: tuple) -> int:
+    """The narrower of the free runs through ``cell`` along z and along x in its layer (3 for 3 or more)."""
+    runs = []
+    for axis in (1, 2):
+        n = 1
+        for step in (1, -1):
+            at = list(cell)
+            while True:
+                at[axis] += step
+                if not 0 <= at[axis] < free.shape[axis] or not free[tuple(at)]:
+                    break
+                n += 1
+        runs.append(n)
+    return min(min(runs), 3)
+
+
+def replay_remnants(directory: str, seed: int) -> dict:
+    """The bound of a remnant-aware placement score on one build. Remnants: the empty cells that want a used-up small
+    part. Each is charged to the placement that left it: the last placed of the final parts next to it (or, inside a
+    larger hole, next to the hole). A second replay stops at each such placement and asks whether, right after it,
+    some part the inventory held could still fill the remnant under every rule (then the remnant was used up later,
+    not made here); else whether another placement at the same visited cell (any part held, any offset, every rule)
+    covers it, or leaves it fillable by a part held then (fit checked without balance: optimistic)."""
+    context, builder, trace, log, final = logged_replay(directory, seed)
+    mask = context.mask
+    _, wanted = final_causes(builder, trace, mask)
+    remnant = sorted(c for c, names in wanted.items() if any(is_small(name) for name in names))
+    state = trace.final
+    index = {part: i for i, (part, _, _) in enumerate(log)}  # the latest placement of an equal part is the kept one
+    placed_at = [index[part] for part in state.placed]
+    labels, _ = ndimage.label(mask & ~final)
+    charged: dict[int, list] = {}
+    in_hole, alone = 0, 0
+    for cell in remnant:
+        owners = {int(state.owner[tuple(np.add(cell, d))]) for d in NEIGHBOURS
+                  if all(0 <= c < n for c, n in zip(np.add(cell, d), mask.shape))} - {-1}
+        if not owners:
+            in_hole += 1
+            hole = labels == labels[cell]
+            owners = set(np.unique(state.owner[ndimage.binary_dilation(hole) & ~hole]).tolist()) - {-1}
+        if not owners:  # a hole no part touches: nothing to charge
+            alone += 1
+            continue
+        charged.setdefault(max(placed_at[i] for i in owners), []).append(cell)
+    hang = builder.holes and builder.hang
+    found: dict[int, dict] = {}
+
+    def on_put(i: int, current, part: PlacedPart, visit: tuple, before: bool) -> None:
+        if i not in charged:
+            return
+        cells = charged[i]
+        if before:
+            alts = alternatives(builder, current, mask, part, visit, hang and log[i][2].startswith("holes"))
+            found[i] = {"alternatives": alts, "before": Snapshot(current),
+                        "covers": {c for c in cells if any(c in set(a.cells()) for a in alts)}}
+            return
+        f = found[i]
+        f["after"] = {c for c in cells if fillable(builder, current, mask, c, hang)}
+        f["leaves"] = {c for c in cells if c not in f["covers"] and c not in f["after"] and
+                       any(fillable(builder, Snapshot(f["before"], a), mask, c, hang) for a in f["alternatives"])}
+        f["count"] = len(f.pop("alternatives"))
+        del f["before"]
+
+    logged_replay(directory, seed, on_put)
+    outcome = {kind: Counter() for kind in ("main", "connect", "holes")}
+    for i, cells in charged.items():
+        f = found[i]
+        for cell in cells:
+            o = ("fillable after" if cell in f["after"] else "alternative covers it" if cell in f["covers"] else
+                 "alternative leaves it fillable" if cell in f["leaves"] else "no alternative")
+            outcome[pass_kind(log[i][2])][o] += 1
+    free = mask & ~final
+    names = sorted({name for name, _ in context.inventory})
+    fits_hole: dict[int, bool] = {}
+    for cell in remnant:
+        hole = int(labels[cell])
+        if hole not in fits_hole:
+            region = ndimage.find_objects((labels == hole).astype(int))[0]
+            fits_hole[hole] = any(fits_inside(CATALOG[name], (labels == hole)[region]) for name in names)
+    return {"seed": seed, "remnant": len(remnant), "in_hole": in_hole, "alone": alone, "placements": len(log),
+            "charged_placements": len(charged),
+            "outcome": {kind: {o: counts[o] for o in REMNANT_OUTCOMES} for kind, counts in outcome.items()},
+            "width": dict(sorted(Counter(strip_width(free, cell) for cell in remnant).items())),
+            "no_set_part_fits": sum(not fits_hole[int(labels[cell])] for cell in remnant)}
+
+
+def remnants_report(rows: list[dict]) -> str:
+    lines = ["Remnants (empty cells that want a used-up small part), by the pass of the placement that left them, and "
+             "what was possible right after it / at it (alone: in a hole no part touches, not charged):", "",
+             "| arm | object | set | remnants | alone | main / connect / holes | " + " | ".join(REMNANT_OUTCOMES) +
+             " | bound (covers + leaves) | width 1 / 2 / 3+ | no set part fits |",
+             "|---|---|---|---:|---:|---|" + "---:|" * len(REMNANT_OUTCOMES) + "---:|---|---:|"]
+    for r in rows:
+        total = {o: sum(r["outcome"][k][o] for k in r["outcome"]) for o in REMNANT_OUTCOMES}
+        passes = " / ".join(str(sum(r["outcome"][k].values())) for k in ("main", "connect", "holes"))
+        bound = total["alternative covers it"] + total["alternative leaves it fillable"]
+        widths = " / ".join(str(r["width"].get(w, 0)) for w in (1, 2, 3))
+        lines.append(f"| {r['arm']} | {r['object']} | {r['set']} | {r['remnant']} | {r['alone']} | {passes} | " +
+                     " | ".join(str(total[o]) for o in REMNANT_OUTCOMES) +
+                     f" | {bound} ({100 * bound / max(1, r['remnant']):.0f}%) | {widths} | {r['no_set_part_fits']} |")
+    return "\n".join(lines)
+
+
+def step_remnants(args: argparse.Namespace) -> None:
+    """The remnant bound on the diagnosed builds (``BUDGET_ARMS``), replayed twice each (no generation)."""
+    jobs = []
+    for arm in BUDGET_ARMS:
+        for r in json.loads((args.out / f"holes_{arm}.json").read_text(encoding="utf-8")):
+            jobs.append((arm, r["object"], r["set"], arm_dir(args.out, arm, r["set"], r["object"], args.runs).as_posix(),
+                         r["seed"]))
+    rows = []
+    with ProcessPoolExecutor(args.workers) if args.workers > 1 else InlineExecutor() as pool:
+        futures = [(arm, obj, set_number, pool.submit(replay_remnants, directory, seed))
+                   for arm, obj, set_number, directory, seed in jobs]
+        for arm, obj, set_number, future in futures:  # in job order
+            rows.append({"arm": arm, "object": obj, "set": set_number} | future.result())
+            print(f"  {arm} {obj} {set_number}: {rows[-1]['remnant']} remnants, {rows[-1]['outcome']}", flush=True)
+    (args.out / "remnants.json").write_text(json.dumps(rows, indent=1), encoding="utf-8")
+    text = remnants_report(rows) + "\n"
+    (args.out / "remnants.md").write_text(text, encoding="utf-8")
+    print(text)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.complete", description=__doc__.splitlines()[0])
     parser.add_argument("--runs", type=Path, default=Path("out"), help="folder holding m12b_sizing_fig and m12b_sizing")
     parser.add_argument("--out", type=Path, default=Path("out/m12b_complete"))
-    parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report", "sweep", "sweep-report", "holes", "old-vs-base"])
+    parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report", "sweep", "sweep-report", "holes", "old-vs-base",
+                                                                           "small-only", "remnants"])
     parser.add_argument("--per-pair", type=int, default=10, help="trace: builds replayed per pair (selected first)")
     parser.add_argument("--workers", type=int, default=5)
     parser.add_argument("--n", type=int, default=50, help="sweep: candidates per run")
@@ -985,6 +1379,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         step_holes(args)
     if "old-vs-base" in args.steps:
         step_old_vs_base(args)
+    if "small-only" in args.steps:
+        step_small_only(args)
+    if "remnants" in args.steps:
+        step_remnants(args)
     return 0
 
 

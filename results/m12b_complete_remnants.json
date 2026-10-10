@@ -1,0 +1,664 @@
+[
+ {
+  "arm": "usable80",
+  "object": "chair",
+  "set": "6378-1",
+  "seed": 18,
+  "remnant": 29,
+  "in_hole": 8,
+  "alone": 2,
+  "placements": 441,
+  "charged_placements": 16,
+  "outcome": {
+   "main": {
+    "fillable after": 2,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 5
+   },
+   "connect": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 4
+   },
+   "holes": {
+    "fillable after": 2,
+    "alternative covers it": 4,
+    "alternative leaves it fillable": 0,
+    "no alternative": 10
+   }
+  },
+  "width": {
+   "1": 26,
+   "2": 3
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "usable80",
+  "object": "chair",
+  "set": "5891-1",
+  "seed": 42,
+  "remnant": 164,
+  "in_hole": 8,
+  "alone": 0,
+  "placements": 406,
+  "charged_placements": 79,
+  "outcome": {
+   "main": {
+    "fillable after": 32,
+    "alternative covers it": 4,
+    "alternative leaves it fillable": 22,
+    "no alternative": 25
+   },
+   "connect": {
+    "fillable after": 2,
+    "alternative covers it": 1,
+    "alternative leaves it fillable": 1,
+    "no alternative": 17
+   },
+   "holes": {
+    "fillable after": 0,
+    "alternative covers it": 3,
+    "alternative leaves it fillable": 2,
+    "no alternative": 55
+   }
+  },
+  "width": {
+   "1": 111,
+   "2": 43,
+   "3": 10
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "usable80",
+  "object": "chair",
+  "set": "4956-1",
+  "seed": 14,
+  "remnant": 294,
+  "in_hole": 15,
+  "alone": 0,
+  "placements": 703,
+  "charged_placements": 99,
+  "outcome": {
+   "main": {
+    "fillable after": 48,
+    "alternative covers it": 22,
+    "alternative leaves it fillable": 18,
+    "no alternative": 49
+   },
+   "connect": {
+    "fillable after": 12,
+    "alternative covers it": 2,
+    "alternative leaves it fillable": 0,
+    "no alternative": 20
+   },
+   "holes": {
+    "fillable after": 12,
+    "alternative covers it": 26,
+    "alternative leaves it fillable": 7,
+    "no alternative": 78
+   }
+  },
+  "width": {
+   "1": 188,
+   "2": 47,
+   "3": 59
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "usable80",
+  "object": "table",
+  "set": "6378-1",
+  "seed": 30,
+  "remnant": 113,
+  "in_hole": 1,
+  "alone": 0,
+  "placements": 402,
+  "charged_placements": 46,
+  "outcome": {
+   "main": {
+    "fillable after": 22,
+    "alternative covers it": 11,
+    "alternative leaves it fillable": 6,
+    "no alternative": 14
+   },
+   "connect": {
+    "fillable after": 2,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 5
+   },
+   "holes": {
+    "fillable after": 1,
+    "alternative covers it": 10,
+    "alternative leaves it fillable": 9,
+    "no alternative": 33
+   }
+  },
+  "width": {
+   "1": 101,
+   "2": 7,
+   "3": 5
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "usable80",
+  "object": "table",
+  "set": "5891-1",
+  "seed": 6,
+  "remnant": 102,
+  "in_hole": 7,
+  "alone": 0,
+  "placements": 898,
+  "charged_placements": 50,
+  "outcome": {
+   "main": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 0
+   },
+   "connect": {
+    "fillable after": 7,
+    "alternative covers it": 4,
+    "alternative leaves it fillable": 2,
+    "no alternative": 21
+   },
+   "holes": {
+    "fillable after": 21,
+    "alternative covers it": 3,
+    "alternative leaves it fillable": 9,
+    "no alternative": 35
+   }
+  },
+  "width": {
+   "1": 51,
+   "2": 39,
+   "3": 12
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "usable80",
+  "object": "table",
+  "set": "4956-1",
+  "seed": 8,
+  "remnant": 297,
+  "in_hole": 9,
+  "alone": 0,
+  "placements": 509,
+  "charged_placements": 78,
+  "outcome": {
+   "main": {
+    "fillable after": 54,
+    "alternative covers it": 1,
+    "alternative leaves it fillable": 1,
+    "no alternative": 6
+   },
+   "connect": {
+    "fillable after": 11,
+    "alternative covers it": 4,
+    "alternative leaves it fillable": 0,
+    "no alternative": 19
+   },
+   "holes": {
+    "fillable after": 14,
+    "alternative covers it": 15,
+    "alternative leaves it fillable": 33,
+    "no alternative": 139
+   }
+  },
+  "width": {
+   "1": 89,
+   "2": 54,
+   "3": 154
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "usable80",
+  "object": "car",
+  "set": "6378-1",
+  "seed": 29,
+  "remnant": 150,
+  "in_hole": 0,
+  "alone": 0,
+  "placements": 186,
+  "charged_placements": 63,
+  "outcome": {
+   "main": {
+    "fillable after": 32,
+    "alternative covers it": 19,
+    "alternative leaves it fillable": 15,
+    "no alternative": 43
+   },
+   "connect": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 0
+   },
+   "holes": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 3,
+    "no alternative": 38
+   }
+  },
+  "width": {
+   "1": 129,
+   "2": 13,
+   "3": 8
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "usable80",
+  "object": "car",
+  "set": "5891-1",
+  "seed": 33,
+  "remnant": 223,
+  "in_hole": 4,
+  "alone": 0,
+  "placements": 315,
+  "charged_placements": 103,
+  "outcome": {
+   "main": {
+    "fillable after": 54,
+    "alternative covers it": 12,
+    "alternative leaves it fillable": 15,
+    "no alternative": 59
+   },
+   "connect": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 0
+   },
+   "holes": {
+    "fillable after": 12,
+    "alternative covers it": 7,
+    "alternative leaves it fillable": 19,
+    "no alternative": 45
+   }
+  },
+  "width": {
+   "1": 133,
+   "2": 76,
+   "3": 14
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "usable80",
+  "object": "car",
+  "set": "4956-1",
+  "seed": 38,
+  "remnant": 476,
+  "in_hole": 27,
+  "alone": 0,
+  "placements": 368,
+  "charged_placements": 141,
+  "outcome": {
+   "main": {
+    "fillable after": 147,
+    "alternative covers it": 42,
+    "alternative leaves it fillable": 22,
+    "no alternative": 210
+   },
+   "connect": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 2
+   },
+   "holes": {
+    "fillable after": 0,
+    "alternative covers it": 14,
+    "alternative leaves it fillable": 2,
+    "no alternative": 37
+   }
+  },
+  "width": {
+   "1": 257,
+   "2": 93,
+   "3": 126
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "reserve80",
+  "object": "chair",
+  "set": "6378-1",
+  "seed": 22,
+  "remnant": 30,
+  "in_hole": 4,
+  "alone": 2,
+  "placements": 346,
+  "charged_placements": 16,
+  "outcome": {
+   "main": {
+    "fillable after": 2,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 2
+   },
+   "connect": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 1
+   },
+   "holes": {
+    "fillable after": 2,
+    "alternative covers it": 2,
+    "alternative leaves it fillable": 1,
+    "no alternative": 18
+   }
+  },
+  "width": {
+   "1": 30
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "reserve80",
+  "object": "chair",
+  "set": "5891-1",
+  "seed": 18,
+  "remnant": 70,
+  "in_hole": 7,
+  "alone": 0,
+  "placements": 330,
+  "charged_placements": 37,
+  "outcome": {
+   "main": {
+    "fillable after": 14,
+    "alternative covers it": 1,
+    "alternative leaves it fillable": 1,
+    "no alternative": 4
+   },
+   "connect": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 0
+   },
+   "holes": {
+    "fillable after": 21,
+    "alternative covers it": 2,
+    "alternative leaves it fillable": 3,
+    "no alternative": 24
+   }
+  },
+  "width": {
+   "1": 49,
+   "2": 15,
+   "3": 6
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "reserve80",
+  "object": "chair",
+  "set": "4956-1",
+  "seed": 45,
+  "remnant": 284,
+  "in_hole": 21,
+  "alone": 0,
+  "placements": 487,
+  "charged_placements": 67,
+  "outcome": {
+   "main": {
+    "fillable after": 54,
+    "alternative covers it": 13,
+    "alternative leaves it fillable": 3,
+    "no alternative": 19
+   },
+   "connect": {
+    "fillable after": 10,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 1,
+    "no alternative": 28
+   },
+   "holes": {
+    "fillable after": 44,
+    "alternative covers it": 20,
+    "alternative leaves it fillable": 17,
+    "no alternative": 75
+   }
+  },
+  "width": {
+   "1": 163,
+   "2": 67,
+   "3": 54
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "reserve80",
+  "object": "table",
+  "set": "6378-1",
+  "seed": 17,
+  "remnant": 97,
+  "in_hole": 2,
+  "alone": 0,
+  "placements": 283,
+  "charged_placements": 39,
+  "outcome": {
+   "main": {
+    "fillable after": 24,
+    "alternative covers it": 3,
+    "alternative leaves it fillable": 2,
+    "no alternative": 3
+   },
+   "connect": {
+    "fillable after": 4,
+    "alternative covers it": 1,
+    "alternative leaves it fillable": 0,
+    "no alternative": 18
+   },
+   "holes": {
+    "fillable after": 20,
+    "alternative covers it": 2,
+    "alternative leaves it fillable": 4,
+    "no alternative": 16
+   }
+  },
+  "width": {
+   "1": 60,
+   "2": 18,
+   "3": 19
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "reserve80",
+  "object": "table",
+  "set": "5891-1",
+  "seed": 35,
+  "remnant": 57,
+  "in_hole": 0,
+  "alone": 0,
+  "placements": 528,
+  "charged_placements": 36,
+  "outcome": {
+   "main": {
+    "fillable after": 5,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 0
+   },
+   "connect": {
+    "fillable after": 0,
+    "alternative covers it": 4,
+    "alternative leaves it fillable": 0,
+    "no alternative": 3
+   },
+   "holes": {
+    "fillable after": 25,
+    "alternative covers it": 2,
+    "alternative leaves it fillable": 0,
+    "no alternative": 18
+   }
+  },
+  "width": {
+   "1": 52,
+   "2": 5
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "reserve80",
+  "object": "table",
+  "set": "4956-1",
+  "seed": 42,
+  "remnant": 440,
+  "in_hole": 57,
+  "alone": 0,
+  "placements": 371,
+  "charged_placements": 73,
+  "outcome": {
+   "main": {
+    "fillable after": 160,
+    "alternative covers it": 9,
+    "alternative leaves it fillable": 8,
+    "no alternative": 7
+   },
+   "connect": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 0
+   },
+   "holes": {
+    "fillable after": 10,
+    "alternative covers it": 11,
+    "alternative leaves it fillable": 7,
+    "no alternative": 228
+   }
+  },
+  "width": {
+   "1": 67,
+   "2": 62,
+   "3": 311
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "reserve80",
+  "object": "car",
+  "set": "6378-1",
+  "seed": 0,
+  "remnant": 148,
+  "in_hole": 2,
+  "alone": 0,
+  "placements": 185,
+  "charged_placements": 57,
+  "outcome": {
+   "main": {
+    "fillable after": 59,
+    "alternative covers it": 15,
+    "alternative leaves it fillable": 11,
+    "no alternative": 44
+   },
+   "connect": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 0
+   },
+   "holes": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 19
+   }
+  },
+  "width": {
+   "1": 117,
+   "2": 21,
+   "3": 10
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "reserve80",
+  "object": "car",
+  "set": "5891-1",
+  "seed": 17,
+  "remnant": 131,
+  "in_hole": 2,
+  "alone": 0,
+  "placements": 311,
+  "charged_placements": 52,
+  "outcome": {
+   "main": {
+    "fillable after": 31,
+    "alternative covers it": 4,
+    "alternative leaves it fillable": 0,
+    "no alternative": 25
+   },
+   "connect": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 0
+   },
+   "holes": {
+    "fillable after": 13,
+    "alternative covers it": 8,
+    "alternative leaves it fillable": 5,
+    "no alternative": 45
+   }
+  },
+  "width": {
+   "1": 85,
+   "2": 27,
+   "3": 19
+  },
+  "no_set_part_fits": 0
+ },
+ {
+  "arm": "reserve80",
+  "object": "car",
+  "set": "4956-1",
+  "seed": 3,
+  "remnant": 342,
+  "in_hole": 32,
+  "alone": 0,
+  "placements": 373,
+  "charged_placements": 118,
+  "outcome": {
+   "main": {
+    "fillable after": 162,
+    "alternative covers it": 20,
+    "alternative leaves it fillable": 11,
+    "no alternative": 109
+   },
+   "connect": {
+    "fillable after": 0,
+    "alternative covers it": 0,
+    "alternative leaves it fillable": 0,
+    "no alternative": 0
+   },
+   "holes": {
+    "fillable after": 0,
+    "alternative covers it": 3,
+    "alternative leaves it fillable": 7,
+    "no alternative": 30
+   }
+  },
+  "width": {
+   "1": 111,
+   "2": 79,
+   "3": 152
+  },
+  "no_set_part_fits": 0
+ }
+]

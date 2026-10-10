@@ -514,6 +514,19 @@ python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --ste
   About 15 minutes.
 - holes writes `holes_reserve80.md` and `.json`; about 5 minutes on one process.
 
+The small-part budget and the remnant bound (fifth part; `m12b_complete_small_only.json`, `m12b_complete_remnants.json`),
+after the two hole diagnoses (`holes_usable80.json`, `holes_reserve80.json`); replays only, no generation:
+
+```
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps small-only --workers 1
+python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps remnants --workers 1
+```
+
+- small-only sizes the 9 targets at 9 slacks and replays the 18 diagnosed builds; writes `small_only.md` and `.json`.
+  About 50 minutes on one process (the sizing dominates).
+- remnants replays each of the 18 builds twice (the second stops at each placement that left a remnant); writes
+  `remnants.md` and `.json`. About 25 minutes on one process.
+
 ### `results/m12b_connected.md` (M12b connected growth on the completeness sweep), with `m12b_connected_sweep.json`, `m12b_connected_sweep_previews.png`, `m12b_connected_sweep_missing.png`, `m12b_connected_stall_map.png`
 
 The three connected arms run on the 9 sweep pairs, then a report joins them to the default (usable) arms at the same

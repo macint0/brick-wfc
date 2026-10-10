@@ -3,7 +3,7 @@
 Mac (2026-10-10): the builds are recognizable but incomplete; a smaller complete object beats a larger partial one.
 This write-up measures completeness on the runs that already exist (no generation) and, in a second part, why
 target cells stay empty as the builder saw them. A third part fixes what that found (a builder bug, two scale
-failures), sweeps hanging support, usable sizing and fill slack on 9 pairs, and says what still blocks completeness. A fourth keeps small parts for the hole pass (two builder options, 6 arms) and diagnoses the best arm.
+failures), sweeps hanging support, usable sizing and fill slack on 9 pairs, and says what still blocks completeness. A fourth keeps small parts for the hole pass (two builder options, 6 arms) and diagnoses the best arm. A fifth measures, by replay only, a small-part budget sizing and the bound of a remnant-aware placement score; neither holds.
 
 **Runs.** Pipeline defaults at 3985e76 (fillable sizing, thin-aware scale, covering support columns up to 6 cells, open
 tops, clutch cap 1111): the chair (a712684f) and table (858f0955) on the six M12 demo sets
@@ -445,3 +445,79 @@ No arm passes, so (cf) only the best arm at 0.8, reserve, is diagnosed: its 9 se
 **Answer.** Reserving does not keep the small plates for the hole pass: **0 are left at the last hole pass on 8 of 9 pairs**, as without it (the 4956-1 table: 9, used up during that pass; its 523-cell hole under the top wants larger plates, 1 × 2 to 2 × 4, all used up). Holes of 1–4 cells drop from 231 to 131 over the 9 builds, and inventory stays the main cause (34–89% of the empty cells). Under reserve the main pass places a small part only where no larger part fits at that moment, and those cells (rims, stepped curves, thin posts) still take them all. The supply is the limit: the three sets hold 6378-1: 77 small parts, 171 cells; 5891-1: 136 small parts, 266 cells; 4956-1: 182 small parts, 324 cells (tiles only on top, 1 × 1 bricks 3 layers), all of it spent where nothing larger fit, and the empty cells a used-up part would still fill number 30–509 per selected build on top of that (the 4956-1 car's 396 alone exceed its set's 324 small-part cells). Support stays 10–66%: the large holes on the sheet are the same caster tips, table rims and car undersides.
 
 **Verdict.** Against the rule: no arm passes at either slack (best: reserve, 6/9 at 1.0, 3/9 at 0.8); nothing is adopted and the options stay off. Against the bar: no build, selected or candidate, is complete (best selected: the 5891-1 table under reserve at 0.8, 96.0 / 16 / 94.0; connected growth's 5891-1 chair at 0.8, 96.4 / 14 / 95.5, stays the closest). A small-part reserve cannot close the inventory gap on these sets, because the cells only small parts can fill outnumber what the sets' small parts cover. Ways around it are a sizing that counts the cells only small parts can fill against the small parts the set holds, or a smaller target; not more reordering.
+
+## Small-part budget: does not hold
+
+Hypothesis (cf, from the verdict above): the target has cells only small parts can fill, and where they outnumber the set's small parts the build cannot be complete; a sizing that shrinks the target until they fit the supply would then close the gap. Measured before building it (`--steps small-only`, no generation):
+- **small-only cells**: target cells that no placement of any inventory part larger than 3 cells (`bottomup.SMALL_CELLS`) covers inside the target: every orientation, the shape check only, as `inventory.unusable`, but per cell (the union of all placements that fit, complemented; `complete.covered_by`, tested against brute force);
+- **supply**: the set's small parts in cells (6378-1: 77 parts, 171 cells, 5891-1: 136 parts, 266 cells, 4956-1: 182 parts, 324 cells);
+- the 9 pairs at usable sizing, fill slack 1.0 down to 0.6 in steps of 0.05 (81 targets; the 0.8 targets are the sweep's, cell for cell in size).
+
+Target cells / small-only cells:
+
+| object | set | 1.00 | 0.95 | 0.90 | 0.85 | 0.80 | 0.75 | 0.70 | 0.65 | 0.60 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| chair | 6378-1 | 1326 / 8 | 1296 / 8 | 1204 / 0 | 1145 / 0 | 1138 / 0 | 1030 / 25 | 979 / 14 | 889 / 18 | 799 / 11 |
+| chair | 5891-1 | 2784 / 0 | 2741 / 0 | 2621 / 0 | 2343 / 0 | 2323 / 0 | 2179 / 0 | 1974 / 0 | 1845 / 0 | 1737 / 0 |
+| chair | 4956-1 | 4334 / 0 | 4047 / 0 | 3892 / 0 | 3480 / 0 | 3480 / 0 | 3104 / 0 | 3022 / 0 | 2784 / 0 | 2617 / 0 |
+| table | 6378-1 | 1748 / 0 | 1591 / 0 | 1576 / 0 | 1432 / 0 | 1344 / 0 | 1299 / 0 | 1122 / 3 | 1122 / 3 | 770 / 0 |
+| table | 5891-1 | 2880 / 0 | 2820 / 0 | 2570 / 0 | 2551 / 0 | 2328 / 0 | 2096 / 0 | 1980 / 0 | 1870 / 0 | 1770 / 0 |
+| table | 4956-1 | 4414 / 0 | 4104 / 0 | 4008 / 0 | 3745 / 0 | 3627 / 0 | 3418 / 0 | 2947 / 0 | 2858 / 0 | 2570 / 0 |
+| car | 6378-1 | 1721 / 0 | 1658 / 0 | 1494 / 0 | 1428 / 0 | 1380 / 0 | 1265 / 0 | 1166 / 0 | 1136 / 0 | 947 / 0 |
+| car | 5891-1 | 2807 / 0 | 2807 / 0 | 2627 / 0 | 2371 / 0 | 2357 / 0 | 2308 / 0 | 2005 / 0 | 1907 / 0 | 1761 / 0 |
+| car | 4956-1 | 4554 / 0 | 4183 / 0 | 4032 / 0 | 3660 / 0 | 3512 / 0 | 3368 / 0 | 3134 / 0 | 2807 / 0 | 2628 / 0 |
+
+Small-only cells are 0 at every scale on 7 of 9 pairs; the 6378-1 chair has up to 25 and the 6378-1 table 3 at two scales. The largest ratio to the supply is 0.15: small-only ≤ supply holds at slack 1.0 on every pair, so the proposed sizing would not shrink any target.
+
+**Against the diagnosed builds** (the usable 0.8 and reserve 0.8 selected builds above, replayed, identity asserted): empty cells that want a used-up small part (some small part would fit there under every rule), and the cells of the small parts the build placed; in brackets, how many lie on small-only cells:
+
+| object | set | want a small part: usable 0.8 → reserve 0.8 | small parts placed, cells: usable 0.8 → reserve 0.8 | supply, cells |
+|---|---|---|---|---:|
+| chair | 6378-1 | 29 (0) → 30 (0) | 167 (0) → 171 (0) | 171 |
+| chair | 5891-1 | 164 (0) → 70 (0) | 252 (0) → 221 (0) | 266 |
+| chair | 4956-1 | 294 (0) → 284 (0) | 282 (0) → 279 (0) | 324 |
+| table | 6378-1 | 113 (0) → 97 (0) | 165 (0) → 171 (0) | 171 |
+| table | 5891-1 | 102 (0) → 57 (0) | 248 (0) → 240 (0) | 266 |
+| table | 4956-1 | 297 (0) → 440 (0) | 324 (0) → 300 (0) | 324 |
+| car | 6378-1 | 150 (0) → 148 (0) | 171 (0) → 171 (0) | 171 |
+| car | 5891-1 | 223 (0) → 131 (0) | 260 (0) → 232 (0) | 266 |
+| car | 4956-1 | 476 (0) → 342 (0) | 295 (0) → 294 (0) | 324 |
+
+**Reading.** The shortfall does not track the small-only count: 29–476 empty cells per build want a small part where the target requires none, and the builds place 165–324 cells of small parts, most or all of each set's supply, none of them on a small-only cell. The demand for small parts is made by the packing, not by the shape: larger parts placed at any offset leave remnants between themselves and the target's boundary, half of them 1-wide strips (next section), that only a used-up small part would fill. Counting the small parts already placed, the builds call for 196–771 cells of small parts per build against a supply of 171–324. No sizing by the target's geometry, and no order of trying parts (the reserve only decides which remnants get the supply), can close that; a lever has to act on where the remnants form.
+
+### Remnants: what a remnant-aware placement could win
+
+The bound for the next lever, a placement score that avoids leaving remnants the inventory cannot fill (`--steps remnants`, no generation; the 18 diagnosed builds, each replayed twice, identity asserted). A **remnant** is an empty cell that wants a used-up small part (as above). Each is charged to the placement that left it: the last-placed of the final parts next to it, or, inside a larger hole, next to the hole ("alone": a hole no part touches, not charged). The second replay stops at each charged placement and asks, in order:
+- **fillable after**: right after the placement, some part the inventory still held covers the remnant under every rule (hanging allowed, as in the later hole passes): it was not made unfillable here but used up later;
+- **alternative covers it**: another placement at the same visited cell (any part held then, any offset, every rule as the builder checks it, balance included) covers the remnant;
+- **alternative leaves it fillable**: another such placement leaves it coverable by a part held then (that fit checked without balance, so optimistic);
+- **no alternative**: neither.
+
+The bound of a remnant-aware score is the two alternative rows: a score at the placement could have avoided at most those (an upper bound: each remnant is judged alone, and the alternative's own later effects are ignored).
+
+| arm | object | set | remnants | by pass: main / connect / holes | fillable after | alternative covers | alternative leaves fillable | no alternative | bound | width 1 / 2 / 3+ |
+|---|---|---|---:|---|---:|---:|---:|---:|---:|---|
+| usable 0.8 | chair | 6378-1 | 29 (2 alone) | 7 / 4 / 16 | 4 | 4 | 0 | 19 | 4 (14%) | 26 / 3 / 0 |
+| usable 0.8 | chair | 5891-1 | 164 | 83 / 21 / 60 | 34 | 8 | 25 | 97 | 33 (20%) | 111 / 43 / 10 |
+| usable 0.8 | chair | 4956-1 | 294 | 137 / 34 / 123 | 72 | 50 | 25 | 147 | 75 (26%) | 188 / 47 / 59 |
+| usable 0.8 | table | 6378-1 | 113 | 53 / 7 / 53 | 25 | 21 | 15 | 52 | 36 (32%) | 101 / 7 / 5 |
+| usable 0.8 | table | 5891-1 | 102 | 0 / 34 / 68 | 28 | 7 | 11 | 56 | 18 (18%) | 51 / 39 / 12 |
+| usable 0.8 | table | 4956-1 | 297 | 62 / 34 / 201 | 79 | 20 | 34 | 164 | 54 (18%) | 89 / 54 / 154 |
+| usable 0.8 | car | 6378-1 | 150 | 109 / 0 / 41 | 32 | 19 | 18 | 81 | 37 (25%) | 129 / 13 / 8 |
+| usable 0.8 | car | 5891-1 | 223 | 140 / 0 / 83 | 66 | 19 | 34 | 104 | 53 (24%) | 133 / 76 / 14 |
+| usable 0.8 | car | 4956-1 | 476 | 421 / 2 / 53 | 147 | 56 | 24 | 249 | 80 (17%) | 257 / 93 / 126 |
+| reserve 0.8 | chair | 6378-1 | 30 (2 alone) | 4 / 1 / 23 | 4 | 2 | 1 | 21 | 3 (10%) | 30 / 0 / 0 |
+| reserve 0.8 | chair | 5891-1 | 70 | 20 / 0 / 50 | 35 | 3 | 4 | 28 | 7 (10%) | 49 / 15 / 6 |
+| reserve 0.8 | chair | 4956-1 | 284 | 89 / 39 / 156 | 108 | 33 | 21 | 122 | 54 (19%) | 163 / 67 / 54 |
+| reserve 0.8 | table | 6378-1 | 97 | 32 / 23 / 42 | 48 | 6 | 6 | 37 | 12 (12%) | 60 / 18 / 19 |
+| reserve 0.8 | table | 5891-1 | 57 | 5 / 7 / 45 | 30 | 6 | 0 | 21 | 6 (11%) | 52 / 5 / 0 |
+| reserve 0.8 | table | 4956-1 | 440 | 184 / 0 / 256 | 170 | 20 | 15 | 235 | 35 (8%) | 67 / 62 / 311 |
+| reserve 0.8 | car | 6378-1 | 148 | 129 / 0 / 19 | 59 | 15 | 11 | 63 | 26 (18%) | 117 / 21 / 10 |
+| reserve 0.8 | car | 5891-1 | 131 | 60 / 0 / 71 | 44 | 12 | 5 | 70 | 17 (13%) | 85 / 27 / 19 |
+| reserve 0.8 | car | 4956-1 | 342 | 302 / 0 / 40 | 162 | 23 | 18 | 139 | 41 (12%) | 111 / 79 / 152 |
+
+Over the 18 builds: 3447 remnants; fillable after 1147 (33%), alternative covers 324 (9%), alternative leaves fillable 267 (8%), no alternative 1705 (49%). Charged to the main pass 1837, connect rounds 206, hole passes 1400.
+
+**Width** (the narrower free run through the remnant along z and x in its layer, in the final build): 1-wide 1819 (53%), 2-wide 669, 3 or more 959 (cells inside larger holes). Lever (c) as a count: remnants in a hole that no part of the set fits at all (shape only, the full inventory): **0** on every build. Every set has 1 × 1 and 1 × 2 parts, so no remnant has a width the set lacks; what it lacks is enough of them.
+
+**Answer.** The bound is under half the shortfall on every build: 8–32% of the remnants (17% over all 18). A remnant-aware placement score cannot close the gap, so it is not proposed. Half the remnants had no alternative at the placement that left them (the visited cell took only that placement, or every other also left them unfillable), and a third were still fillable afterwards and lost to later demand: the small parts went to remnants elsewhere first. Coarser offsets (lever (c)) have nothing to align to: no remnant is narrower than every part of its set. What the counts point to instead is the supply itself: the remnants a build leaves outnumber the small parts every set holds, whatever order or placement made them.
