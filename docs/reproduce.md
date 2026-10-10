@@ -498,6 +498,32 @@ python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --ste
   49d5739. Every other cell's target is byte-identical at 49d5739 and the builder is unchanged, so a run from scratch
   at 49d5739 gives the same table.
 
+### `results/m12b_connected.md` (M12b connected growth on the completeness sweep), with `m12b_connected_sweep.json`, `m12b_connected_sweep_previews.png`, `m12b_connected_sweep_missing.png`, `m12b_connected_stall_map.png`
+
+The three connected arms run on the 9 sweep pairs, then a report joins them to the default (usable) arms at the same
+slack. The default arms must be in `out/m12b_complete/sweep/`; see `m12b_complete.md`. Commands, at m12b-connected
+after the merge of 49d5739 or later:
+
+```
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report \
+    --arms connected connected90 connected80 --workers 5 --report-name sweep_connected
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-report \
+    --arms usable connected usable90 connected90 usable80 connected80 --report-name sweep_joined
+```
+
+- **Runtime:** 27 runs of 50 candidates on 5 workers, about 2.5 hours; resumable (a finished cell is skipped).
+- **Stages:** the runs were made in two stages, 41c9406 first, then the 4 cells whose masks the scale fixes changed,
+  at 49d5739. Every other mask is byte-identical at 49d5739 and the builder is unchanged, so a run from scratch gives
+  the same table.
+- **Report outputs:** `sweep_joined.md` / `.json` and `sweep_joined_previews.png` / `_missing.png`.
+  - The `.json` is copied to `results/m12b_connected_sweep.json`.
+  - The sheets are scaled to 40% as `results/m12b_connected_sweep_previews.png` and `_missing.png`.
+  - The `.md`'s two tables are in the write-up.
+- **Stall diagnosis and `m12b_connected_stall_map.png`:** these come from one-off scripts. They rebuild a stalled seed
+  with the builder's grown state captured (wrapping `_grow_from_seed` and `_standing_prefix`), then try every
+  placement at the layer above the grown top, with the inventory left and with any catalog part. The write-up states
+  what they measured.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):

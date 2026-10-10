@@ -2,6 +2,7 @@
 
     python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps final
     python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --steps trace --per-pair 10 --workers 5
+    python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report --arms ...
 
 Reads finished pipeline runs (no generation): the chair and table on the six M12 demo sets
 (``m12b_sizing_fig/<set>/<object>_default``) and the car on four (``m12b_sizing/<set>/car_cover``).
@@ -24,6 +25,14 @@ identical to the cached build). Every unfilled target cell gets the cause of its
   geometry   no part fits the free space there (target too narrow, open-top or tile rules)
   unvisited  no visit recorded
   missed     a remaining part fits and balances (should not happen; counted to show that)
+
+``sweep`` runs the arms (``ARMS``; ``--arms`` picks some) on the 9 sweep pairs; ``sweep-report`` writes their
+table, previews and missing maps (``--report-name``, default ``sweep``). Besides completeness it reports the
+selected build's clutch, the share of the target's tip cells filled (``tip_cells``: the far ends of the low
+structure, a chair's casters, a table's feet, a car's wheel corners) and how many candidates stalled (``STALL_FILL``:
+fill under half the target; single-seed growth that could not get across) with the layers their builds top out at.
+Where a report holds both arms of a ``COMPARE`` pair (same target, same seeds), it also compares their selected
+builds metric by metric (``compare_report``).
 """
 
 from __future__ import annotations
@@ -678,7 +687,36 @@ ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed a
     "usable": ("usable + hang", ["--sizing", "usable", *HANG]),
     "usable90": ("usable 0.9 + hang", ["--sizing", "usable", "--fill-slack", "0.9", *HANG]),
     "usable80": ("usable 0.8 + hang", ["--sizing", "usable", "--fill-slack", "0.8", *HANG]),
+    # The connected growth order (bricks/bottomup.py) on the usable targets, to join the arms above.
+    "connected": ("connected + usable + hang", ["--sizing", "usable", *HANG, "--order", "connected"]),
+    "connected90": ("connected + usable 0.9 + hang",
+                    ["--sizing", "usable", "--fill-slack", "0.9", *HANG, "--order", "connected"]),
+    "connected80": ("connected + usable 0.8 + hang",
+                    ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--order", "connected"]),
 }
+COMPARE = (("usable", "connected"), ("usable90", "connected90"), ("usable80", "connected80"))
+STALL_FILL = 50.0  # a candidate under this fill % of its target stalled
+TIP_HEIGHT = 1 / 3  # tip cells: in the lowest third of the target's height ...
+TIP_RADIUS = 2 / 3  # ... and at least this share of the farthest such cell's distance from their centroid
+
+
+def tip_cells(mask: np.ndarray) -> np.ndarray:
+    """The target's tip cells: among its cells in the lowest ``TIP_HEIGHT`` of its height, those at least
+    ``TIP_RADIUS`` of the largest horizontal distance from their centroid (casters, feet, wheel corners)."""
+    ys = np.nonzero(mask.any(axis=(1, 2)))[0]
+    low = mask.copy()
+    low[ys.min() + max(1, round(TIP_HEIGHT * (ys.max() - ys.min() + 1))):] = False
+    cells = np.argwhere(low)
+    centre = cells[:, 1:].mean(axis=0)
+    distance = np.hypot(*(cells[:, 1:] - centre).T)
+    tips = np.zeros_like(mask)
+    far = cells[distance >= TIP_RADIUS * distance.max()]
+    tips[tuple(far.T)] = True
+    return tips
+
+
+def tips_filled_pct(filled: np.ndarray, tips: np.ndarray) -> float:
+    return 100 * float((filled & tips).sum() / tips.sum()) if tips.any() else math.nan
 
 
 def arm_dir(out: Path, arm: str, set_number: str, obj: str, runs: Path) -> Path:
@@ -703,7 +741,7 @@ def same_target(arm: str, other: str, set_number: str, obj: str) -> bool:
 def step_sweep(args: argparse.Namespace) -> None:
     """The arms' pipeline runs, one after another (each on ``--workers``); resumable (the pipeline's cache). The
     usable arm is run only where usable sizing changes the target: elsewhere it is the hang arm."""
-    for arm in ARMS:
+    for arm in args.arms or ARMS:
         if arm == "old":
             continue
         for obj in OBJECTS:
@@ -736,14 +774,22 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
     _, sizing = sized_target(source, arm_config(config_arm, obj))
     obj_target, _ = sized_target(source, arm_config(config_arm, obj, supports=False))
     valid = [c for c in candidates if c.valid]
-    rows = {c.seed: completeness(occupancy(c.placed, mask.shape), mask) for c in valid}
+    tips = tip_cells(mask)
+    rows = {}
+    for c in valid:
+        filled = occupancy(c.placed, mask.shape)
+        rows[c.seed] = completeness(filled, mask) | {"tips_pct": tips_filled_pct(filled, tips)}
     selected = stats["selected"][0] if stats["selected"] else None
+    stall_tops = Counter(top_layer(c.placed) for c in candidates
+                         if 100 * (occupancy(c.placed, mask.shape) & mask).sum() < STALL_FILL * mask.sum())
     cell = {"arm": arm, "set": set_number, "object": obj, "run": directory.as_posix(), "same_as": alias,
             "target_cells": int(mask.sum()), "object_cells": int(obj_target.mask.sum()), "sizing": sizing,
             "valid": len(valid), "candidates": len(candidates),
             "s_per_candidate": stats["generation_cpu_s"] / max(1, len(candidates)),
-            "complete": sum(complete(r) for r in rows.values())}
-    for name in ("fill_pct", "holes", "largest_hole", "surface_pct"):
+            "complete": sum(complete(r) for r in rows.values()), "tip_cells": int(tips.sum()),
+            "stalled": sum(stall_tops.values()), "stalled_valid": sum(r["fill_pct"] < STALL_FILL for r in rows.values()),
+            "stall_tops": sorted(stall_tops.items())}
+    for name in ("fill_pct", "holes", "largest_hole", "surface_pct", "tips_pct"):
         cell[f"mean_{name}"] = mean([r[name] for r in rows.values()])
     if selected is not None:
         chosen = next(c for c in candidates if c.seed == selected["seed"])
@@ -760,8 +806,8 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
 def sweep_report(cells: list[dict]) -> str:
     lines = ["| object | set | arm | target cells | object cells | valid | complete | fill % (sel / mean) | "
              "holes (sel / mean) | largest hole (sel / mean) | surface % (sel / mean) | parts (sel) | used % (sel) | "
-             "s / candidate |",
-             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+             "s / candidate | tips filled % (sel / mean) | clutch (sel) | stalled (top layers) |",
+             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for c in cells:
         s = c.get("selected", {})
         title = ARMS[c["arm"]][0] + (f" (= {ARMS[c['same_as']][0]})" if c["same_as"] else "")
@@ -771,12 +817,65 @@ def sweep_report(cells: list[dict]) -> str:
             f"{s.get('fill_pct', math.nan):.1f} / {c['mean_fill_pct']:.1f} | "
             f"{s.get('holes', 0)} / {c['mean_holes']:.1f} | {s.get('largest_hole', 0)} / {c['mean_largest_hole']:.0f} | "
             f"{s.get('surface_pct', math.nan):.1f} / {c['mean_surface_pct']:.1f} | {s.get('parts', 0)} | "
-            f"{s.get('utilization_pct', math.nan):.0f} | {c['s_per_candidate']:.1f} |")
+            f"{s.get('utilization_pct', math.nan):.0f} | {c['s_per_candidate']:.1f} | "
+            f"{s.get('tips_pct', math.nan):.0f} / {c.get('mean_tips_pct', math.nan):.0f} | "
+            f"{s.get('clutch', math.nan):.0f} | {c.get('stalled', 0)}{stall_tops_text(c.get('stall_tops', []))} |")
     return "\n".join(lines)
 
 
-def sweep_sheets(cells: list[dict], out: Path) -> list[Path]:
-    """Two sheets, pairs as rows and arms as columns: the selected builds' previews, and their missing maps."""
+def top_layer(placed: Sequence[PlacedPart]) -> int:
+    """The highest layer a build reaches (-1 if empty)."""
+    return max((cell[0] for p in placed for cell in p.cells()), default=-1)
+
+
+def stall_tops_text(tops: Sequence[Sequence[int]]) -> str:
+    if not tops:
+        return ""
+    return " (" + ", ".join(f"{y}" if n == 1 else f"{y}: {n}" for y, n in tops) + ")"
+
+
+COMPARED = (  # (label, value of a sweep cell, higher is better, format)
+    ("fill %", lambda c: c["selected"]["fill_pct"], True, ".1f"),
+    ("holes", lambda c: c["selected"]["holes"], False, ".0f"),
+    ("largest hole", lambda c: c["selected"]["largest_hole"], False, ".0f"),
+    ("surface %", lambda c: c["selected"]["surface_pct"], True, ".1f"),
+    ("tips filled %", lambda c: c["selected"]["tips_pct"], True, ".0f"),
+    ("valid", lambda c: c["valid"], True, ".0f"),
+    ("s / candidate", lambda c: c["s_per_candidate"], False, ".1f"),
+)
+
+
+def compare_report(cells: list[dict], pairs: Sequence[tuple[str, str]] = COMPARE) -> str:
+    """Per pair and per (base, arm) in ``pairs`` present in ``cells``: the selected builds' metrics, base -> arm,
+    marked + where the arm is better, - where worse, = where equal; and the count of each."""
+    by_key = {(c["arm"], c["object"], c["set"]): c for c in cells}
+    lines = ["| object | set | base -> arm | " + " | ".join(name for name, *_ in COMPARED)
+             + " | complete (sel) | stalled | better / worse |",
+             "|---|---|---|" + "---:|" * (len(COMPARED) + 3)]
+    for base, arm in pairs:
+        for obj in OBJECTS:
+            for set_number in SWEEP_SETS:
+                a, b = by_key.get((base, obj, set_number)), by_key.get((arm, obj, set_number))
+                if a is None or b is None or "selected" not in a or "selected" not in b:
+                    continue
+                row, better, worse = [], 0, 0
+                for _, value, higher, spec in COMPARED:
+                    x, y = value(a), value(b)
+                    if math.isclose(x, y, abs_tol=1e-9):
+                        mark = "="
+                    elif (y > x) == higher:
+                        mark, better = "+", better + 1
+                    else:
+                        mark, worse = "-", worse + 1
+                    row.append(f"{x:{spec}} -> {y:{spec}} {mark}")
+                lines.append(f"| {obj} | {set_number} | {ARMS[base][0]} -> {ARMS[arm][0]} | " + " | ".join(row)
+                             + f" | {int(a['selected']['complete'])} -> {int(b['selected']['complete'])} | "
+                             f"{a.get('stalled', 0)} -> {b.get('stalled', 0)} | {better} / {worse} |")
+    return "\n".join(lines) if len(lines) > 2 else ""
+
+
+def sweep_sheets(cells: list[dict], out: Path, arms: Sequence[str] = tuple(ARMS), name: str = "sweep") -> list[Path]:
+    """Two sheets, pairs as rows and ``arms`` as columns: the selected builds' previews, and their missing maps."""
     from PIL import Image
 
     by_key = {(c["object"], c["set"], c["arm"]): c for c in cells}
@@ -784,11 +883,11 @@ def sweep_sheets(cells: list[dict], out: Path) -> list[Path]:
     blank.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (8, 8), (255, 255, 255)).save(blank)
     paths = []
-    for which, name in (("preview", "sweep_previews.png"), ("missing_png", "sweep_missing.png")):
+    for which, sheet in (("preview", f"{name}_previews.png"), ("missing_png", f"{name}_missing.png")):
         images, labels = [], []
         for obj in OBJECTS:
             for set_number in SWEEP_SETS:
-                for arm in ARMS:
+                for arm in arms:
                     c = by_key.get((obj, set_number, arm))
                     if c is None or which not in c:
                         images.append(blank)
@@ -798,21 +897,26 @@ def sweep_sheets(cells: list[dict], out: Path) -> list[Path]:
                     images.append(Path(c[which]))
                     labels.append(f"{obj} {set_number}, {ARMS[arm][0]}\nfill {s['fill_pct']:.0f}%, surface "
                                   f"{s['surface_pct']:.0f}%\nlargest hole {s['largest_hole']}, {s['parts']} parts")
-        path = out / name
-        labeled_sheet(images, labels, path, columns=len(ARMS), width=500)
+        path = out / sheet
+        labeled_sheet(images, labels, path, columns=len(arms), width=500)
         paths.append(path)
     return paths
 
 
 def step_sweep_report(args: argparse.Namespace) -> None:
-    cells = [c for obj in OBJECTS for set_number in SWEEP_SETS for arm in ARMS
+    arms = args.arms or list(ARMS)
+    cells = [c for obj in OBJECTS for set_number in SWEEP_SETS for arm in arms
              if (c := sweep_cell(args, arm, set_number, obj)) is not None]
-    (args.out / "sweep.json").write_text(json.dumps(cells, indent=2), encoding="utf-8")
-    sheets = sweep_sheets(cells, args.out)
+    name = args.report_name
+    (args.out / f"{name}.json").write_text(json.dumps(cells, indent=2), encoding="utf-8")
+    sheets = sweep_sheets(cells, args.out, arms, name)
     text = sweep_report(cells) + "\n"
-    (args.out / "sweep.md").write_text(text, encoding="utf-8")
+    if compared := compare_report(cells):
+        text += "\nSelected builds compared (same target, same seeds; + the second arm better, - worse):\n\n"
+        text += compared + "\n"
+    (args.out / f"{name}.md").write_text(text, encoding="utf-8")
     print(text)
-    print("wrote sweep.json, sweep.md, " + ", ".join(p.name for p in sheets))
+    print(f"wrote {name}.json, {name}.md, " + ", ".join(p.name for p in sheets))
 
 
 def step_old_vs_base(args: argparse.Namespace) -> None:
@@ -852,6 +956,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--per-pair", type=int, default=10, help="trace: builds replayed per pair (selected first)")
     parser.add_argument("--workers", type=int, default=5)
     parser.add_argument("--n", type=int, default=50, help="sweep: candidates per run")
+    parser.add_argument("--arms", nargs="+", choices=list(ARMS), help="sweep, sweep-report: these arms (default: all)")
+    parser.add_argument("--report-name", default="sweep", help="sweep-report: file names (<name>.md, .json, sheets)")
     parser.add_argument("--arm", default="usable80", help="holes: the sweep arm whose selected builds to diagnose")
     args = parser.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
