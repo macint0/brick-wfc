@@ -4,17 +4,21 @@ driver's checks (experiments/select.py); synthetic rows only."""
 import numpy as np
 
 from brickwfc.experiments.complete import (
-    ARMS, COMPARE, HOLLOW_COMPARE, arm_config, complete, compare_report, completeness, size_report, size_rows,
+    ARMS, COMPARE, HOLLOW_ARMS, HOLLOW_COMPARE, arm_config, complete, compare_report, completeness, size_report, size_rows,
     size_rules, sweep_report,
 )
 from brickwfc.experiments.select import stored_rule, table
 
 
-def test_hollow_arms_are_creserve_with_a_shell_and_the_surface_bar() -> None:
-    for hollow, base, slack in (("hollow", "creserve", 1.0), ("hollow80", "creserve80", 0.8)):
-        assert ARMS[hollow][1] == ARMS[base][1] + ["--hollow", "2", "--bar", "surface"]
+def test_hollow_arms_are_creserve_with_a_shell_at_the_solids_scale_and_the_surface_bar() -> None:
+    assert set(HOLLOW_ARMS) <= set(ARMS)
+    for hollow, base, slack, thickness in (("hollow1", "creserve", 1.0, 1), ("hollow2", "creserve", 1.0, 2),
+                                           ("hollow1_80", "creserve80", 0.8, 1), ("hollow2_80", "creserve80", 0.8, 2)):
+        assert ARMS[hollow][1] == ARMS[base][1] + ["--hollow", str(thickness), "--hollow-scale", "solid", "--bar",
+                                                   "surface"]
         config = arm_config(hollow, "chair")
-        assert (config.hollow, config.bar, config.fill_slack, config.sizing) == (2, "surface", slack, "usable")
+        assert (config.hollow, config.hollow_scale, config.bar, config.fill_slack, config.sizing) == (
+            thickness, "solid", "surface", slack, "usable")
         assert (arm_config(base, "chair").hollow, arm_config(base, "chair").bar) == (0, "volume")
         assert (base, hollow) in HOLLOW_COMPARE and (base, hollow) in COMPARE
     assert len(set(COMPARE)) == len(COMPARE)
@@ -53,16 +57,16 @@ def cell(arm: str, volume: list[int], surface: list[int], selected: tuple[bool, 
 
 
 def test_sweep_report_counts_both_bars() -> None:
-    line = sweep_report([cell("hollow", [], [3, 9, 12], (False, True))]).splitlines()
+    line = sweep_report([cell("hollow1", [], [3, 9, 12], (False, True))]).splitlines()
     assert "complete (vol / surf) | selected complete (vol / surf) |" in line[0]
     assert "| 45/50 | 0 / 3 | no / yes | 90.0 / 85.0 |" in line[2] and "| 2 / 25 |" in line[2]
 
 
 def test_compare_report_shows_both_bars() -> None:
-    text = compare_report([cell("creserve", [], [], (False, False)), cell("hollow", [], [3], (False, True))],
+    text = compare_report([cell("creserve", [], [], (False, False)), cell("hollow1", [], [3], (False, True))],
                           HOLLOW_COMPARE)
     line = text.splitlines()[2]
-    assert "| connected + reserve-small -> connected + reserve-small, hollow 2, surface bar |" in line
+    assert "| connected + reserve-small -> connected + reserve-small, hollow 1 at the solid's scale, surface bar |" in line
     assert "| 0 / 0 -> 0 / 1 |" in line and "20 -> 2 +" in line  # the largest surface hole, smaller is better
 
 
@@ -90,3 +94,35 @@ def test_select_table_without_a_selection() -> None:
     lines = table(cells).splitlines()
     assert lines[2].startswith("| creserve60 | chair | 5891-1 | 0 | 0 / 0 | - | no selection |")
     assert "| 34 | 1 / 1 | 1 | 98.7 / 4 / 98.3 / 4 | -0.350 | yes |" in lines[3]
+
+
+def test_target_hash_tells_targets_apart() -> None:
+    from brickwfc.experiments.complete import target_hash
+
+    box = np.ones((3, 4, 4), dtype=bool)
+    other = box.copy()
+    other[1, 1, 1] = False
+    assert target_hash(box) == target_hash(box.copy()) != target_hash(other)
+    assert target_hash(np.ones((4, 3, 4), dtype=bool)) != target_hash(box)  # same cells, another shape
+
+
+def test_compare_report_says_whether_the_targets_are_the_same() -> None:
+    base, hollowed = cell("creserve", [], [], (False, False)), cell("hollow1", [], [3], (False, True))
+    assert "| base -> arm | same target |" in compare_report([base, hollowed], HOLLOW_COMPARE).splitlines()[0]
+    assert " | - | " in compare_report([base, hollowed], HOLLOW_COMPARE).splitlines()[2]  # unknown
+    base["target_hash"], hollowed["target_hash"] = "a", "b"
+    assert "surface bar | no | " in compare_report([base, hollowed], HOLLOW_COMPARE).splitlines()[2]
+    hollowed["target_hash"] = "a"
+    assert "surface bar | yes | " in compare_report([base, hollowed], HOLLOW_COMPARE).splitlines()[2]
+
+
+def test_hollow_sizing_report() -> None:
+    from brickwfc.experiments.complete import hollow_sizing_report
+
+    shell = {"thickness": 1, "cells": 600, "solid_cells": 1000, "kept_pct": 60.0, "exposed": 500, "enclosed": True,
+             "budget_cells": 1000, "spare_cells": 400, "spare_pct": 40.0, "fit_nowhere": {"brick2x4": 2},
+             "fit_nowhere_cells": 48}
+    cells = [{"object": "car", "set": "6378-1", "slack": 1.0, "solid_cells": 1000, "solid_exposed": 500,
+              "shells": [shell]}]
+    assert hollow_sizing_report(cells).splitlines()[2] == (
+        "| car | 6378-1 | 1.0 | 1000 | 500 | 1000 | 1 | 600 (60) | 500 | yes | 400 (40) | 48 (brick2x4 x2) |")

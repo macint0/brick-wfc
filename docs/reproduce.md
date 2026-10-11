@@ -587,18 +587,33 @@ python -m brickwfc.experiments.select --sweep out/m12b_complete --out results/m1
   printed table is the write-up's, with the surface-bar columns folded into a note (identical to the volume bar's).
 - **Check:** the driver stops if the old rule does not reproduce a run's selected seed in its `stats.json`.
 
+### `results/m12c_hollow_sizing.md` (M12c hollow targets at the solid's scale, sizing only), with `m12c_hollow_sizing.json`
+
+Sizes creserve's and creserve80's solid targets on the 9 sweep pairs and cuts 1- and 2-cell shells from them at their
+scale; generates nothing. At m12c-hollow or later, with the sweep's creserve runs in `out/m12b_complete/sweep/` (for the
+check that the solid targets are theirs):
+
+```
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps hollow-sizing
+```
+
+- **Runtime:** about 4 minutes on one process (18 usable sizings, 36 shells); resumable (one json per pair under
+  `hollow_sizing/`).
+- **Outputs:** `hollow_sizing.json` is copied to `results/m12c_hollow_sizing.json`; the table in `hollow_sizing.md` is
+  the write-up's.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
 
-- **M12c hollow targets on the surface bar** (arms `hollow`, `hollow80`; creserve's flags plus `--hollow 2 --bar
-  surface`), then the joined report with creserve:
-  `python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report --arms hollow hollow80
+- **M12c hollow targets on the surface bar** (arms `hollow1`, `hollow1_80`, and `hollow2`, `hollow2_80`; creserve's
+  flags plus `--hollow 1|2 --hollow-scale solid --bar surface`), then the joined report with creserve:
+  `python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report --arms hollow1 hollow1_80
   --workers 5 --report-name sweep_hollow` and
-  `python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-report --arms creserve hollow
-  creserve80 hollow80 --report-name sweep_hollow`.
-  - 18 runs of 50 candidates; about 75 minutes on 5 workers if as fast as creserve and creserve80 (45 + 30 minutes;
-    not measured).
+  `python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-report --arms creserve hollow1
+  creserve80 hollow1_80 --report-name sweep_hollow`.
+  - 18 runs of 50 candidates per pair of arms; about 75 minutes on 5 workers if as fast as creserve and creserve80
+    (45 + 30 minutes; not measured).
 
 - **M13 budget curve**:
   `python -m brickwfc.experiments.budget_curve --out out/m13_budget`.
