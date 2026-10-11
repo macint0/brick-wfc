@@ -654,6 +654,13 @@ scan sizes the 54 bench pairs under creserve and creserve80; `bench-plan` now re
 
 Commands for results that are still to be run (the drivers are on main):
 
+- **M12c overnight queue** (`scripts/overnight_m12c.sh SLACK [SLACK ...]`, from the main checkout; `--dry-run` prints
+  the commands): hollow1 / hollow1_80 on the 9 sweep pairs, the reconnected 6378-1 chair under cregrow and the usable
+  controls (`out/m12c_reconnected`), then the bench arm (cregrow + `--min-fill 0.5`) per slack on the 45 new pairs
+  small sets first, its reports, and the 9 sweep pairs last (`out/m12c_bench`). The steps are in
+  `brickwfc.experiments.overnight` (`steps`, `estimate`); the log, with the estimated minutes per step and
+  `STEP_DONE` / `STEP_FAILED` / `ALL_DONE` markers, is `out/m12b_complete/overnight.log`.
+
 - **M12c wider bench** (the creserve arm at the size rule's slack on the 54 pairs; plan and estimate in
   `m12c_bench_plan.md`): `python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report
   --arms creserve --pairs examples/m12c_bench.json --workers 5 --report-name sweep_bench` (or `creserve80`; the 9 cached
