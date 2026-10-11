@@ -650,6 +650,23 @@ the grown structure, the per-prefix balance and the ground parts. The wrappers d
 identical to its cached build. The piece counts come from `scipy.ndimage.label` on each run's cache-key mask. The bench
 scan sizes the 54 bench pairs under creserve and creserve80; `bench-plan` now reports the same `pieces` column.
 
+### `results/m12b_size.md` (M12c size below 0.8), with `m12b_size.json`, `m12b_size_sheet.png`, `m12b_size_sheet_usable.png`
+
+The size arms (creserve and the default at 0.9 / 0.7 / 0.6; the other slacks are the cached arms above), the size report
+and the completeness-first re-rank, at m12c-size (007e6dd for the runs; the report after the merge of main 044b8f6):
+
+```
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep \
+    --arms creserve90 creserve70 creserve60 usable70 usable60 --workers 5 --n 50
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps size-report
+python -m brickwfc.experiments.select --arms creserve90 creserve70 creserve60 usable70 usable60 --out out/m12c_size_select
+```
+
+- **Runtime:** 45 runs of 50 candidates on 5 workers, 3 h 17 min; resumable. The report takes about 10 minutes.
+- **Report outputs:** `size.md` / `.json` (the `.json` is copied to `results/m12b_size.json`), `size_sheet_creserve.png`
+  and `size_sheet_usable.png` (scaled to 40% as `results/m12b_size_sheet.png` and `_usable.png`), and the complete
+  candidates under `complete_candidates/`. The write-up marks the 6378-1 chair rows as a cut target by hand.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
