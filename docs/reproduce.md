@@ -591,6 +591,15 @@ python -m brickwfc.experiments.select --sweep out/m12b_complete --out results/m1
 
 Commands for results that are still to be run (the drivers are on main):
 
+- **M12c hollow targets on the surface bar** (arms `hollow`, `hollow80`; creserve's flags plus `--hollow 2 --bar
+  surface`), then the joined report with creserve:
+  `python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report --arms hollow hollow80
+  --workers 5 --report-name sweep_hollow` and
+  `python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-report --arms creserve hollow
+  creserve80 hollow80 --report-name sweep_hollow`.
+  - 18 runs of 50 candidates; about 75 minutes on 5 workers if as fast as creserve and creserve80 (45 + 30 minutes;
+    not measured).
+
 - **M13 budget curve**:
   `python -m brickwfc.experiments.budget_curve --out out/m13_budget`.
   - Defaults: 3 sets, 10 seeds, budgets up to 600 s.

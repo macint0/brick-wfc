@@ -29,10 +29,12 @@ def cell(arm: str, complete_seeds: list[int], selected_complete: bool, obj: str 
     fill, hole, surface = (98.5, 3, 98.4) if selected_complete else (93.0, 20, 91.0)
     return {"arm": arm, "object": obj, "set": set_number, "target_cells": 2000, "valid": 45, "candidates": 50,
             "mean_fill_pct": 85.0, "mean_largest_hole": 40.0, "mean_surface_pct": 84.0,
-            "complete": len(complete_seeds), "complete_seeds": complete_seeds, "s_per_candidate": 12.5,
+            "mean_largest_surface_hole": 30.0, "complete": len(complete_seeds), "complete_seeds": complete_seeds,
+            "complete_surface": len(complete_seeds), "complete_surface_seeds": complete_seeds, "s_per_candidate": 12.5,
             "stalled": 0,
             "selected": {"seed": 7, "fill_pct": fill, "holes": 3, "largest_hole": hole, "surface_pct": surface,
-                         "tips_pct": 90.0, "complete": selected_complete}}
+                         "largest_surface_hole": hole, "tips_pct": 90.0, "complete": selected_complete,
+                         "complete_surface": selected_complete}}
 
 
 def test_size_rows_follow_the_families_largest_slack_first() -> None:
@@ -69,16 +71,16 @@ def test_size_report_tables() -> None:
     rows = size_rows([cell("creserve80", [1], False), cell("creserve70", [3, 4], True)])
     lines = size_report(rows).splitlines()
     assert lines[0].startswith("| object | set | family | slack | target cells | valid |")
-    assert lines[2] == ("| chair | 5891-1 | creserve | 0.8 | 2000 | 45/50 | 85.0 | 40 | 84.0 | 93.0 | 20 | 91.0 | no | "
-                        "1 | 12.5 |")
-    assert lines[3].startswith("| chair | 5891-1 | creserve | 0.7 |") and "| yes | 2 | 12.5 |" in lines[3]
-    assert lines[5].endswith("candidates meeting the bar (0.8 / 0.7) |")
-    assert lines[7] == "| chair | 5891-1 | creserve | 0.8 | 0.7 | 1 / 2 |"
+    assert lines[2] == ("| chair | 5891-1 | creserve | 0.8 | 2000 | 45/50 | 85.0 | 40 | 84.0 | 30 | 93.0 | 20 | 91.0 | "
+                        "20 | no / no | 1 / 1 | 12.5 |")
+    assert lines[3].startswith("| chair | 5891-1 | creserve | 0.7 |") and "| yes / yes | 2 / 2 | 12.5 |" in lines[3]
+    assert "candidates meeting the volume bar (0.8 / 0.7) | candidates meeting the surface bar |" in lines[5]
+    assert lines[7] == "| chair | 5891-1 | creserve | 0.8 / 0.8 | 0.7 / 0.7 | 1 / 2 | 1 / 2 |"
     # a pair with no complete candidate at any slack, and one missing a slack
     lines = size_report(size_rows([cell("usable", [], False), cell("creserve60", [], False, set_number="6378-1"),
                                    cell("creserve", [], False, set_number="6378-1")])).splitlines()
-    assert "| chair | 6378-1 | creserve | none | none | 0 / 0 |" in lines  # slacks 1.0 / 0.6
-    assert "| chair | 5891-1 | usable | none | none | 0 / - |" in lines
+    assert "| chair | 6378-1 | creserve | none / none | none / none | 0 / 0 | 0 / 0 |" in lines  # slacks 1.0 / 0.6
+    assert "| chair | 5891-1 | usable | none / none | none / none | 0 / - | 0 / - |" in lines
 
 
 def test_size_report_without_a_selected_build() -> None:
@@ -94,4 +96,4 @@ def test_size_compare_joins_creserve_across_slacks() -> None:
     text = compare_report([cell("creserve80", [1], False), cell("creserve70", [3, 4], True)], SIZE_COMPARE)
     row = text.splitlines()[2]
     assert "connected + reserve-small, 0.8 -> connected + reserve-small, 0.7" in row
-    assert "93.0 -> 98.5 +" in row and "20 -> 3 +" in row and "| 0 -> 1 |" in row
+    assert "93.0 -> 98.5 +" in row and "20 -> 3 +" in row and "| 0 / 0 -> 1 / 1 |" in row

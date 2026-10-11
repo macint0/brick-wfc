@@ -38,6 +38,11 @@ builds metric by metric (``compare_report``).
 family and slack the valid candidates' mean completeness, the selected build's, the candidates meeting the bar and the
 time per candidate; per pair and family the largest slack at which any candidate, and the selected build, is complete
 (``size.md``, ``size.json``, ``size_sheet_<family>.png``); complete candidates go to ``complete_candidates/``.
+
+Completeness is counted under both bars (``complete``; ``features.Bar``): the volume bar (fill, largest hole, surface)
+and the surface bar (surface share and largest surface hole: interior cells are invisible), side by side in every
+report. The hollow arms (``hollow``, ``hollow80``: creserve's flags with a 2-cell shell, selected on the surface bar)
+are judged on the surface; their ``HOLLOW_COMPARE`` pairs against creserve compare different targets.
 """
 
 from __future__ import annotations
@@ -56,7 +61,7 @@ import numpy as np
 from scipy import ndimage
 
 from brickwfc.alt.candidates import Candidate, Context, d2_builder
-from brickwfc.alt.features import exposed, occupancy
+from brickwfc.alt.features import Bar, exposed, largest_component, occupancy
 from brickwfc.alt.inputs import learned_style, load_source
 from brickwfc.alt.pipeline import AltConfig, cache_key, make_context, make_target, sized_target
 from brickwfc.alt.pipeline import main as pipeline_main
@@ -118,13 +123,30 @@ def completeness(filled: np.ndarray, mask: np.ndarray) -> dict:
         "fill_pct": 100 * float((filled & mask).sum() / mask.sum()),
         "holes": int(count), "largest_hole": int(sizes.max()) if count else 0, "unfilled": unfilled,
         "surface_pct": 100 * float((filled & skin).sum() / skin.sum()),
+        "largest_surface_hole": largest_component(missing & skin),
         "unfilled_on_surface_pct": 100 * float((missing & skin).sum() / unfilled) if unfilled else 0.0,
     }
 
 
-def complete(row: dict) -> bool:
-    """Mac's bar for a complete build (cf, 2026-10-10): fill >= 97%, no hole over 4 cells, surface >= 98%."""
-    return row["fill_pct"] >= 97 and row["largest_hole"] <= 4 and row["surface_pct"] >= 98
+BAR = Bar()  # the default thresholds (``features.Bar``), as in the pipeline
+
+
+def complete(row: dict, bar: str = "volume") -> bool:
+    """Whether a build (a ``completeness`` row, in %) meets the bar (cf, 2026-10-10; ``features.Bar``). ``volume``:
+    fill >= 97%, no hole over 4 cells, surface >= 98%; ``surface`` (M12c, for hollow targets: interior cells are
+    invisible): surface >= 98%, no surface hole over 4 cells."""
+    if bar == "surface":
+        return row["surface_pct"] >= 100 * BAR.surface and row["largest_surface_hole"] <= BAR.largest_hole
+    return (row["fill_pct"] >= 100 * BAR.fill and row["largest_hole"] <= BAR.largest_hole
+            and row["surface_pct"] >= 100 * BAR.surface)
+
+
+def bars_text(volume: object, surface: object) -> str:
+    """A count or flag under the volume bar and the surface bar, side by side."""
+    def text(value: object) -> str:
+        return ("yes" if value else "no") if isinstance(value, bool) else str(value)
+
+    return f"{text(volume)} / {text(surface)}"
 
 
 def missing_png(placed: Sequence[PlacedPart], mask: np.ndarray, path: Path) -> Path:
@@ -737,7 +759,17 @@ ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed a
                    ["--sizing", "usable", "--fill-slack", "0.6", *HANG, "--order", "connected", "--reserve-small"]),
     "usable70": ("usable 0.7 + hang", ["--sizing", "usable", "--fill-slack", "0.7", *HANG]),
     "usable60": ("usable 0.6 + hang", ["--sizing", "usable", "--fill-slack", "0.6", *HANG]),
+    # hollow targets judged on the surface (cf, 2026-10-10 night: interior cells are invisible): creserve's flags, a
+    # 2-cell shell with internal pillars (``shapes.hollow``; the shell is scaled to the inventory's volume, so the
+    # object grows) and the surface bar at selection
+    "hollow": ("connected + reserve-small, hollow 2, surface bar",
+               ["--sizing", "usable", *HANG, "--order", "connected", "--reserve-small", "--hollow", "2",
+                "--bar", "surface"]),
+    "hollow80": ("connected + reserve-small, 0.8, hollow 2, surface bar",
+                 ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--order", "connected", "--reserve-small",
+                  "--hollow", "2", "--bar", "surface"]),
 }
+HOLLOW_COMPARE = (("creserve", "hollow"), ("creserve80", "hollow80"))  # different targets: the hollow one is a shell
 SIZE_COMPARE = (  # size: the default vs creserve at each slack, then creserve from one slack to the next smaller
     ("usable", "creserve"), ("usable90", "creserve90"), ("usable80", "creserve80"), ("usable70", "creserve70"),
     ("usable60", "creserve60"), ("creserve", "creserve90"), ("creserve90", "creserve80"), ("creserve", "creserve80"),
@@ -752,7 +784,7 @@ COMPARE = (("usable", "connected"), ("usable90", "connected90"), ("usable80", "c
            # and vs the default at their slack (cf, 2026-10-10: the adoption rule's comparison)
            ("usable", "creserve"), ("usable", "csmall1"), ("usable", "csmall2"), ("usable80", "creserve80"),
            ("usable80", "csmall1_80"), ("usable80", "csmall2_80"))
-COMPARE += tuple(pair for pair in SIZE_COMPARE if pair not in COMPARE)
+COMPARE += tuple(pair for pair in SIZE_COMPARE + HOLLOW_COMPARE if pair not in COMPARE)
 CONNECTED_SMALL_ARMS = ("connected", "creserve", "csmall1", "csmall2", "connected80", "creserve80", "csmall1_80",
                         "csmall2_80")
 STALL_FILL = 50.0  # a candidate under this fill % of its target stalled
@@ -784,10 +816,14 @@ def arm_dir(out: Path, arm: str, set_number: str, obj: str, runs: Path) -> Path:
 
 
 def arm_config(arm: str, obj: str, **changes) -> AltConfig:
+    """The arm's target settings (sizing, slack, hollow shell) and the bar it is selected on."""
     flags = ARMS[arm][1]
     sizing = flags[flags.index("--sizing") + 1] if "--sizing" in flags else "fillable"
     slack = float(flags[flags.index("--fill-slack") + 1]) if "--fill-slack" in flags else 1.0
-    return AltConfig(shape="brickgpt:" + STRUCTURES[obj], sizing=sizing, fill_slack=slack, **changes)
+    shell = int(flags[flags.index("--hollow") + 1]) if "--hollow" in flags else 0
+    bar = flags[flags.index("--bar") + 1] if "--bar" in flags else "volume"
+    return AltConfig(shape="brickgpt:" + STRUCTURES[obj], sizing=sizing, fill_slack=slack, hollow=shell, bar=bar,
+                     **changes)
 
 
 def same_target(arm: str, other: str, set_number: str, obj: str) -> bool:
@@ -849,11 +885,15 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
             "target_cells": int(mask.sum()), "object_cells": int(obj_target.mask.sum()), "sizing": sizing,
             "valid": len(valid), "candidates": len(candidates),
             "s_per_candidate": stats["generation_cpu_s"] / max(1, len(candidates)),
+            "bar": arm_config(config_arm, obj).bar,  # the bar the run selected on
             "complete": sum(complete(r) for r in rows.values()),
-            "complete_seeds": sorted(seed for seed, r in rows.items() if complete(r)), "tip_cells": int(tips.sum()),
+            "complete_seeds": sorted(seed for seed, r in rows.items() if complete(r)),
+            "complete_surface": sum(complete(r, "surface") for r in rows.values()),
+            "complete_surface_seeds": sorted(seed for seed, r in rows.items() if complete(r, "surface")),
+            "tip_cells": int(tips.sum()),
             "stalled": sum(stall_tops.values()), "stalled_valid": sum(r["fill_pct"] < STALL_FILL for r in rows.values()),
             "stall_tops": sorted(stall_tops.items())}
-    for name in ("fill_pct", "holes", "largest_hole", "surface_pct", "tips_pct"):
+    for name in ("fill_pct", "holes", "largest_hole", "surface_pct", "largest_surface_hole", "tips_pct"):
         cell[f"mean_{name}"] = mean([r[name] for r in rows.values()])
     if selected is not None:
         chosen = next(c for c in candidates if c.seed == selected["seed"])
@@ -861,6 +901,7 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
                                                      "utilization_pct": selected["utilization_pct"],
                                                      "clutch": selected["clutch"], "judge": selected["judge"]}
         cell["selected"]["complete"] = complete(cell["selected"])
+        cell["selected"]["complete_surface"] = complete(cell["selected"], "surface")
         cell["preview"] = (directory / selected["png"]).as_posix()
         path = args.out / "sweep_missing" / f"{obj}_{set_number}_{arm}.png"
         cell["missing_png"] = missing_png(chosen.placed, mask, path).as_posix()
@@ -868,19 +909,23 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
 
 
 def sweep_report(cells: list[dict]) -> str:
-    lines = ["| object | set | arm | target cells | object cells | valid | complete | fill % (sel / mean) | "
-             "holes (sel / mean) | largest hole (sel / mean) | surface % (sel / mean) | parts (sel) | used % (sel) | "
-             "judge (sel) | s / candidate | tips filled % (sel / mean) | clutch (sel) | stalled (top layers) |",
-             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    lines = ["| object | set | arm | target cells | object cells | valid | complete (vol / surf) | "
+             "selected complete (vol / surf) | fill % (sel / mean) | holes (sel / mean) | largest hole (sel / mean) | "
+             "surface % (sel / mean) | largest surface hole (sel / mean) | parts (sel) | used % (sel) | judge (sel) | "
+             "s / candidate | tips filled % (sel / mean) | clutch (sel) | stalled (top layers) |",
+             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for c in cells:
         s = c.get("selected", {})
         title = ARMS[c["arm"]][0] + (f" (= {ARMS[c['same_as']][0]})" if c["same_as"] else "")
         lines.append(
             f"| {c['object']} | {c['set']} | {title} | {c['target_cells']} | {c['object_cells']} | "
-            f"{c['valid']}/{c['candidates']} | {c['complete']} | "
+            f"{c['valid']}/{c['candidates']} | {bars_text(c['complete'], c.get('complete_surface', 0))} | "
+            f"{bars_text(s.get('complete', False), s.get('complete_surface', False))} | "
             f"{s.get('fill_pct', math.nan):.1f} / {c['mean_fill_pct']:.1f} | "
             f"{s.get('holes', 0)} / {c['mean_holes']:.1f} | {s.get('largest_hole', 0)} / {c['mean_largest_hole']:.0f} | "
-            f"{s.get('surface_pct', math.nan):.1f} / {c['mean_surface_pct']:.1f} | {s.get('parts', 0)} | "
+            f"{s.get('surface_pct', math.nan):.1f} / {c['mean_surface_pct']:.1f} | "
+            f"{s.get('largest_surface_hole', 0)} / {c.get('mean_largest_surface_hole', math.nan):.0f} | "
+            f"{s.get('parts', 0)} | "
             f"{s.get('utilization_pct', math.nan):.0f} | {s.get('judge', math.nan):.4f} | {c['s_per_candidate']:.1f} | "
             f"{s.get('tips_pct', math.nan):.0f} / {c.get('mean_tips_pct', math.nan):.0f} | "
             f"{s.get('clutch', math.nan):.0f} | {c.get('stalled', 0)}{stall_tops_text(c.get('stall_tops', []))} |")
@@ -903,6 +948,7 @@ COMPARED = (  # (label, value of a sweep cell, higher is better, format)
     ("holes", lambda c: c["selected"]["holes"], False, ".0f"),
     ("largest hole", lambda c: c["selected"]["largest_hole"], False, ".0f"),
     ("surface %", lambda c: c["selected"]["surface_pct"], True, ".1f"),
+    ("largest surface hole", lambda c: c["selected"]["largest_surface_hole"], False, ".0f"),
     ("tips filled %", lambda c: c["selected"]["tips_pct"], True, ".0f"),
     ("valid", lambda c: c["valid"], True, ".0f"),
     ("s / candidate", lambda c: c["s_per_candidate"], False, ".1f"),
@@ -914,7 +960,7 @@ def compare_report(cells: list[dict], pairs: Sequence[tuple[str, str]] = COMPARE
     marked + where the arm is better, - where worse, = where equal; and the count of each."""
     by_key = {(c["arm"], c["object"], c["set"]): c for c in cells}
     lines = ["| object | set | base -> arm | " + " | ".join(name for name, *_ in COMPARED)
-             + " | complete (sel) | stalled | better / worse |",
+             + " | complete (sel, vol / surf) | stalled | better / worse |",
              "|---|---|---|" + "---:|" * (len(COMPARED) + 3)]
     for base, arm in pairs:
         for obj in OBJECTS:
@@ -933,7 +979,8 @@ def compare_report(cells: list[dict], pairs: Sequence[tuple[str, str]] = COMPARE
                         mark, worse = "-", worse + 1
                     row.append(f"{x:{spec}} -> {y:{spec}} {mark}")
                 lines.append(f"| {obj} | {set_number} | {ARMS[base][0]} -> {ARMS[arm][0]} | " + " | ".join(row)
-                             + f" | {int(a['selected']['complete'])} -> {int(b['selected']['complete'])} | "
+                             + f" | {bars_text(int(a['selected']['complete']), int(a['selected']['complete_surface']))} -> "
+                             f"{bars_text(int(b['selected']['complete']), int(b['selected']['complete_surface']))} | "
                              f"{a.get('stalled', 0)} -> {b.get('stalled', 0)} | {better} / {worse} |")
     return "\n".join(lines) if len(lines) > 2 else ""
 
@@ -960,7 +1007,8 @@ def sweep_sheets(cells: list[dict], out: Path, arms: Sequence[str] = tuple(ARMS)
                     s = c["selected"]
                     images.append(Path(c[which]))
                     labels.append(f"{obj} {set_number}, {ARMS[arm][0]}\nfill {s['fill_pct']:.0f}%, surface "
-                                  f"{s['surface_pct']:.0f}%\nlargest hole {s['largest_hole']}, {s['parts']} parts")
+                                  f"{s['surface_pct']:.0f}%\nlargest hole {s['largest_hole']} (surface "
+                                  f"{s['largest_surface_hole']}), {s['parts']} parts")
         path = out / sheet
         labeled_sheet(images, labels, path, columns=len(arms), width=500)
         paths.append(path)
@@ -1422,53 +1470,71 @@ def size_rows(cells: list[dict]) -> list[dict]:
                         "object": obj, "set": set_number, "family": family, "slack": slack, "arm": arm,
                         "target_cells": c["target_cells"], "valid": c["valid"], "candidates": c["candidates"],
                         "mean_fill_pct": c["mean_fill_pct"], "mean_largest_hole": c["mean_largest_hole"],
-                        "mean_surface_pct": c["mean_surface_pct"], "complete": c["complete"],
-                        "complete_seeds": c.get("complete_seeds", []), "s_per_candidate": c["s_per_candidate"],
+                        "mean_surface_pct": c["mean_surface_pct"],
+                        "mean_largest_surface_hole": c.get("mean_largest_surface_hole", math.nan),
+                        "complete": c["complete"], "complete_seeds": c.get("complete_seeds", []),
+                        "complete_surface": c.get("complete_surface", 0),
+                        "complete_surface_seeds": c.get("complete_surface_seeds", []),
+                        "s_per_candidate": c["s_per_candidate"],
                         "selected_seed": s.get("seed"), "selected_fill_pct": s.get("fill_pct", math.nan),
                         "selected_largest_hole": s.get("largest_hole"),
                         "selected_surface_pct": s.get("surface_pct", math.nan),
-                        "selected_complete": bool(s) and complete(s)})
+                        "selected_largest_surface_hole": s.get("largest_surface_hole"),
+                        "selected_complete": bool(s) and complete(s),
+                        "selected_complete_surface": bool(s) and complete(s, "surface")})
     return rows
 
 
 def size_rules(rows: list[dict]) -> list[dict]:
     """Per pair and family: the largest slack at which any candidate is complete, and at which the selected build
-    is (None: at no slack run), with the slacks that were run."""
+    is (None: at no slack run), with the slacks that were run; under the volume bar and, with ``_surface`` keys, the
+    surface bar."""
     rules = {}
     for r in rows:
         rule = rules.setdefault((r["object"], r["set"], r["family"]),
                                 {"object": r["object"], "set": r["set"], "family": r["family"], "slacks": [],
-                                 "complete_by_slack": {}, "any_complete": None, "selected_complete": None})
+                                 "complete_by_slack": {}, "any_complete": None, "selected_complete": None,
+                                 "complete_surface_by_slack": {}, "any_complete_surface": None,
+                                 "selected_complete_surface": None})
         rule["slacks"].append(r["slack"])
-        rule["complete_by_slack"][r["slack"]] = r["complete"]
-        if r["complete"] and (rule["any_complete"] is None or r["slack"] > rule["any_complete"]):
-            rule["any_complete"] = r["slack"]
-        if r["selected_complete"] and (rule["selected_complete"] is None or r["slack"] > rule["selected_complete"]):
-            rule["selected_complete"] = r["slack"]
+        for suffix in ("", "_surface"):
+            rule[f"complete{suffix}_by_slack"][r["slack"]] = r[f"complete{suffix}"]
+            for flag, key in ((r[f"complete{suffix}"], f"any_complete{suffix}"),
+                              (r[f"selected_complete{suffix}"], f"selected_complete{suffix}")):
+                if flag and (rule[key] is None or r["slack"] > rule[key]):
+                    rule[key] = r["slack"]
     return list(rules.values())
 
 
 def size_report(rows: list[dict]) -> str:
     """The per pair, family and slack table, then the per pair largest complete slacks."""
     lines = ["| object | set | family | slack | target cells | valid | fill % (mean) | largest hole (mean) | "
-             "surface % (mean) | fill % (sel) | largest hole (sel) | surface % (sel) | complete (sel) | "
-             "candidates meeting the bar | s / candidate |",
-             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+             "surface % (mean) | largest surface hole (mean) | fill % (sel) | largest hole (sel) | surface % (sel) | "
+             "largest surface hole (sel) | complete (sel, vol / surf) | candidates meeting the bar (vol / surf) | "
+             "s / candidate |",
+             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for r in rows:
         hole = "" if r["selected_largest_hole"] is None else str(r["selected_largest_hole"])
+        surface_hole = "" if r.get("selected_largest_surface_hole") is None else str(r["selected_largest_surface_hole"])
         lines.append(
             f"| {r['object']} | {r['set']} | {r['family']} | {r['slack']:.1f} | {r['target_cells']} | "
             f"{r['valid']}/{r['candidates']} | {r['mean_fill_pct']:.1f} | {r['mean_largest_hole']:.0f} | "
-            f"{r['mean_surface_pct']:.1f} | {r['selected_fill_pct']:.1f} | {hole} | {r['selected_surface_pct']:.1f} | "
-            f"{'yes' if r['selected_complete'] else 'no'} | {r['complete']} | {r['s_per_candidate']:.1f} |")
+            f"{r['mean_surface_pct']:.1f} | {r['mean_largest_surface_hole']:.0f} | {r['selected_fill_pct']:.1f} | "
+            f"{hole} | {r['selected_surface_pct']:.1f} | {surface_hole} | "
+            f"{bars_text(r['selected_complete'], r['selected_complete_surface'])} | "
+            f"{bars_text(r['complete'], r['complete_surface'])} | {r['s_per_candidate']:.1f} |")
     slacks = sorted({r["slack"] for r in rows}, reverse=True)
-    lines += ["", "| object | set | family | largest slack, any candidate complete | largest slack, selected complete | "
-              "candidates meeting the bar (" + " / ".join(f"{s:.1f}" for s in slacks) + ") |",
-              "|---|---|---|---:|---:|---:|"]
+    lines += ["", "| object | set | family | largest slack, any candidate complete (vol / surf) | largest slack, "
+              "selected complete (vol / surf) | candidates meeting the volume bar (" + " / ".join(f"{s:.1f}" for s in slacks)
+              + ") | candidates meeting the surface bar |",
+              "|---|---|---|---:|---:|---:|---:|"]
     for rule in size_rules(rows):
-        counts = " / ".join(str(rule["complete_by_slack"].get(s, "-")) for s in slacks)
-        lines.append(f"| {rule['object']} | {rule['set']} | {rule['family']} | {slack_text(rule['any_complete'])} | "
-                     f"{slack_text(rule['selected_complete'])} | {counts} |")
+        counts = {suffix: " / ".join(str(rule[f"complete{suffix}_by_slack"].get(s, "-")) for s in slacks)
+                  for suffix in ("", "_surface")}
+        lines.append(f"| {rule['object']} | {rule['set']} | {rule['family']} | "
+                     f"{bars_text(slack_text(rule['any_complete']), slack_text(rule['any_complete_surface']))} | "
+                     f"{bars_text(slack_text(rule['selected_complete']), slack_text(rule['selected_complete_surface']))}"
+                     f" | {counts['']} | {counts['_surface']} |")
     return "\n".join(lines)
 
 
@@ -1477,18 +1543,19 @@ def slack_text(slack: float | None) -> str:
 
 
 def save_complete_candidates(cells: list[dict], out: Path) -> list[Path]:
-    """Each complete candidate of ``cells`` as <object>_<set>_<arm>_seedNN.ldr (+ preview and missing map) under
+    """Each complete candidate of ``cells`` (under either bar) as <object>_<set>_<arm>_seedNN.ldr (+ preview and missing map) under
     ``out``; files already there are kept."""
     from brickwfc.alt.output import write_build
 
     out.mkdir(parents=True, exist_ok=True)
     paths = []
     for c in cells:
-        if not c.get("complete_seeds"):
+        seeds = sorted({*c.get("complete_seeds", []), *c.get("complete_surface_seeds", [])})  # either bar
+        if not seeds:
             continue
         key, _, candidates = load_run(Path(c["run"]))
         mask = key_mask(key)
-        for seed in c["complete_seeds"]:
+        for seed in seeds:
             stem = out / f"{c['object']}_{c['set']}_{c['arm']}_seed{seed:02d}"
             if not stem.with_suffix(".ldr").exists():
                 chosen = next(x for x in candidates if x.seed == seed)
@@ -1518,10 +1585,12 @@ def size_sheet(cells: list[dict], out: Path, family: str, path: Path) -> Path:
                     continue
                 s = c["selected"]
                 images.append(Path(c["preview"]))
-                labels.append(f"{obj} {set_number}, {slack:.1f}{', COMPLETE' if s['complete'] else ''}\n"
+                done = [name for name, flag in (("vol", s["complete"]), ("surf", s["complete_surface"])) if flag]
+                labels.append(f"{obj} {set_number}, {slack:.1f}{', COMPLETE (' + ' + '.join(done) + ')' if done else ''}\n"
                               f"fill {s['fill_pct']:.1f}%, surface {s['surface_pct']:.1f}%\n"
-                              f"largest hole {s['largest_hole']}, {c['target_cells']} cells\n"
-                              f"{c['complete']} of {c['valid']} valid complete")
+                              f"largest hole {s['largest_hole']} (surface {s['largest_surface_hole']}), "
+                              f"{c['target_cells']} cells\n"
+                              f"{c['complete']} / {c['complete_surface']} of {c['valid']} valid complete (vol / surf)")
     labeled_sheet(images, labels, path, columns=len(SIZE_FAMILIES[family]), width=500)
     return path
 
