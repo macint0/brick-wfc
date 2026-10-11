@@ -1,0 +1,5 @@
+{
+  "description": "M12c bench (results/m12c_bench_plan.md): 9 sets from small to large across Classic Town, Creator, City and Modular Buildings, x 6 BrickGPT objects (complete.STRUCTURES). The 9 sweep pairs are the 6378-1 / 5891-1 / 4956-1 x chair / table / car part of it.",
+  "sets": ["7796-1", "6370-1", "6372-1", "6378-1", "7743-1", "5891-1", "4956-1", "10190-1", "10182-1"],
+  "objects": ["chair", "table", "car", "sofa", "vessel", "bench"]
+}

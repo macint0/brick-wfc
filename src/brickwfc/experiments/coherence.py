@@ -46,7 +46,7 @@ from brickwfc.bricks.coherence import coherence, shuffled
 from brickwfc.bricks.recolor import recolor
 from brickwfc.bricks.parts import BY_FILE, PlacedPart
 from brickwfc.bricks.voxelize import grid_shape, voxelize
-from brickwfc.experiments.complete import OBJECTS, SWEEP_SETS, load_run
+from brickwfc.experiments.complete import load_pairs, load_run
 from brickwfc.experiments.demo import labeled_sheet
 from brickwfc.ldraw.fetch import fetch_set
 from brickwfc.ldraw.mpd import flatten
@@ -198,6 +198,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="writes <results>.json, .png (with --recolor also <results>_chair.png)")
     parser.add_argument("--recolor", action="store_true", help="also recolour each build within part types and "
                         "measure it after (bricks.recolor)")
+    parser.add_argument("--pairs", type=Path, help="a JSON file of (set, object) pairs (complete.load_pairs); "
+                        "default: the 9 sweep pairs; a pair without a finished run is skipped")
     args = parser.parse_args(argv)
     args.cache.mkdir(parents=True, exist_ok=True)
     real = []
@@ -206,10 +208,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"real {set_number}: {real[-1]['parts']} parts", flush=True)
     builds = []
     for arm in ARMS:
-        for obj in OBJECTS:
-            for set_number in SWEEP_SETS:
-                builds.append(build_row(args.sweep, arm, set_number, obj, args.draws))
-                print(f"{arm} {obj} {set_number}: seed {builds[-1]['seed']}", flush=True)
+        for set_number, obj in load_pairs(args.pairs):
+            if not (args.sweep / "sweep" / arm / set_number / obj / "stats.json").exists():
+                print(f"{arm} {obj} {set_number}: no finished run, skipped", flush=True)
+                continue
+            builds.append(build_row(args.sweep, arm, set_number, obj, args.draws))
+            print(f"{arm} {obj} {set_number}: seed {builds[-1]['seed']}", flush=True)
     arm, set_number, obj, seed = COMPLETE_CHAIR
     builds.append(build_row(args.sweep, arm, set_number, obj, args.draws, seed) | {"complete": True})
     for b in builds:

@@ -628,9 +628,27 @@ python -m brickwfc.experiments.coherence --recolor --sweep out/m12b_complete --r
 - **Outputs:** `results/m12c_recolour.json`, `.png` and `_chair.png`; the table in `out/m12c_colour/recolor_tables.md`
   is the write-up's.
 
+### `results/m12c_bench_plan.md` (M12c wider bench: plan, sizing dry run, run-time estimate), with `m12c_bench_plan.json`
+
+Sizes the 54 bench pairs (`examples/m12c_bench.json`) under the creserve and creserve80 arms and fits the run-time model
+on the cached creserve / creserve80 runs in `out/m12b_complete/sweep/`; generates nothing. At m12c-bench or later:
+
+```
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps bench-plan --pairs examples/m12c_bench.json
+```
+
+- **Runtime:** about 15 minutes on one process; resumable (one json per pair and arm under `bench_sizing/`).
+- **Outputs:** `bench_plan.json` is copied to `results/m12c_bench_plan.json`; the table in `bench_plan.md` is the
+  write-up's.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
+
+- **M12c wider bench** (the creserve arm at the size rule's slack on the 54 pairs; plan and estimate in
+  `m12c_bench_plan.md`): `python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report
+  --arms creserve --pairs examples/m12c_bench.json --workers 5 --report-name sweep_bench` (or `creserve80`; the 9 cached
+  pairs are skipped). About 8.4 h at 1.0, 5.5 h at 0.8 (the two Modular sets two thirds of it, extrapolated).
 
 - **M12c hollow targets on the surface bar** (arms `hollow1`, `hollow1_80`, and `hollow2`, `hollow2_80`; creserve's
   flags plus `--hollow 1|2 --hollow-scale solid --bar surface`), then the joined report with creserve:

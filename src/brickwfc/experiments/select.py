@@ -4,7 +4,7 @@
     python -m brickwfc.experiments.select --arms creserve90 creserve70 creserve60 usable70 usable60 --out out/m12c_size_select
 
 For each arm (``--arms``: any arm folders under ``<sweep>/sweep/``, default creserve and creserve80) and each of the 9
-sweep pairs (``experiments/complete.py``: ``SWEEP_SETS`` x ``OBJECTS``; a pair with no finished run is skipped and
+sweep pairs (``experiments/complete.py``: ``PAIRS``, or the pairs of ``--pairs``; a pair with no finished run is skipped and
 listed), the pipeline's own funnel (``pipeline.run_funnel``) runs on the cached candidates
 (``<sweep>/sweep/<arm>/<set>/<object>/candidates.jsonl``) with the run's config (stats.json) under three rules:
 
@@ -31,7 +31,7 @@ from brickwfc.alt.features import completeness, occupancy
 from brickwfc.alt.inputs import DATA_DIR, learned_style, load_source
 from brickwfc.alt.pipeline import SHAPE_EMPTY_WEIGHT, AltConfig, run_funnel
 from brickwfc.bricks.shapes import fill
-from brickwfc.experiments.complete import OBJECTS, SWEEP_SETS, key_mask, load_run
+from brickwfc.experiments.complete import key_mask, load_pairs, load_run
 
 ARMS = ("creserve", "creserve80")
 RULES = {"old": dict(complete_first=False), "volume": dict(complete_first=True, bar="volume"),
@@ -107,20 +107,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--arms", nargs="+", default=list(ARMS),
                         help="arm folders under <sweep>/sweep/ (any names; default: " + " ".join(ARMS) + ")")
     parser.add_argument("--out", type=Path, default=Path("out/m12c_select/select"), help="writes <out>.json")
+    parser.add_argument("--pairs", type=Path, help="a JSON file of (set, object) pairs (complete.load_pairs); "
+                        "default: the 9 sweep pairs")
     args = parser.parse_args(argv)
     cells, missing = [], []
     for arm in args.arms:
-        for obj in OBJECTS:
-            for set_number in SWEEP_SETS:
-                run = Path("sweep", arm, set_number, obj)  # under --sweep
-                if not (args.sweep / run / "stats.json").exists():  # not run, or not finished
-                    missing.append(run.as_posix())
-                    continue
-                cell = {"arm": arm, "object": obj, "set": set_number, "run": run.as_posix()}
-                cell |= rerank(args.sweep / run, args.data)
-                cells.append(cell)
-                print(f"{arm} {obj} {set_number}: " + ", ".join(
-                    f"{rule} seed {cell[rule]['seed'] if cell[rule] else '-'}" for rule in RULES), flush=True)
+        for set_number, obj in load_pairs(args.pairs):
+            run = Path("sweep", arm, set_number, obj)  # under --sweep
+            if not (args.sweep / run / "stats.json").exists():  # not run, or not finished
+                missing.append(run.as_posix())
+                continue
+            cell = {"arm": arm, "object": obj, "set": set_number, "run": run.as_posix()}
+            cell |= rerank(args.sweep / run, args.data)
+            cells.append(cell)
+            print(f"{arm} {obj} {set_number}: " + ", ".join(
+                f"{rule} seed {cell[rule]['seed'] if cell[rule] else '-'}" for rule in RULES), flush=True)
     if missing:
         print(f"no finished run, skipped: {', '.join(missing)}")
     watched = next((c for c in cells if (c["arm"], c["set"], c["object"]) == WATCH[:3]), None)
