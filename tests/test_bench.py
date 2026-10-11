@@ -63,3 +63,16 @@ def test_time_model_fits_a_power_law() -> None:
     model = time_model(runs)
     assert model["b"] == pytest.approx(1.5) and model["a"] == pytest.approx(0.01) and model["parallel_overhead"] == 1.2
     assert predicted_minutes(model, 1000, candidates=50) == pytest.approx(50 * 0.01 * 1000 ** 1.5 / 5 * 1.2 / 60)
+
+
+def test_bench_report_marks_a_cut_target() -> None:
+    from brickwfc.experiments.complete import bench_report
+
+    cell = {"arm": "creserve70", "object": "chair", "set": "6378-1", "slack": 0.7, "inventory_parts": 204,
+            "grid": [42, 9, 10], "target_cells": 979, "object_cells": 967, "support_cells": 12, "left_out": {},
+            "left_out_cells": 0, "rounds": 1, "thinnest_section": 1, "overhang_moment": 20.0, "pieces": 2}
+    model = {"a": 1e-5, "b": 2.0, "runs": 3, "cells_range": [1000, 4000], "log_residual_sd": 0.1,
+             "parallel_overhead": 1.0}
+    line = bench_report([cell], model, 50).splitlines()[2]
+    assert "| 20 | **2** |" in line
+    assert "| 20 | — |" in bench_report([cell | {"pieces": None}], model, 50).splitlines()[2]  # older dry runs

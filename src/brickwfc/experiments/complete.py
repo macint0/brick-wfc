@@ -1740,8 +1740,10 @@ BENCH_WORKERS = 5
 
 def bench_sizing_cell(arm: str, set_number: str, obj: str) -> dict:
     """One pair's target under ``arm``, sized as the run would size it (no generation): its cells, the object's
-    (without support columns), the usable sizing's left-out parts, and the thin-aware scale's result on the object
-    (its thinnest horizontal section, 0 if the scale cut it in two, and its overhang moment)."""
+    (without support columns), the usable sizing's left-out parts, the thin-aware scale's result on the object
+    (its thinnest horizontal section, 0 if the scale cut it in two, and its overhang moment), and the target's
+    face-connected pieces (more than one: resampling cut an arm off; connected growth cannot reach it, and a seed on
+    it stalls the run, results/m12c_stall_6378_chair.md)."""
     source = load_source(set_number)
     config = resolve(arm_config(arm, obj))
     clock = time.perf_counter()
@@ -1757,7 +1759,7 @@ def bench_sizing_cell(arm: str, set_number: str, obj: str) -> dict:
             "left_out": details.get("left_out", {}), "left_out_cells": details.get("left_out_cells", 0),
             "rounds": details.get("rounds"), "settled": details.get("settled"),
             "thinnest_section": thinnest_section(obj_mask), "overhang_moment": overhang_moment(obj_mask),
-            "sizing_s": seconds}
+            "pieces": int(ndimage.label(target.mask)[1]), "sizing_s": seconds}
 
 
 def run_seconds(out: Path, arms: Sequence[str] = BENCH_ARMS) -> list[dict]:
@@ -1795,8 +1797,8 @@ def predicted_minutes(model: dict, target_cells: int, candidates: int = 50) -> f
 
 def bench_report(cells: Sequence[dict], model: dict, n: int) -> str:
     lines = ["| object | set | slack | inventory parts | grid (YxZxX) | target cells | object cells | support cells | "
-             "left out (cells) | usable rounds | thinnest section | overhang moment | est. minutes |",
-             "|---|---|---:|---:|---|---:|---:|---:|---|---:|---:|---:|---:|"]
+             "left out (cells) | usable rounds | thinnest section | overhang moment | pieces | est. minutes |",
+             "|---|---|---:|---:|---|---:|---:|---:|---|---:|---:|---:|---:|---:|"]
     for c in cells:
         left = ", ".join(f"{name} x{k}" for name, k in c["left_out"].items())
         lines.append(f"| {c['object']} | {c['set']} | {c['slack']:.1f} | {c['inventory_parts']} | "
@@ -1804,7 +1806,8 @@ def bench_report(cells: Sequence[dict], model: dict, n: int) -> str:
                      f"{'—' if c['support_cells'] is None else c['support_cells']} | "
                      f"{c['left_out_cells']}{f' ({left})' if left else ''} | {c['rounds']} | "
                      f"{'**0 (cut)**' if c['thinnest_section'] == 0 else c['thinnest_section']} | "
-                     f"{c['overhang_moment']:.0f} | {predicted_minutes(model, c['target_cells'], n):.1f} |")
+                     f"{c['overhang_moment']:.0f} | {pieces_text(c.get('pieces'))} | "
+                     f"{predicted_minutes(model, c['target_cells'], n):.1f} |")
     totals = []
     for arm in dict.fromkeys(c["arm"] for c in cells):
         minutes = sum(predicted_minutes(model, c["target_cells"], n) for c in cells if c["arm"] == arm)
@@ -1814,6 +1817,11 @@ def bench_report(cells: Sequence[dict], model: dict, n: int) -> str:
               f"{model['log_residual_sd']:.2f}), x {model['parallel_overhead']:.2f} parallel overhead, {n} candidates on "
               f"{BENCH_WORKERS} workers. Totals: " + "; ".join(totals) + "."]
     return "\n".join(lines)
+
+
+def pieces_text(pieces: int | None) -> str:
+    """A target's face-connected pieces for the table: bold when the target is cut, "—" if not recorded."""
+    return "—" if pieces is None else f"**{pieces}**" if pieces > 1 else str(pieces)
 
 
 def step_bench_plan(args: argparse.Namespace) -> None:

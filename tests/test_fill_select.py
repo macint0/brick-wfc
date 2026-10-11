@@ -60,3 +60,18 @@ def test_fill_weight_moves_the_full_build_up() -> None:
 def test_standardized() -> None:
     assert np.allclose(standardized(np.array([1.0, 3.0])), [-1.0, 1.0])
     assert np.allclose(standardized(np.array([2.0, 2.0])), [0.0, 0.0]) and not math.isnan(standardized(np.ones(3))[0])
+
+
+def test_min_fill_fails_a_run_where_every_build_stalls() -> None:
+    # The fill floor is relative to the run's 90th percentile, so stubs alone pass it; --min-fill is absolute.
+    stats, context, _ = setup()
+    stubs = [candidate(i, [piece("plate1x2", 0), piece("plate1x2", 1, color=BLUE)]) for i in range(3)]
+    config = dict(k=2, min_size_quantile=0.0, dedupe_threshold=0.0)
+    relative = run_funnel(stubs, context, stats, AltConfig(**config), 0.0)
+    assert "low_fill" not in relative.check_failures and relative.selected  # 4 / 64 cells, every one "valid"
+    absolute = run_funnel(stubs, context, stats, AltConfig(min_fill=0.5, **config), 0.0)
+    assert absolute.check_failures["low_fill"] == 3 and not absolute.selected
+    _, _, candidates = setup()
+    kept = run_funnel(candidates, context, stats, AltConfig(min_fill=0.5, k=8, min_size_quantile=0.0,
+                                                            dedupe_threshold=0.0), 0.0)
+    assert kept.check_failures["low_fill"] == 1  # only the stub; the half-filled build is at the floor

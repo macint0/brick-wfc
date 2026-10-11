@@ -641,6 +641,15 @@ python -m brickwfc.experiments.complete --out out/m12b_complete --steps bench-pl
 - **Outputs:** `bench_plan.json` is copied to `results/m12c_bench_plan.json`; the table in `bench_plan.md` is the
   write-up's.
 
+### `results/m12c_stall_6378_chair.md` (M12c diagnosis: connected growth on the cut 6378-1 chair target)
+
+A diagnosis of cached runs (`out/m12b_complete/sweep/creserve70|creserve60/6378-1/chair`, made at 007e6dd); it generates
+nothing. The replays come from one-off scripts. Each rebuilds a cached seed with the pipeline's builder
+(`alt.candidates.d2_builder` on `complete.replay_setup`) and wraps `_grow_from_seed` and `_standing_prefix` to record
+the grown structure, the per-prefix balance and the ground parts. The wrappers draw nothing, and every replay is checked
+identical to its cached build. The piece counts come from `scipy.ndimage.label` on each run's cache-key mask. The bench
+scan sizes the 54 bench pairs under creserve and creserve80; `bench-plan` now reports the same `pieces` column.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
