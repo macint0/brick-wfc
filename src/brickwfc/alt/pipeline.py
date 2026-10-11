@@ -26,6 +26,12 @@ statistics, from the fold that held the set out if it is one of the M10 sets, el
             ``--bar surface`` surface >= 98%, largest surface hole <= 4) are picked before the rest (M12c,
             ``--no-complete-first`` restores score order); with complete-first, dedupe also keeps a complete
             build over an incomplete near-duplicate
+  recolor   with ``--recolor`` (M12c, off by default), each selected build's colours are permuted among the parts
+            of each part type to make its skin colour-coherent (``bricks.recolor``): every placement and every
+            (part, colour) count stays, so every check above still holds. It runs after select, so the judge
+            and the selection are those of the builds as generated (the stats.json ``judge`` is the original
+            build's). The alternative, recolouring every candidate before the judge, would let the judge's colour
+            term see the new colours and could change the selection
 
 Without a target shape, the grid is a cube in millimetres (2.5 plates tall per stud of width) with
 volume ``--room`` x the inventory's; ``--height`` fixes the height instead (M10's grid: ``--height 12``). With
@@ -59,6 +65,7 @@ from brickwfc.alt.inputs import (CATALOGS, DATA_DIR, SETS_FILE, STYLE_DIR, STYLE
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
 from brickwfc.alt.target import Target, load_target, takes_supports
 from brickwfc.bricks.inventory import SIZINGS, inventory_cells, target_volume, unusable, utilization
+from brickwfc.bricks.recolor import recolor
 from brickwfc.bricks.shapes import SHAPES, fill, hollow, iou
 from brickwfc.bricks.style import StyleStats, events, matched_divergence
 from brickwfc.bricks.symmetry import SYMMETRIZE_MIN_SCORE
@@ -135,6 +142,7 @@ class AltConfig:
     judge_draws: int = 5
     dedupe_threshold: float = 0.05
     diversity: float = 0.5
+    recolor: bool = False  # after select: colours permuted within part types for a coherent skin (``bricks.recolor``)
 
 
 @dataclass(frozen=True)
@@ -142,6 +150,7 @@ class Selected:
     candidate: Candidate
     judge: float
     complete: bool | None = None  # meets the bar (None: no target shape)
+    recolored: dict | None = None  # with --recolor: the skin's coherence before and after (``recolor_selected``)
 
 
 @dataclass
@@ -448,6 +457,24 @@ def real_model_judge(source: Source, stats: StyleStats, size: int, draws: int) -
 # Output -----------------------------------------------------------------------------------------------
 
 
+RECOLOR_STREAM = 7  # the recolouring's Generator: [build seed, this]
+
+
+def recolor_selected(report: FunnelReport, context: Context) -> FunnelReport:
+    """``report`` with each selected build recoloured within part types (``bricks.recolor``); placements, counts, the
+    judge and the order are kept."""
+    selected = []
+    for chosen in report.selected:
+        c = chosen.candidate
+        done = recolor(c.placed, context.grid, np.random.default_rng([c.seed, RECOLOR_STREAM]))
+        selected.append(replace(chosen, candidate=replace(c, placed=tuple(done.placed)), recolored={
+            "seams_pct_before": 100 * done.before.same_color, "seams_pct_after": 100 * done.after.same_color,
+            "colors_per_window_before": done.before.colors_per_window,
+            "colors_per_window_after": done.after.colors_per_window, "swaps": done.swaps,
+            "fixed_skin_pct": 100 * done.fixed_skin_share, "seconds": done.seconds}))
+    return replace(report, selected=selected)
+
+
 def write_outputs(source: Source, context: Context, report: FunnelReport, out: Path) -> list[dict]:
     rows, previews = [], []
     for rank, chosen in enumerate(report.selected, 1):
@@ -466,6 +493,8 @@ def write_outputs(source: Source, context: Context, report: FunnelReport, out: P
             row.update(fill_pct=100 * fill(filled, context.mask), iou=iou(filled, context.mask), holes=done.holes,
                        largest_hole=done.largest_hole, surface_pct=100 * done.surface,
                        largest_surface_hole=done.largest_surface_hole, complete=chosen.complete)
+        if chosen.recolored is not None:
+            row["recolor"] = chosen.recolored
         rows.append(row)
     if previews:
         write_sheet(previews, out / "sheet.png")
@@ -599,6 +628,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help=f"bar: least filled share of the exposed cells (default {defaults.complete_surface})")
     parser.add_argument("--dedupe-threshold", type=float, default=defaults.dedupe_threshold)
     parser.add_argument("--diversity", type=float, default=defaults.diversity, help="lambda in selection")
+    parser.add_argument("--recolor", action="store_true",
+                        help="after select: permute each selected build's colours within part types for a coherent "
+                        "skin (placements and part counts kept; the judge is the original build's)")
     parser.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 3) - 2))
     parser.add_argument("--wfc-workers", type=int, default=2, help="worker cap for --generator wfc (memory-heavy)")
     parser.add_argument("--data", type=Path, default=DATA_DIR, help="OMR download cache")
@@ -636,7 +668,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
         complete_first=not args.no_complete_first, bar=args.bar, complete_fill=args.complete_fill,
         complete_hole=args.complete_hole, complete_surface=args.complete_surface,
-        dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
+        dedupe_threshold=args.dedupe_threshold, diversity=args.diversity, recolor=args.recolor,
     ))
     if config.hang and not config.holes:
         parser.error("--hang goes with --holes")
@@ -670,8 +702,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     candidates = generate_all(context, seeds, cache, cache_key(source, style_label, context), workers)
     report = run_funnel(candidates, context, stats, config, time.perf_counter() - clock)
     real = real_model_judge(source, stats, report.judge_size, config.judge_draws)
+    if config.recolor:
+        report = recolor_selected(report, context)
     rows = write_outputs(source, context, report, out)
     print(format_stages(report.requested, report.stages, report.check_failures))
+    for row in rows:
+        if "recolor" in row:
+            r = row["recolor"]
+            print(f"recolor build {row['rank']}: same-colour seams {r['seams_pct_before']:.0f}% -> "
+                  f"{r['seams_pct_after']:.0f}%, colours per 4x4 window {r['colors_per_window_before']:.2f} -> "
+                  f"{r['colors_per_window_after']:.2f} ({r['swaps']} swaps, {r['seconds']:.1f} s)")
     if report.complete is not None:
         print(f"select: {'complete first' if config.complete_first else 'score only (--no-complete-first)'}, "
               f"{bar_of(config).describe()}; {report.complete} of {report.stages[2].survivors} unique builds complete")
