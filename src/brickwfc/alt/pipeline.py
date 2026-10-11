@@ -21,7 +21,11 @@ statistics, from the fold that held the set out if it is one of the M10 sets, el
   select    top ``--k`` by judge + ``--diversity`` x distance to the builds already picked
             (``funnel.select``); judge scores are standardized and feature distances divided by their
             median, so the two terms are on comparable scales. With a target shape the score is
-            z(judge) + ``--fill-weight`` x z(fill) (M12b; 0 restores judge only)
+            z(judge) + ``--fill-weight`` x z(fill) (M12b; 0 restores judge only), and builds that meet the
+            completeness bar (``features.Bar``: ``--bar volume`` fill >= 97%, largest hole <= 4, surface >= 98%;
+            ``--bar surface`` surface >= 98%, largest surface hole <= 4) are picked before the rest (M12c,
+            ``--no-complete-first`` restores score order); with complete-first, dedupe also keeps a complete
+            build over an incomplete near-duplicate
 
 Without a target shape, the grid is a cube in millimetres (2.5 plates tall per stud of width) with
 volume ``--room`` x the inventory's; ``--height`` fixes the height instead (M10's grid: ``--height 12``). With
@@ -49,7 +53,7 @@ from typing import Sequence
 import numpy as np
 
 from brickwfc.alt.candidates import BUILDER_VERSION, GENERATORS, VERIFY_VERSION, Candidate, Context, generate
-from brickwfc.alt.features import completeness, feature_vector, occupancy
+from brickwfc.alt.features import BARS, Bar, completeness, feature_vector, occupancy
 from brickwfc.alt.inputs import (CATALOGS, DATA_DIR, SETS_FILE, STYLE_DIR, STYLE_FILES, STYLE_VERSION, Source,
                                  learned_style, load_source)
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
@@ -120,6 +124,12 @@ class AltConfig:
     min_size_quantile: float = 0.1
     fill_floor: float = 0.5  # with a target: fail builds filling < this x the 90th-percentile fill (0: off)
     fill_weight: float = 1.0  # with a target: selection score z(judge) + this x z(fill) (0: judge only)
+    complete_first: bool = True  # with a target: builds that meet the bar are selected before the rest (M12c)
+    bar: str = "volume"  # what complete means (``features.Bar``): volume (fill, largest hole, surface) or surface
+    # (surface share and largest surface hole; interior cells are invisible)
+    complete_fill: float = Bar.fill  # the bar's thresholds: fill share (volume bar only), ...
+    complete_hole: int = Bar.largest_hole  # ... cells of the largest (surface) hole, ...
+    complete_surface: float = Bar.surface  # ... and the filled share of the exposed cells
     judge_draws: int = 5
     dedupe_threshold: float = 0.05
     diversity: float = 0.5
@@ -129,6 +139,7 @@ class AltConfig:
 class Selected:
     candidate: Candidate
     judge: float
+    complete: bool | None = None  # meets the bar (None: no target shape)
 
 
 @dataclass
@@ -140,6 +151,11 @@ class FunnelReport:
     judge_size: int  # contact events every judged build was subsampled to
     selected: list[Selected]
     candidates: list[Candidate]
+    complete: int | None = None  # unique builds that meet the bar (None: no target shape)
+
+
+def bar_of(config: AltConfig) -> Bar:
+    return Bar(config.complete_fill, config.complete_hole, config.complete_surface, config.bar)
 
 
 def cube_grid(cells: float, room: float) -> tuple[int, int, int]:
@@ -329,6 +345,15 @@ def run_funnel(candidates: list[Candidate], context: Context, stats: StyleStats,
         if len(kept) < len(verified):
             failures["low_fill"] = len(verified) - len(kept)
         verified = kept
+    # With a target shape: which builds meet the completeness bar. With complete-first they go first into dedupe
+    # (so a complete build is kept over an incomplete near-duplicate) and are selected before the rest.
+    complete: dict[int, bool] = {}
+    if context.mask is not None:
+        bar = bar_of(config)
+        complete = {c.seed: bar.met(completeness(occupancy(c.placed, context.grid), context.mask), filled_share[c.seed])
+                    for c in verified}
+        if config.complete_first:
+            verified = sorted(verified, key=lambda c: not complete[c.seed])  # stable: seed order within each group
     stages.append(StageStats("verify", len(verified), time.perf_counter() - clock))
 
     clock = time.perf_counter()
@@ -353,10 +378,12 @@ def run_funnel(candidates: list[Candidate], context: Context, stats: StyleStats,
             z = z + config.fill_weight * standardized(np.array([filled_share[c.seed] for c in unique]))
         distances = np.linalg.norm(features[:, None] - features[None, :], axis=-1)[np.triu_indices(len(unique), 1)]
         scale = float(np.median(distances)) if distances.size and np.median(distances) > 0 else 1.0
-        picks = select(z, features / scale, config.k, config.diversity)
+        tiers = np.array([complete[c.seed] for c in unique]) if complete and config.complete_first else None
+        picks = select(z, features / scale, config.k, config.diversity, tiers)
     stages.append(StageStats("select", len(picks), time.perf_counter() - clock))
-    selected = [Selected(unique[i], float(scores[i])) for i in picks]
-    return FunnelReport(len(candidates), stages, failures, floor, size, selected, candidates)
+    selected = [Selected(unique[i], float(scores[i]), complete.get(unique[i].seed)) for i in picks]
+    return FunnelReport(len(candidates), stages, failures, floor, size, selected, candidates,
+                        sum(complete[c.seed] for c in unique) if context.mask is not None else None)
 
 
 def real_model_judge(source: Source, stats: StyleStats, size: int, draws: int) -> tuple[float, int] | None:
@@ -392,7 +419,8 @@ def write_outputs(source: Source, context: Context, report: FunnelReport, out: P
             filled = occupancy(c.placed, context.grid)
             done = completeness(filled, context.mask)
             row.update(fill_pct=100 * fill(filled, context.mask), iou=iou(filled, context.mask), holes=done.holes,
-                       largest_hole=done.largest_hole, surface_pct=100 * done.surface)
+                       largest_hole=done.largest_hole, surface_pct=100 * done.surface,
+                       largest_surface_hole=done.largest_surface_hole, complete=chosen.complete)
         rows.append(row)
     if previews:
         write_sheet(previews, out / "sheet.png")
@@ -401,10 +429,12 @@ def write_outputs(source: Source, context: Context, report: FunnelReport, out: P
 
 def format_selected(rows: list[dict]) -> str:
     shaped = bool(rows) and "fill_pct" in rows[0]
-    lines = ["rank  seed  parts  used%   judge   clutch  steps" + ("  fill%  holes  largest  surface%" if shaped else "")]
+    lines = ["rank  seed  parts  used%   judge   clutch  steps"
+             + ("  fill%  holes  largest  surface%  surf.hole  complete" if shaped else "")]
     lines += [f"{r['rank']:4d} {r['seed']:5d} {r['parts']:6d} {r['utilization_pct']:6.1f} {r['judge']:7.3f} "
               f"{r['clutch']:8.1f} {r['steps']:6d}"
-              + (f" {r['fill_pct']:6.1f} {r['holes']:6d} {r['largest_hole']:8d} {r['surface_pct']:9.1f}" if shaped else "")
+              + (f" {r['fill_pct']:6.1f} {r['holes']:6d} {r['largest_hole']:8d} {r['surface_pct']:9.1f} "
+                 f"{r['largest_surface_hole']:10d} {'yes' if r['complete'] else 'no':>9}" if shaped else "")
               for r in rows]
     return "\n".join(lines)
 
@@ -508,6 +538,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="target shape: fail builds filling less than this x the 90th-percentile fill (0: off)")
     parser.add_argument("--fill-weight", type=float, default=defaults.fill_weight,
                         help="target shape: selection score z(judge) + this x z(fill) (0: judge only)")
+    parser.add_argument("--no-complete-first", action="store_true",
+                        help="target shape: select by score only, not builds that meet the completeness bar first")
+    parser.add_argument("--bar", choices=BARS, default=defaults.bar,
+                        help="target shape: what complete means; volume: fill, largest hole and surface share; "
+                        "surface: surface share and largest surface hole only (interior cells are invisible)")
+    parser.add_argument("--complete-fill", type=float, default=defaults.complete_fill,
+                        help=f"volume bar: least fill share (default {defaults.complete_fill})")
+    parser.add_argument("--complete-hole", type=int, default=defaults.complete_hole,
+                        help=f"bar: most cells in the largest hole, or surface hole (default {defaults.complete_hole})")
+    parser.add_argument("--complete-surface", type=float, default=defaults.complete_surface,
+                        help=f"bar: least filled share of the exposed cells (default {defaults.complete_surface})")
     parser.add_argument("--dedupe-threshold", type=float, default=defaults.dedupe_threshold)
     parser.add_argument("--diversity", type=float, default=defaults.diversity, help="lambda in selection")
     parser.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 3) - 2))
@@ -545,6 +586,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         holes=args.holes, hang=args.hang, reserve_small=args.reserve_small, small_last=args.small_last,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
+        complete_first=not args.no_complete_first, bar=args.bar, complete_fill=args.complete_fill,
+        complete_hole=args.complete_hole, complete_surface=args.complete_surface,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity,
     ))
     if config.hang and not config.holes:
@@ -575,6 +618,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     real = real_model_judge(source, stats, report.judge_size, config.judge_draws)
     rows = write_outputs(source, context, report, out)
     print(format_stages(report.requested, report.stages, report.check_failures))
+    if report.complete is not None:
+        print(f"select: {'complete first' if config.complete_first else 'score only (--no-complete-first)'}, "
+              f"{bar_of(config).describe()}; {report.complete} of {report.stages[2].survivors} unique builds complete")
     print(format_selected(rows))
     complete = valid_completeness(candidates, context)
     if complete is not None:
@@ -599,6 +645,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "clusters_per_build_median": float(np.median([c.clusters for c in candidates])),
         "connected": sum(c.clusters == 1 for c in candidates),
         "valid_completeness": complete,
+        "complete_unique": report.complete,
         "wall_time_s": time.perf_counter() - start,
         "selected": rows,
     }
