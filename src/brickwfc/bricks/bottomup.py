@@ -110,7 +110,11 @@ nothing but the seed reaches the ground. With ``balanced``, the growth does not 
 stand (grown from one leg, a table could never reach its other legs); it asks it of the result instead: the
 build is cut back to the longest prefix of its placements that stands (every prefix is supported and one piece
 by construction), and the parts cut go back to the inventory for the hole pass, which checks balance at every
-placement as the main pass does.
+placement as the main pass does. With ``regrow`` (M12c, off by default), a growth whose result covers less than
+``REGROW_FILL`` of the target (a stall: the seed region joins the rest only through a neck no part could straddle,
+results/m12c_stall_6378_chair.md) is started again from the next ground region in the same ranking, on an empty build,
+with the same generator; when every region has been tried, the attempt covering the most is kept. A growth that does
+not stall is returned as it is, so it is the same build as without ``regrow``.
 
 Diagnosis (M12b completeness): a ``trace`` object set on the builder hears about every cell visit of the main pass
 that places nothing (``skipped``: the solid-share draw passed the cell over; ``failed``: no part fits there) and
@@ -139,6 +143,7 @@ if TYPE_CHECKING:
 
 PREFERRED_BOOST = 1e6  # weight factor for parts of a cell's preferred color: in practice, tried first
 SMALL_CELLS = 3  # small_reserve / small_power: parts of at most this many cells (see the module docstring)
+REGROW_FILL = 0.5  # regrow: a connected growth covering less than this share of the target stalled
 
 
 class BottomUpBuilder:
@@ -147,7 +152,7 @@ class BottomUpBuilder:
                  connect_rounds: int = 1, open_tops: bool = False, order: str = "random",
                  proposal: Proposal | None = None, proposal_strength: float = 1.0, skin: bool = False,
                  skin_power: float | None = None, holes: bool = False, hang: bool = False,
-                 small_reserve: bool = False, small_power: float | None = None) -> None:
+                 small_reserve: bool = False, small_power: float | None = None, regrow: bool = False) -> None:
         if bridge and not (balanced and any_offset):
             raise ValueError("bridge needs balanced=True and any_offset=True")
         if holes and not any_offset:
@@ -159,6 +164,7 @@ class BottomUpBuilder:
         if order not in ("random", "raster", "connected"):
             raise ValueError(f"order must be 'random', 'raster' or 'connected', not {order!r}")
         self.order = order
+        self.regrow = regrow  # connected order: restart the growth from the next ground region on a stall
         self.skin = skin
         self.skin_power = skin_power  # None: hard largest-first sort on the skin; a: weights x cells ** a
         self.holes = holes
@@ -351,9 +357,46 @@ class BottomUpBuilder:
     def _grow(self, state: "_State", rng: np.random.Generator, allowed: np.ndarray, preferred: np.ndarray | None,
               target: np.ndarray | None) -> "_State":
         """The connected growth order's main pass (see the module docstring): a seed part on the ground, sweeps
-        over joinable cells until one places nothing, then (``balanced``) the longest prefix that stands."""
+        over joinable cells until one places nothing, then (``balanced``) the longest prefix that stands; with
+        ``regrow``, again from the next ground region while the result stalls."""
+        regions = self._seed_regions(allowed)
+        if not self.regrow:
+            return self._grow_once(state, rng, allowed, preferred, target, regions[:1])
+        inventory = None if state.remaining is None else dict(state.remaining)
+        cells = max(int(allowed.sum()), 1)
+        best, best_cover = state, -1.0
+        for i in range(len(regions)):
+            attempt = state if i == 0 else self._new_state(allowed.shape, inventory, target, state.skin, state.plane)
+            attempt = self._grow_once(attempt, rng, allowed, preferred, target, regions[i:i + 1])
+            cover = float((attempt.filled & allowed).sum()) / cells
+            if cover > best_cover:
+                best, best_cover = attempt, cover
+            if cover >= REGROW_FILL:
+                break
+        return best
+
+    def _seed_regions(self, allowed: np.ndarray) -> list[np.ndarray]:
+        """The (z, x) cells of each connected region of the target's ground layer, in the order the growth seeds from
+        them: largest first, then nearest the centre of the target's footprint."""
+        labels, count = ndimage.label(allowed[0])
+        if not count:
+            return []
+        sizes = np.bincount(labels.ravel())[1:]
+        footprint = np.argwhere(allowed.any(axis=0)).mean(axis=0)
+
+        def rank(region: int) -> tuple[int, float]:  # largest, then nearest the footprint's centre
+            centre = np.argwhere(labels == region).mean(axis=0)
+            return int(sizes[region - 1]), -float(np.hypot(*(centre - footprint)))
+
+        # max() took the first of tied regions; a stable sort keeps that one first
+        return [np.argwhere(labels == r) for r in sorted(range(1, count + 1), key=rank, reverse=True)]
+
+    def _grow_once(self, state: "_State", rng: np.random.Generator, allowed: np.ndarray,
+                   preferred: np.ndarray | None, target: np.ndarray | None, regions: list[np.ndarray]) -> "_State":
+        """One growth from the first of ``regions`` (none: no growth), cut back to the longest prefix that stands."""
         balance, state.balance = state.balance, None  # checked on the result, below
-        self._grow_from_seed(state, rng, allowed, preferred)
+        if regions:
+            self._grow_from_seed(state, rng, allowed, preferred, regions[0])
         if balance is None:
             return state
         keep = self._standing_prefix(state.placed, allowed.shape)
@@ -378,20 +421,10 @@ class BottomUpBuilder:
         return keep
 
     def _grow_from_seed(self, state: "_State", rng: np.random.Generator, allowed: np.ndarray,
-                        preferred: np.ndarray | None) -> None:
-        labels, count = ndimage.label(allowed[0])
-        if not count:
-            return
-        sizes = np.bincount(labels.ravel())[1:]
-        footprint = np.argwhere(allowed.any(axis=0)).mean(axis=0)
-
-        def rank(region: int) -> tuple[int, float]:  # largest, then nearest the footprint's centre
-            centre = np.argwhere(labels == region).mean(axis=0)
-            return int(sizes[region - 1]), -float(np.hypot(*(centre - footprint)))
-
-        region = max(range(1, count + 1), key=rank)
-        cells = np.argwhere(labels == region)
-        cells = cells[rng.permutation(len(cells))]
+                        preferred: np.ndarray | None, region: np.ndarray) -> None:
+        """A seed part on the ground in ``region`` ((z, x) cells), then sweeps over joinable cells, lowest layer
+        first (see the module docstring)."""
+        cells = region[rng.permutation(len(region))]
         open_bottom = state.open_bottom if self.open_bottoms else None
         fit_map = _FitMap(state.filled, state.studs, allowed, 0, self._studless_top if self.open_tops else None,
                           open_bottom, state.open_bottom if self.hang else None)

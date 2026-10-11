@@ -813,8 +813,16 @@ ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed a
                               ["--sizing", "usable", *slack, *HANG, "--order", "connected", "--reserve-small",
                                "--hollow", str(t), "--hollow-scale", "solid", "--bar", "surface"])
        for suffix, title, slack in (("", "", []), ("_80", ", 0.8", ["--fill-slack", "0.8"])) for t in (1, 2)},
+    # connected growth that stalls is grown again from the next ground region (M12c, results/m12c_stall_6378_chair.md):
+    # creserve at each slack + --regrow; a pair whose growth never stalls builds the same candidates as creserve
+    **{f"cregrow{suffix}": (f"connected + reserve-small{title}, regrow",
+                            ["--sizing", "usable", *slack, *HANG, "--order", "connected", "--reserve-small", "--regrow"])
+       for suffix, title, slack in (("", "", []), ("80", ", 0.8", ["--fill-slack", "0.8"]),
+                                    ("70", ", 0.7", ["--fill-slack", "0.7"]), ("60", ", 0.6", ["--fill-slack", "0.6"]))},
 }
 HOLLOW_ARMS = ("hollow1", "hollow2", "hollow1_80", "hollow2_80")
+REGROW_COMPARE = (("creserve", "cregrow"), ("creserve80", "cregrow80"), ("creserve70", "cregrow70"),
+                  ("creserve60", "cregrow60"))  # same targets, same seeds
 HOLLOW_COMPARE = (("creserve", "hollow1"), ("creserve", "hollow2"), ("hollow2", "hollow1"),  # the same object, less
                   ("creserve80", "hollow1_80"), ("creserve80", "hollow2_80"), ("hollow2_80", "hollow1_80"))
 SIZE_COMPARE = (  # size: the default vs creserve at each slack, then creserve from one slack to the next smaller
@@ -831,7 +839,7 @@ COMPARE = (("usable", "connected"), ("usable90", "connected90"), ("usable80", "c
            # and vs the default at their slack (cf, 2026-10-10: the adoption rule's comparison)
            ("usable", "creserve"), ("usable", "csmall1"), ("usable", "csmall2"), ("usable80", "creserve80"),
            ("usable80", "csmall1_80"), ("usable80", "csmall2_80"))
-COMPARE += tuple(pair for pair in SIZE_COMPARE + HOLLOW_COMPARE if pair not in COMPARE)
+COMPARE += tuple(pair for pair in SIZE_COMPARE + HOLLOW_COMPARE + REGROW_COMPARE if pair not in COMPARE)
 CONNECTED_SMALL_ARMS = ("connected", "creserve", "csmall1", "csmall2", "connected80", "creserve80", "csmall1_80",
                         "csmall2_80")
 STALL_FILL = 50.0  # a candidate under this fill % of its target stalled
