@@ -572,6 +572,21 @@ python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-re
   arm's small-part option. The figure writes seed 1 and seed 43 of `sweep/creserve80/5891-1/chair` with their
   missing-cell maps (`alt.output.write_build`, `complete.missing_png`).
 
+
+### `results/m12c_select.md` (M12c completeness-first selection), with `m12c_select.json`
+
+A re-rank of the cached creserve and creserve80 candidates (see `m12b_connected.md`); it generates nothing. At
+m12c-select or later:
+
+```
+python -m brickwfc.experiments.select --sweep out/m12b_complete --out results/m12c_select
+```
+
+- **Runtime:** about 1 minute on one process.
+- **Outputs:** `results/m12c_select.json` (every pair under the old rule, the volume bar and the surface bar); the
+  printed table is the write-up's, with the surface-bar columns folded into a note (identical to the volume bar's).
+- **Check:** the driver stops if the old rule does not reproduce a run's selected seed in its `stats.json`.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):

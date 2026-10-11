@@ -1,0 +1,751 @@
+{
+  "cells": [
+    {
+      "arm": "creserve",
+      "object": "chair",
+      "set": "6378-1",
+      "run": "sweep/creserve/6378-1/chair",
+      "candidates": 50,
+      "valid": 49,
+      "old": {
+        "seed": 45,
+        "judge": -0.29118032232203434,
+        "complete": false,
+        "fill_pct": 88.91402714932126,
+        "largest_hole": 96,
+        "surface_pct": 86.96808510638297,
+        "largest_surface_hole": 96,
+        "unique": 45,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 45,
+        "judge": -0.29118032232203434,
+        "complete": false,
+        "fill_pct": 88.91402714932126,
+        "largest_hole": 96,
+        "surface_pct": 86.96808510638297,
+        "largest_surface_hole": 96,
+        "unique": 45,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 45,
+        "judge": -0.29118032232203434,
+        "complete": false,
+        "fill_pct": 88.91402714932126,
+        "largest_hole": 96,
+        "surface_pct": 86.96808510638297,
+        "largest_surface_hole": 96,
+        "unique": 45,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve",
+      "object": "chair",
+      "set": "5891-1",
+      "run": "sweep/creserve/5891-1/chair",
+      "candidates": 50,
+      "valid": 50,
+      "old": {
+        "seed": 46,
+        "judge": -0.32202959650088514,
+        "complete": false,
+        "fill_pct": 93.64224137931035,
+        "largest_hole": 18,
+        "surface_pct": 92.83208020050125,
+        "largest_surface_hole": 13,
+        "unique": 45,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 46,
+        "judge": -0.32202959650088514,
+        "complete": false,
+        "fill_pct": 93.64224137931035,
+        "largest_hole": 18,
+        "surface_pct": 92.83208020050125,
+        "largest_surface_hole": 13,
+        "unique": 45,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 46,
+        "judge": -0.32202959650088514,
+        "complete": false,
+        "fill_pct": 93.64224137931035,
+        "largest_hole": 18,
+        "surface_pct": 92.83208020050125,
+        "largest_surface_hole": 13,
+        "unique": 45,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve",
+      "object": "chair",
+      "set": "4956-1",
+      "run": "sweep/creserve/4956-1/chair",
+      "candidates": 50,
+      "valid": 47,
+      "old": {
+        "seed": 14,
+        "judge": -0.2550399603377433,
+        "complete": false,
+        "fill_pct": 86.61744347023534,
+        "largest_hole": 244,
+        "surface_pct": 82.09771096686028,
+        "largest_surface_hole": 228,
+        "unique": 43,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 14,
+        "judge": -0.2550399603377433,
+        "complete": false,
+        "fill_pct": 86.61744347023534,
+        "largest_hole": 244,
+        "surface_pct": 82.09771096686028,
+        "largest_surface_hole": 228,
+        "unique": 43,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 14,
+        "judge": -0.2550399603377433,
+        "complete": false,
+        "fill_pct": 86.61744347023534,
+        "largest_hole": 244,
+        "surface_pct": 82.09771096686028,
+        "largest_surface_hole": 228,
+        "unique": 43,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve",
+      "object": "table",
+      "set": "6378-1",
+      "run": "sweep/creserve/6378-1/table",
+      "candidates": 50,
+      "valid": 50,
+      "old": {
+        "seed": 43,
+        "judge": -0.32297788720900245,
+        "complete": false,
+        "fill_pct": 81.40732265446225,
+        "largest_hole": 119,
+        "surface_pct": 84.53695836873408,
+        "largest_surface_hole": 23,
+        "unique": 43,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 43,
+        "judge": -0.32297788720900245,
+        "complete": false,
+        "fill_pct": 81.40732265446225,
+        "largest_hole": 119,
+        "surface_pct": 84.53695836873408,
+        "largest_surface_hole": 23,
+        "unique": 43,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 43,
+        "judge": -0.32297788720900245,
+        "complete": false,
+        "fill_pct": 81.40732265446225,
+        "largest_hole": 119,
+        "surface_pct": 84.53695836873408,
+        "largest_surface_hole": 23,
+        "unique": 43,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve",
+      "object": "table",
+      "set": "5891-1",
+      "run": "sweep/creserve/5891-1/table",
+      "candidates": 50,
+      "valid": 48,
+      "old": {
+        "seed": 19,
+        "judge": -0.33439025027822883,
+        "complete": false,
+        "fill_pct": 91.90972222222223,
+        "largest_hole": 15,
+        "surface_pct": 90.66503965832825,
+        "largest_surface_hole": 15,
+        "unique": 43,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 19,
+        "judge": -0.33439025027822883,
+        "complete": false,
+        "fill_pct": 91.90972222222223,
+        "largest_hole": 15,
+        "surface_pct": 90.66503965832825,
+        "largest_surface_hole": 15,
+        "unique": 43,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 19,
+        "judge": -0.33439025027822883,
+        "complete": false,
+        "fill_pct": 91.90972222222223,
+        "largest_hole": 15,
+        "surface_pct": 90.66503965832825,
+        "largest_surface_hole": 15,
+        "unique": 43,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve",
+      "object": "table",
+      "set": "4956-1",
+      "run": "sweep/creserve/4956-1/table",
+      "candidates": 50,
+      "valid": 37,
+      "old": {
+        "seed": 28,
+        "judge": -0.27326482419353515,
+        "complete": false,
+        "fill_pct": 84.11871318531944,
+        "largest_hole": 307,
+        "surface_pct": 78.3311489733508,
+        "largest_surface_hole": 254,
+        "unique": 34,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 28,
+        "judge": -0.27326482419353515,
+        "complete": false,
+        "fill_pct": 84.11871318531944,
+        "largest_hole": 307,
+        "surface_pct": 78.3311489733508,
+        "largest_surface_hole": 254,
+        "unique": 34,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 28,
+        "judge": -0.27326482419353515,
+        "complete": false,
+        "fill_pct": 84.11871318531944,
+        "largest_hole": 307,
+        "surface_pct": 78.3311489733508,
+        "largest_surface_hole": 254,
+        "unique": 34,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve",
+      "object": "car",
+      "set": "6378-1",
+      "run": "sweep/creserve/6378-1/car",
+      "candidates": 50,
+      "valid": 50,
+      "old": {
+        "seed": 46,
+        "judge": -0.346820930179291,
+        "complete": false,
+        "fill_pct": 87.44915746658918,
+        "largest_hole": 92,
+        "surface_pct": 86.49214659685865,
+        "largest_surface_hole": 56,
+        "unique": 46,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 46,
+        "judge": -0.346820930179291,
+        "complete": false,
+        "fill_pct": 87.44915746658918,
+        "largest_hole": 92,
+        "surface_pct": 86.49214659685865,
+        "largest_surface_hole": 56,
+        "unique": 46,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 46,
+        "judge": -0.346820930179291,
+        "complete": false,
+        "fill_pct": 87.44915746658918,
+        "largest_hole": 92,
+        "surface_pct": 86.49214659685865,
+        "largest_surface_hole": 56,
+        "unique": 46,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve",
+      "object": "car",
+      "set": "5891-1",
+      "run": "sweep/creserve/5891-1/car",
+      "candidates": 50,
+      "valid": 49,
+      "old": {
+        "seed": 42,
+        "judge": -0.32841436617341385,
+        "complete": false,
+        "fill_pct": 92.48307801923762,
+        "largest_hole": 53,
+        "surface_pct": 93.0609097918273,
+        "largest_surface_hole": 14,
+        "unique": 45,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 42,
+        "judge": -0.32841436617341385,
+        "complete": false,
+        "fill_pct": 92.48307801923762,
+        "largest_hole": 53,
+        "surface_pct": 93.0609097918273,
+        "largest_surface_hole": 14,
+        "unique": 45,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 42,
+        "judge": -0.32841436617341385,
+        "complete": false,
+        "fill_pct": 92.48307801923762,
+        "largest_hole": 53,
+        "surface_pct": 93.0609097918273,
+        "largest_surface_hole": 14,
+        "unique": 45,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve",
+      "object": "car",
+      "set": "4956-1",
+      "run": "sweep/creserve/4956-1/car",
+      "candidates": 50,
+      "valid": 46,
+      "old": {
+        "seed": 17,
+        "judge": -0.25872055160259244,
+        "complete": false,
+        "fill_pct": 83.35529205094423,
+        "largest_hole": 345,
+        "surface_pct": 83.07277628032345,
+        "largest_surface_hole": 38,
+        "unique": 42,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 17,
+        "judge": -0.25872055160259244,
+        "complete": false,
+        "fill_pct": 83.35529205094423,
+        "largest_hole": 345,
+        "surface_pct": 83.07277628032345,
+        "largest_surface_hole": 38,
+        "unique": 42,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 17,
+        "judge": -0.25872055160259244,
+        "complete": false,
+        "fill_pct": 83.35529205094423,
+        "largest_hole": 345,
+        "surface_pct": 83.07277628032345,
+        "largest_surface_hole": 38,
+        "unique": 42,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve80",
+      "object": "chair",
+      "set": "6378-1",
+      "run": "sweep/creserve80/6378-1/chair",
+      "candidates": 50,
+      "valid": 50,
+      "old": {
+        "seed": 25,
+        "judge": -0.30767881507241013,
+        "complete": false,
+        "fill_pct": 94.4639718804921,
+        "largest_hole": 35,
+        "surface_pct": 93.44432882414152,
+        "largest_surface_hole": 35,
+        "unique": 45,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 25,
+        "judge": -0.30767881507241013,
+        "complete": false,
+        "fill_pct": 94.4639718804921,
+        "largest_hole": 35,
+        "surface_pct": 93.44432882414152,
+        "largest_surface_hole": 35,
+        "unique": 45,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 25,
+        "judge": -0.30767881507241013,
+        "complete": false,
+        "fill_pct": 94.4639718804921,
+        "largest_hole": 35,
+        "surface_pct": 93.44432882414152,
+        "largest_surface_hole": 35,
+        "unique": 45,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve80",
+      "object": "chair",
+      "set": "5891-1",
+      "run": "sweep/creserve80/5891-1/chair",
+      "candidates": 50,
+      "valid": 48,
+      "old": {
+        "seed": 43,
+        "judge": -0.29398647022978625,
+        "complete": false,
+        "fill_pct": 98.45027981058976,
+        "largest_hole": 7,
+        "surface_pct": 97.99882283696292,
+        "largest_surface_hole": 7,
+        "unique": 34,
+        "complete_unique": 1
+      },
+      "volume": {
+        "seed": 1,
+        "judge": -0.3513756467263829,
+        "complete": true,
+        "fill_pct": 98.66551872578562,
+        "largest_hole": 4,
+        "surface_pct": 98.29311359623308,
+        "largest_surface_hole": 4,
+        "unique": 34,
+        "complete_unique": 1
+      },
+      "surface": {
+        "seed": 1,
+        "judge": -0.3513756467263829,
+        "complete": true,
+        "fill_pct": 98.66551872578562,
+        "largest_hole": 4,
+        "surface_pct": 98.29311359623308,
+        "largest_surface_hole": 4,
+        "unique": 34,
+        "complete_unique": 1
+      }
+    },
+    {
+      "arm": "creserve80",
+      "object": "chair",
+      "set": "4956-1",
+      "run": "sweep/creserve80/4956-1/chair",
+      "candidates": 50,
+      "valid": 42,
+      "old": {
+        "seed": 49,
+        "judge": -0.23296273512697857,
+        "complete": false,
+        "fill_pct": 89.91379310344828,
+        "largest_hole": 80,
+        "surface_pct": 87.5776397515528,
+        "largest_surface_hole": 77,
+        "unique": 38,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 49,
+        "judge": -0.23296273512697857,
+        "complete": false,
+        "fill_pct": 89.91379310344828,
+        "largest_hole": 80,
+        "surface_pct": 87.5776397515528,
+        "largest_surface_hole": 77,
+        "unique": 38,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 49,
+        "judge": -0.23296273512697857,
+        "complete": false,
+        "fill_pct": 89.91379310344828,
+        "largest_hole": 80,
+        "surface_pct": 87.5776397515528,
+        "largest_surface_hole": 77,
+        "unique": 38,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve80",
+      "object": "table",
+      "set": "6378-1",
+      "run": "sweep/creserve80/6378-1/table",
+      "candidates": 50,
+      "valid": 50,
+      "old": {
+        "seed": 37,
+        "judge": -0.2984327245382065,
+        "complete": false,
+        "fill_pct": 86.53273809523809,
+        "largest_hole": 76,
+        "surface_pct": 82.67379679144385,
+        "largest_surface_hole": 76,
+        "unique": 46,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 37,
+        "judge": -0.2984327245382065,
+        "complete": false,
+        "fill_pct": 86.53273809523809,
+        "largest_hole": 76,
+        "surface_pct": 82.67379679144385,
+        "largest_surface_hole": 76,
+        "unique": 46,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 37,
+        "judge": -0.2984327245382065,
+        "complete": false,
+        "fill_pct": 86.53273809523809,
+        "largest_hole": 76,
+        "surface_pct": 82.67379679144385,
+        "largest_surface_hole": 76,
+        "unique": 46,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve80",
+      "object": "table",
+      "set": "5891-1",
+      "run": "sweep/creserve80/5891-1/table",
+      "candidates": 50,
+      "valid": 48,
+      "old": {
+        "seed": 1,
+        "judge": -0.34656766096223457,
+        "complete": false,
+        "fill_pct": 96.04810996563575,
+        "largest_hole": 9,
+        "surface_pct": 95.93318809005083,
+        "largest_surface_hole": 9,
+        "unique": 42,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 1,
+        "judge": -0.34656766096223457,
+        "complete": false,
+        "fill_pct": 96.04810996563575,
+        "largest_hole": 9,
+        "surface_pct": 95.93318809005083,
+        "largest_surface_hole": 9,
+        "unique": 42,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 1,
+        "judge": -0.34656766096223457,
+        "complete": false,
+        "fill_pct": 96.04810996563575,
+        "largest_hole": 9,
+        "surface_pct": 95.93318809005083,
+        "largest_surface_hole": 9,
+        "unique": 42,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve80",
+      "object": "table",
+      "set": "4956-1",
+      "run": "sweep/creserve80/4956-1/table",
+      "candidates": 50,
+      "valid": 38,
+      "old": {
+        "seed": 30,
+        "judge": -0.253398862233543,
+        "complete": false,
+        "fill_pct": 86.43507030603806,
+        "largest_hole": 390,
+        "surface_pct": 80.13732221677293,
+        "largest_surface_hole": 312,
+        "unique": 35,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 30,
+        "judge": -0.253398862233543,
+        "complete": false,
+        "fill_pct": 86.43507030603806,
+        "largest_hole": 390,
+        "surface_pct": 80.13732221677293,
+        "largest_surface_hole": 312,
+        "unique": 35,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 30,
+        "judge": -0.253398862233543,
+        "complete": false,
+        "fill_pct": 86.43507030603806,
+        "largest_hole": 390,
+        "surface_pct": 80.13732221677293,
+        "largest_surface_hole": 312,
+        "unique": 35,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve80",
+      "object": "car",
+      "set": "6378-1",
+      "run": "sweep/creserve80/6378-1/car",
+      "candidates": 50,
+      "valid": 50,
+      "old": {
+        "seed": 11,
+        "judge": -0.30368619976776223,
+        "complete": false,
+        "fill_pct": 87.60869565217392,
+        "largest_hole": 75,
+        "surface_pct": 87.46518105849582,
+        "largest_surface_hole": 28,
+        "unique": 46,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 11,
+        "judge": -0.30368619976776223,
+        "complete": false,
+        "fill_pct": 87.60869565217392,
+        "largest_hole": 75,
+        "surface_pct": 87.46518105849582,
+        "largest_surface_hole": 28,
+        "unique": 46,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 11,
+        "judge": -0.30368619976776223,
+        "complete": false,
+        "fill_pct": 87.60869565217392,
+        "largest_hole": 75,
+        "surface_pct": 87.46518105849582,
+        "largest_surface_hole": 28,
+        "unique": 46,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve80",
+      "object": "car",
+      "set": "5891-1",
+      "run": "sweep/creserve80/5891-1/car",
+      "candidates": 50,
+      "valid": 50,
+      "old": {
+        "seed": 29,
+        "judge": -0.3262834230384712,
+        "complete": false,
+        "fill_pct": 92.32074671192193,
+        "largest_hole": 31,
+        "surface_pct": 91.03972950126796,
+        "largest_surface_hole": 15,
+        "unique": 46,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 29,
+        "judge": -0.3262834230384712,
+        "complete": false,
+        "fill_pct": 92.32074671192193,
+        "largest_hole": 31,
+        "surface_pct": 91.03972950126796,
+        "largest_surface_hole": 15,
+        "unique": 46,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 29,
+        "judge": -0.3262834230384712,
+        "complete": false,
+        "fill_pct": 92.32074671192193,
+        "largest_hole": 31,
+        "surface_pct": 91.03972950126796,
+        "largest_surface_hole": 15,
+        "unique": 46,
+        "complete_unique": 0
+      }
+    },
+    {
+      "arm": "creserve80",
+      "object": "car",
+      "set": "4956-1",
+      "run": "sweep/creserve80/4956-1/car",
+      "candidates": 50,
+      "valid": 48,
+      "old": {
+        "seed": 19,
+        "judge": -0.25284770311495885,
+        "complete": false,
+        "fill_pct": 91.0876993166287,
+        "largest_hole": 59,
+        "surface_pct": 90.69319640564827,
+        "largest_surface_hole": 26,
+        "unique": 44,
+        "complete_unique": 0
+      },
+      "volume": {
+        "seed": 19,
+        "judge": -0.25284770311495885,
+        "complete": false,
+        "fill_pct": 91.0876993166287,
+        "largest_hole": 59,
+        "surface_pct": 90.69319640564827,
+        "largest_surface_hole": 26,
+        "unique": 44,
+        "complete_unique": 0
+      },
+      "surface": {
+        "seed": 19,
+        "judge": -0.25284770311495885,
+        "complete": false,
+        "fill_pct": 91.0876993166287,
+        "largest_hole": 59,
+        "surface_pct": 90.69319640564827,
+        "largest_surface_hole": 26,
+        "unique": 44,
+        "complete_unique": 0
+      }
+    }
+  ],
+  "watched": {
+    "arm": "creserve80",
+    "set": "5891-1",
+    "object": "chair",
+    "seed": 1,
+    "old": false,
+    "volume": true,
+    "surface": true
+  }
+}
