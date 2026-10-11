@@ -1526,9 +1526,16 @@ SIZE_FAMILIES = {  # family: its arms from the largest target to the smallest, w
 }
 
 
+def stalled_cell(cell: dict) -> bool:
+    """Whether a run stalled as a whole: most of its candidates end under ``STALL_FILL`` (e.g. the growth seed on a
+    piece the resampling cut off; results/m12c_stall_6378_chair.md). Such a run says nothing about the size."""
+    return 2 * cell.get("stalled", 0) > cell["candidates"]
+
+
 def size_rows(cells: list[dict]) -> list[dict]:
     """One row per pair, family and slack present in ``cells`` (sweep cells): the target, the valid candidates' mean
-    completeness, the selected build's, how many candidates meet the bar, and the time per candidate."""
+    completeness, the selected build's, how many candidates meet the bar, the time per candidate, and whether the run
+    stalled (``stalled_cell``)."""
     by_key = {(c["arm"], c["object"], c["set"]): c for c in cells}
     rows = []
     for set_number, obj in pair_order(cells):
@@ -1547,8 +1554,8 @@ def size_rows(cells: list[dict]) -> list[dict]:
                     "complete": c["complete"], "complete_seeds": c.get("complete_seeds", []),
                     "complete_surface": c.get("complete_surface", 0),
                     "complete_surface_seeds": c.get("complete_surface_seeds", []),
-                    "s_per_candidate": c["s_per_candidate"],
-                    "selected_seed": s.get("seed"), "selected_fill_pct": s.get("fill_pct", math.nan),
+                    "s_per_candidate": c["s_per_candidate"], "stalled": c.get("stalled", 0),
+                    "stalled_cell": stalled_cell(c), "selected_seed": s.get("seed"), "selected_fill_pct": s.get("fill_pct", math.nan),
                     "selected_largest_hole": s.get("largest_hole"),
                     "selected_surface_pct": s.get("surface_pct", math.nan),
                     "selected_largest_surface_hole": s.get("largest_surface_hole"),
@@ -1560,20 +1567,22 @@ def size_rows(cells: list[dict]) -> list[dict]:
 def size_rules(rows: list[dict]) -> list[dict]:
     """Per pair and family: the largest slack at which any candidate is complete, and at which the selected build
     is (None: at no slack run), with the slacks that were run; under the volume bar and, with ``_surface`` keys, the
-    surface bar."""
+    surface bar. Stalled runs (``stalled_cell``) are listed but left out of the largest slacks."""
     rules = {}
     for r in rows:
         rule = rules.setdefault((r["object"], r["set"], r["family"]),
                                 {"object": r["object"], "set": r["set"], "family": r["family"], "slacks": [],
                                  "complete_by_slack": {}, "any_complete": None, "selected_complete": None,
                                  "complete_surface_by_slack": {}, "any_complete_surface": None,
-                                 "selected_complete_surface": None})
+                                 "selected_complete_surface": None, "stalled_slacks": []})
         rule["slacks"].append(r["slack"])
+        if r.get("stalled_cell"):
+            rule["stalled_slacks"].append(r["slack"])
         for suffix in ("", "_surface"):
             rule[f"complete{suffix}_by_slack"][r["slack"]] = r[f"complete{suffix}"]
             for flag, key in ((r[f"complete{suffix}"], f"any_complete{suffix}"),
                               (r[f"selected_complete{suffix}"], f"selected_complete{suffix}")):
-                if flag and (rule[key] is None or r["slack"] > rule[key]):
+                if flag and not r.get("stalled_cell") and (rule[key] is None or r["slack"] > rule[key]):
                     rule[key] = r["slack"]
     return list(rules.values())
 
@@ -1583,8 +1592,8 @@ def size_report(rows: list[dict]) -> str:
     lines = ["| object | set | family | slack | target cells | valid | fill % (mean) | largest hole (mean) | "
              "surface % (mean) | largest surface hole (mean) | fill % (sel) | largest hole (sel) | surface % (sel) | "
              "largest surface hole (sel) | complete (sel, vol / surf) | candidates meeting the bar (vol / surf) | "
-             "s / candidate |",
-             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+             "s / candidate | stalled |",
+             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for r in rows:
         hole = "" if r["selected_largest_hole"] is None else str(r["selected_largest_hole"])
         surface_hole = "" if r.get("selected_largest_surface_hole") is None else str(r["selected_largest_surface_hole"])
@@ -1594,19 +1603,21 @@ def size_report(rows: list[dict]) -> str:
             f"{r['mean_surface_pct']:.1f} | {r['mean_largest_surface_hole']:.0f} | {r['selected_fill_pct']:.1f} | "
             f"{hole} | {r['selected_surface_pct']:.1f} | {surface_hole} | "
             f"{bars_text(r['selected_complete'], r['selected_complete_surface'])} | "
-            f"{bars_text(r['complete'], r['complete_surface'])} | {r['s_per_candidate']:.1f} |")
+            f"{bars_text(r['complete'], r['complete_surface'])} | {r['s_per_candidate']:.1f} | "
+            f"{r.get('stalled', 0)}{' (run stalled)' if r.get('stalled_cell') else ''} |")
     slacks = sorted({r["slack"] for r in rows}, reverse=True)
     lines += ["", "| object | set | family | largest slack, any candidate complete (vol / surf) | largest slack, "
               "selected complete (vol / surf) | candidates meeting the volume bar (" + " / ".join(f"{s:.1f}" for s in slacks)
-              + ") | candidates meeting the surface bar |",
-              "|---|---|---|---:|---:|---:|---:|"]
+              + ") | candidates meeting the surface bar | stalled runs (left out) |",
+              "|---|---|---|---:|---:|---:|---:|---:|"]
     for rule in size_rules(rows):
         counts = {suffix: " / ".join(str(rule[f"complete{suffix}_by_slack"].get(s, "-")) for s in slacks)
                   for suffix in ("", "_surface")}
         lines.append(f"| {rule['object']} | {rule['set']} | {rule['family']} | "
                      f"{bars_text(slack_text(rule['any_complete']), slack_text(rule['any_complete_surface']))} | "
                      f"{bars_text(slack_text(rule['selected_complete']), slack_text(rule['selected_complete_surface']))}"
-                     f" | {counts['']} | {counts['_surface']} |")
+                     f" | {counts['']} | {counts['_surface']} | "
+                     f"{', '.join(f'{x:.1f}' for x in rule['stalled_slacks']) or 'none'} |")
     return "\n".join(lines)
 
 

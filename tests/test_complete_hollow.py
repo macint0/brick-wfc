@@ -76,7 +76,7 @@ def test_size_rules_per_bar() -> None:
     assert (rule["any_complete"], rule["any_complete_surface"]) == (0.8, 1.0)
     assert (rule["selected_complete"], rule["selected_complete_surface"]) == (0.8, 1.0)
     assert rule["complete_surface_by_slack"] == {1.0: 1, 0.8: 2}
-    assert "| chair | 5891-1 | creserve | 0.8 / 1.0 | 0.8 / 1.0 | 0 / 1 | 1 / 2 |" in size_report(rows).splitlines()
+    assert "| chair | 5891-1 | creserve | 0.8 / 1.0 | 0.8 / 1.0 | 0 / 1 | 1 / 2 | none |" in size_report(rows).splitlines()
 
 
 def test_select_checks_a_run_with_the_rule_it_was_selected_by() -> None:

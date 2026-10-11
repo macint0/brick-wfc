@@ -72,15 +72,33 @@ def test_size_report_tables() -> None:
     lines = size_report(rows).splitlines()
     assert lines[0].startswith("| object | set | family | slack | target cells | valid |")
     assert lines[2] == ("| chair | 5891-1 | creserve | 0.8 | 2000 | 45/50 | 85.0 | 40 | 84.0 | 30 | 93.0 | 20 | 91.0 | "
-                        "20 | no / no | 1 / 1 | 12.5 |")
+                        "20 | no / no | 1 / 1 | 12.5 | 0 |")
     assert lines[3].startswith("| chair | 5891-1 | creserve | 0.7 |") and "| yes / yes | 2 / 2 | 12.5 |" in lines[3]
     assert "candidates meeting the volume bar (0.8 / 0.7) | candidates meeting the surface bar |" in lines[5]
-    assert lines[7] == "| chair | 5891-1 | creserve | 0.8 / 0.8 | 0.7 / 0.7 | 1 / 2 | 1 / 2 |"
+    assert lines[7] == "| chair | 5891-1 | creserve | 0.8 / 0.8 | 0.7 / 0.7 | 1 / 2 | 1 / 2 | none |"
     # a pair with no complete candidate at any slack, and one missing a slack
     lines = size_report(size_rows([cell("usable", [], False), cell("creserve60", [], False, set_number="6378-1"),
                                    cell("creserve", [], False, set_number="6378-1")])).splitlines()
-    assert "| chair | 6378-1 | creserve | none / none | none / none | 0 / 0 | 0 / 0 |" in lines  # slacks 1.0 / 0.6
-    assert "| chair | 5891-1 | usable | none / none | none / none | 0 / - | 0 / - |" in lines
+    assert "| chair | 6378-1 | creserve | none / none | none / none | 0 / 0 | 0 / 0 | none |" in lines  # slacks 1.0 / 0.6
+    assert "| chair | 5891-1 | usable | none / none | none / none | 0 / - | 0 / - | none |" in lines
+
+
+def test_stalled_runs_are_marked_and_left_out_of_the_largest_slacks() -> None:
+    from brickwfc.experiments.complete import stalled_cell
+
+    stub = cell("creserve70", [], True)  # every candidate under half the target, its stub "selected"
+    stub["stalled"] = 50
+    half = cell("creserve60", [2], False)
+    half["stalled"] = 25  # half stalled is not a stalled run
+    assert stalled_cell(stub) and not stalled_cell(half)
+    rows = size_rows([cell("creserve80", [], False), stub, half])
+    assert [r["stalled_cell"] for r in rows] == [False, True, False]
+    rule = size_rules(rows)[0]
+    assert rule["stalled_slacks"] == [0.7]
+    assert rule["selected_complete"] is None and rule["any_complete"] == 0.6  # the stalled 0.7 counts for nothing
+    lines = size_report(rows).splitlines()
+    assert lines[3].endswith("| 50 (run stalled) |") and lines[4].endswith("| 25 |")
+    assert lines[-1].endswith("| 0.7 |")
 
 
 def test_size_report_without_a_selected_build() -> None:
