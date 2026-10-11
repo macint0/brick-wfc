@@ -349,6 +349,21 @@ is the wrong quantity (interior cells are invisible: measure surface completenes
 looks have not moved (the complete chair is a colour mottle); nine pairs from three small sets is a narrow bench.
 Proposed order, pending Mac: completeness-first selection; size sweep to 0.6 with reserve-in-growth; surface-only bar
 with hollow targets; colour and symmetry; widen the bench before paper tables.
+**2026-10-11 (Mac: go on the recommendation yes / yes / no slack default; two worker sessions, this one coordinates):**
+- **Completeness-first selection — merged d478fd7, default.** `funnel.select(tiers=)`, `alt/features.Bar` (`--bar volume`:
+  fill ≥ 97%, largest hole ≤ 4, surface ≥ 98%, the default; `--bar surface`: surface ≥ 98% and largest *surface* hole ≤ 4,
+  interior cells invisible; `completeness` reports `largest_surface_hole`), `--no-complete-first` restores score order.
+  Complete builds also enter dedupe first. Re-rank of the cached creserve / creserve80 runs with no generation
+  (`experiments/select.py`, `results/m12c_select.md`; the old rule reproduces every stored selection, 18/18): the
+  5891-1 chair creserve80 seed 1 (98.7 / 4 / 98.3) is now selected, judge −0.294 → −0.351; the only change, since it is the
+  only complete candidate of 850 valid. The surface bar picks the same build on all 18 pairs (the binding threshold is the
+  surface share, 78–96% on the other old picks), though the largest surface hole is smaller than the largest hole on 12/18
+  (4956-1 car 345 → 38: holes are mostly interior).
+- **Size sweep below 0.8 — running** (`experiments/complete.py` arms creserve90 / creserve70 / creserve60 and the
+  usable70 / usable60 controls, `--steps sweep`, 5 workers, started 17:02; `size-report` → `results/m12b_size.md`):
+  per pair the largest slack at which any candidate, and the selected build, is complete.
+- creserve as the 3D default waits for the size sweep (decision (2) is yes in principle; the default changes with the
+  size rule in one commit). Next in the order, prepared as code while the PC is busy: hollow arms under the surface bar.
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
