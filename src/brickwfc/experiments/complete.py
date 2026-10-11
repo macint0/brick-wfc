@@ -58,6 +58,8 @@ import functools
 import hashlib
 import json
 import math
+import re
+import time
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import fields, replace
@@ -70,13 +72,14 @@ from scipy import ndimage
 from brickwfc.alt.candidates import Candidate, Context, d2_builder
 from brickwfc.alt.features import Bar, exposed, largest_component, occupancy
 from brickwfc.alt.inputs import DATA_DIR, learned_style, load_source
-from brickwfc.alt.pipeline import AltConfig, cache_key, make_context, make_target, sized_target, solid_scale_shell
+from brickwfc.alt.pipeline import (AltConfig, cache_key, make_context, make_target, resolve, scaled_target, sized_target,
+                                   solid_scale_shell)
 from brickwfc.alt.pipeline import main as pipeline_main
 from brickwfc.bricks.bottomup import SMALL_CELLS, BottomUpBuilder, _FitMap
 from brickwfc.bricks.build import placed_colors, slope_profiles
-from brickwfc.bricks.inventory import fits_inside, part_cells
+from brickwfc.bricks.inventory import fits_inside, part_cells, target_volume
 from brickwfc.bricks.parts import CATALOG, PlacedPart, extract_parts, shapes_of
-from brickwfc.bricks.shapes import surface
+from brickwfc.bricks.shapes import overhang_moment, surface, thinnest_section
 from brickwfc.bricks.style import StyleBias, styled_tileset
 from brickwfc.bricks.support import studded
 from brickwfc.experiments.demo import labeled_sheet
@@ -718,8 +721,45 @@ def step_holes(args: argparse.Namespace) -> None:
 # Sweep: sizing and the hole pass ----------------------------------------------------------------------------
 
 SWEEP_SETS = ("6378-1", "5891-1", "4956-1")
-STRUCTURES = {"chair": "a712684f-8e79-4ecd-81de-11aef42b50d4", "table": "858f0955-846e-4138-84d9-df66b66eddc2",
-              "car": "4b15b71c-f400-4e54-a118-f0c2afba6e17"}
+STRUCTURES = {  # BrickGPT test-split structures: the median-size one of each of the six most common categories
+    # (experiments/brickgpt.py: pick_objects; results/m12b_brickgpt.md)
+    "chair": "a712684f-8e79-4ecd-81de-11aef42b50d4", "table": "858f0955-846e-4138-84d9-df66b66eddc2",
+    "car": "4b15b71c-f400-4e54-a118-f0c2afba6e17", "sofa": "d1137e5f-7455-4287-9369-eed134020de7",
+    "vessel": "5c5f88b6-9e68-4df9-bf09-f8e7c2b38c47", "bench": "365bf4bd-7e5f-4c53-aac5-77859e9e796b"}
+PAIRS = tuple((s, o) for o in OBJECTS for s in SWEEP_SETS)  # the 9 sweep pairs (set, object), objects outer
+
+
+def load_pairs(path: Path | None) -> tuple[tuple[str, str], ...]:
+    """(set, object) pairs from a JSON file, or ``PAIRS`` without one. The file holds either ``"pairs"``: a list of
+    [set, object], or ``"sets"`` and ``"objects"``: every pair of them, objects outer (as ``PAIRS``). Objects are keys
+    of ``STRUCTURES``; sets are set numbers ("6378-1"); a pair may appear once."""
+    if path is None:
+        return PAIRS
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if "pairs" in data:
+        if "sets" in data or "objects" in data:
+            raise ValueError(f"{path}: give either pairs or sets and objects, not both")
+        pairs = [tuple(pair) for pair in data["pairs"]]
+    else:
+        pairs = [(s, o) for o in data["objects"] for s in data["sets"]]
+    if not pairs:
+        raise ValueError(f"{path}: no pairs")
+    for pair in pairs:
+        if len(pair) != 2 or not all(isinstance(x, str) for x in pair):
+            raise ValueError(f"{path}: a pair is [set, object], not {list(pair)}")
+        set_number, obj = pair
+        if obj not in STRUCTURES:
+            raise ValueError(f"{path}: unknown object {obj!r} (known: {', '.join(STRUCTURES)})")
+        if not re.fullmatch(r"\d+-\d+", set_number):
+            raise ValueError(f"{path}: {set_number!r} is not a set number like 6378-1")
+    if len(set(pairs)) < len(pairs):
+        raise ValueError(f"{path}: a pair appears twice")
+    return tuple(pairs)
+
+
+def pair_order(cells: Sequence[dict]) -> list[tuple[str, str]]:
+    """The (set, object) pairs of ``cells`` in the order they first appear (the order the steps built them in)."""
+    return list(dict.fromkeys((c["set"], c["object"]) for c in cells))
 HANG = ["--holes", "--hang"]
 ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed after the sweep); "old" is the
     # cached pre-fix run (run_dir), not run again
@@ -853,22 +893,21 @@ def step_sweep(args: argparse.Namespace) -> None:
     for arm in args.arms or ARMS:
         if arm == "old":
             continue
-        for obj in OBJECTS:
-            for set_number in SWEEP_SETS:
-                out = arm_dir(args.out, arm, set_number, obj, args.runs)
-                if arm == "usable" and same_target("usable", "hang", set_number, obj):
-                    print(f"{arm} {obj} {set_number}: same target as hang, not run", flush=True)
-                    continue
-                stats = out / "stats.json"
-                if stats.exists() and json.loads(stats.read_text(encoding="utf-8"))["requested"] == args.n:
-                    continue
-                target, _ = sized_target(load_source(set_number), arm_config(arm, obj))
-                print(f"{arm} {obj} {set_number}: slack {arm_config(arm, obj).fill_slack}, "
-                      f"target cells {int(target.mask.sum())}", flush=True)
-                argv = [set_number, "--shape", "brickgpt:" + STRUCTURES[obj], "--n", str(args.n), "--k", "1",
-                        "--workers", str(args.workers), "--out", str(out), *ARMS[arm][1]]
-                print(f"{arm} {obj} {set_number}: python -m brickwfc.alt {' '.join(argv)}", flush=True)
-                pipeline_main(argv)
+        for set_number, obj in args.pairs:
+            out = arm_dir(args.out, arm, set_number, obj, args.runs)
+            if arm == "usable" and same_target("usable", "hang", set_number, obj):
+                print(f"{arm} {obj} {set_number}: same target as hang, not run", flush=True)
+                continue
+            stats = out / "stats.json"
+            if stats.exists() and json.loads(stats.read_text(encoding="utf-8"))["requested"] == args.n:
+                continue
+            target, _ = sized_target(load_source(set_number), arm_config(arm, obj))
+            print(f"{arm} {obj} {set_number}: slack {arm_config(arm, obj).fill_slack}, "
+                  f"target cells {int(target.mask.sum())}", flush=True)
+            argv = [set_number, "--shape", "brickgpt:" + STRUCTURES[obj], "--n", str(args.n), "--k", "1",
+                    "--workers", str(args.workers), "--out", str(out), *ARMS[arm][1]]
+            print(f"{arm} {obj} {set_number}: python -m brickwfc.alt {' '.join(argv)}", flush=True)
+            pipeline_main(argv)
 
 
 def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) -> dict | None:
@@ -979,27 +1018,26 @@ def compare_report(cells: list[dict], pairs: Sequence[tuple[str, str]] = COMPARE
              + " | complete (sel, vol / surf) | stalled | better / worse |",
              "|---|---|---|---|" + "---:|" * (len(COMPARED) + 3)]
     for base, arm in pairs:
-        for obj in OBJECTS:
-            for set_number in SWEEP_SETS:
-                a, b = by_key.get((base, obj, set_number)), by_key.get((arm, obj, set_number))
-                if a is None or b is None or "selected" not in a or "selected" not in b:
-                    continue
-                row, better, worse = [], 0, 0
-                for _, value, higher, spec in COMPARED:
-                    x, y = value(a), value(b)
-                    if math.isclose(x, y, abs_tol=1e-9):
-                        mark = "="
-                    elif (y > x) == higher:
-                        mark, better = "+", better + 1
-                    else:
-                        mark, worse = "-", worse + 1
-                    row.append(f"{x:{spec}} -> {y:{spec}} {mark}")
-                same = ("-" if a.get("target_hash") is None or b.get("target_hash") is None
-                        else "yes" if a["target_hash"] == b["target_hash"] else "no")
-                lines.append(f"| {obj} | {set_number} | {ARMS[base][0]} -> {ARMS[arm][0]} | {same} | " + " | ".join(row)
-                             + f" | {bars_text(int(a['selected']['complete']), int(a['selected']['complete_surface']))} -> "
-                             f"{bars_text(int(b['selected']['complete']), int(b['selected']['complete_surface']))} | "
-                             f"{a.get('stalled', 0)} -> {b.get('stalled', 0)} | {better} / {worse} |")
+        for set_number, obj in pair_order(cells):
+            a, b = by_key.get((base, obj, set_number)), by_key.get((arm, obj, set_number))
+            if a is None or b is None or "selected" not in a or "selected" not in b:
+                continue
+            row, better, worse = [], 0, 0
+            for _, value, higher, spec in COMPARED:
+                x, y = value(a), value(b)
+                if math.isclose(x, y, abs_tol=1e-9):
+                    mark = "="
+                elif (y > x) == higher:
+                    mark, better = "+", better + 1
+                else:
+                    mark, worse = "-", worse + 1
+                row.append(f"{x:{spec}} -> {y:{spec}} {mark}")
+            same = ("-" if a.get("target_hash") is None or b.get("target_hash") is None
+                    else "yes" if a["target_hash"] == b["target_hash"] else "no")
+            lines.append(f"| {obj} | {set_number} | {ARMS[base][0]} -> {ARMS[arm][0]} | {same} | " + " | ".join(row)
+                         + f" | {bars_text(int(a['selected']['complete']), int(a['selected']['complete_surface']))} -> "
+                         f"{bars_text(int(b['selected']['complete']), int(b['selected']['complete_surface']))} | "
+                         f"{a.get('stalled', 0)} -> {b.get('stalled', 0)} | {better} / {worse} |")
     return "\n".join(lines) if len(lines) > 2 else ""
 
 
@@ -1014,19 +1052,18 @@ def sweep_sheets(cells: list[dict], out: Path, arms: Sequence[str] = tuple(ARMS)
     paths = []
     for which, sheet in (("preview", f"{name}_previews.png"), ("missing_png", f"{name}_missing.png")):
         images, labels = [], []
-        for obj in OBJECTS:
-            for set_number in SWEEP_SETS:
-                for arm in arms:
-                    c = by_key.get((obj, set_number, arm))
-                    if c is None or which not in c:
-                        images.append(blank)
-                        labels.append(f"{obj} {set_number}\n{ARMS[arm][0]}: no run")
-                        continue
-                    s = c["selected"]
-                    images.append(Path(c[which]))
-                    labels.append(f"{obj} {set_number}, {ARMS[arm][0]}\nfill {s['fill_pct']:.0f}%, surface "
-                                  f"{s['surface_pct']:.0f}%\nlargest hole {s['largest_hole']} (surface "
-                                  f"{s['largest_surface_hole']}), {s['parts']} parts")
+        for set_number, obj in pair_order(cells):
+            for arm in arms:
+                c = by_key.get((obj, set_number, arm))
+                if c is None or which not in c:
+                    images.append(blank)
+                    labels.append(f"{obj} {set_number}\n{ARMS[arm][0]}: no run")
+                    continue
+                s = c["selected"]
+                images.append(Path(c[which]))
+                labels.append(f"{obj} {set_number}, {ARMS[arm][0]}\nfill {s['fill_pct']:.0f}%, surface "
+                              f"{s['surface_pct']:.0f}%\nlargest hole {s['largest_hole']} (surface "
+                              f"{s['largest_surface_hole']}), {s['parts']} parts")
         path = out / sheet
         labeled_sheet(images, labels, path, columns=len(arms), width=500)
         paths.append(path)
@@ -1035,7 +1072,7 @@ def sweep_sheets(cells: list[dict], out: Path, arms: Sequence[str] = tuple(ARMS)
 
 def step_sweep_report(args: argparse.Namespace) -> None:
     arms = args.arms or list(ARMS)
-    cells = [c for obj in OBJECTS for set_number in SWEEP_SETS for arm in arms
+    cells = [c for set_number, obj in args.pairs for arm in arms
              if (c := sweep_cell(args, arm, set_number, obj)) is not None]
     name = args.report_name
     (args.out / f"{name}.json").write_text(json.dumps(cells, indent=2), encoding="utf-8")
@@ -1476,30 +1513,29 @@ def size_rows(cells: list[dict]) -> list[dict]:
     completeness, the selected build's, how many candidates meet the bar, and the time per candidate."""
     by_key = {(c["arm"], c["object"], c["set"]): c for c in cells}
     rows = []
-    for obj in OBJECTS:
-        for set_number in SWEEP_SETS:
-            for family, arms in SIZE_FAMILIES.items():
-                for arm, slack in arms:
-                    c = by_key.get((arm, obj, set_number))
-                    if c is None:
-                        continue
-                    s = c.get("selected", {})
-                    rows.append({
-                        "object": obj, "set": set_number, "family": family, "slack": slack, "arm": arm,
-                        "target_cells": c["target_cells"], "valid": c["valid"], "candidates": c["candidates"],
-                        "mean_fill_pct": c["mean_fill_pct"], "mean_largest_hole": c["mean_largest_hole"],
-                        "mean_surface_pct": c["mean_surface_pct"],
-                        "mean_largest_surface_hole": c.get("mean_largest_surface_hole", math.nan),
-                        "complete": c["complete"], "complete_seeds": c.get("complete_seeds", []),
-                        "complete_surface": c.get("complete_surface", 0),
-                        "complete_surface_seeds": c.get("complete_surface_seeds", []),
-                        "s_per_candidate": c["s_per_candidate"],
-                        "selected_seed": s.get("seed"), "selected_fill_pct": s.get("fill_pct", math.nan),
-                        "selected_largest_hole": s.get("largest_hole"),
-                        "selected_surface_pct": s.get("surface_pct", math.nan),
-                        "selected_largest_surface_hole": s.get("largest_surface_hole"),
-                        "selected_complete": bool(s) and complete(s),
-                        "selected_complete_surface": bool(s) and complete(s, "surface")})
+    for set_number, obj in pair_order(cells):
+        for family, arms in SIZE_FAMILIES.items():
+            for arm, slack in arms:
+                c = by_key.get((arm, obj, set_number))
+                if c is None:
+                    continue
+                s = c.get("selected", {})
+                rows.append({
+                    "object": obj, "set": set_number, "family": family, "slack": slack, "arm": arm,
+                    "target_cells": c["target_cells"], "valid": c["valid"], "candidates": c["candidates"],
+                    "mean_fill_pct": c["mean_fill_pct"], "mean_largest_hole": c["mean_largest_hole"],
+                    "mean_surface_pct": c["mean_surface_pct"],
+                    "mean_largest_surface_hole": c.get("mean_largest_surface_hole", math.nan),
+                    "complete": c["complete"], "complete_seeds": c.get("complete_seeds", []),
+                    "complete_surface": c.get("complete_surface", 0),
+                    "complete_surface_seeds": c.get("complete_surface_seeds", []),
+                    "s_per_candidate": c["s_per_candidate"],
+                    "selected_seed": s.get("seed"), "selected_fill_pct": s.get("fill_pct", math.nan),
+                    "selected_largest_hole": s.get("largest_hole"),
+                    "selected_surface_pct": s.get("surface_pct", math.nan),
+                    "selected_largest_surface_hole": s.get("largest_surface_hole"),
+                    "selected_complete": bool(s) and complete(s),
+                    "selected_complete_surface": bool(s) and complete(s, "surface")})
     return rows
 
 
@@ -1593,22 +1629,21 @@ def size_sheet(cells: list[dict], out: Path, family: str, path: Path) -> Path:
     blank.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (8, 8), (255, 255, 255)).save(blank)
     images, labels = [], []
-    for obj in OBJECTS:
-        for set_number in SWEEP_SETS:
-            for arm, slack in SIZE_FAMILIES[family]:
-                c = by_key.get((arm, obj, set_number))
-                if c is None or "preview" not in c:
-                    images.append(blank)
-                    labels.append(f"{obj} {set_number}, {slack:.1f}\nno run")
-                    continue
-                s = c["selected"]
-                images.append(Path(c["preview"]))
-                done = [name for name, flag in (("vol", s["complete"]), ("surf", s["complete_surface"])) if flag]
-                labels.append(f"{obj} {set_number}, {slack:.1f}{', COMPLETE (' + ' + '.join(done) + ')' if done else ''}\n"
-                              f"fill {s['fill_pct']:.1f}%, surface {s['surface_pct']:.1f}%\n"
-                              f"largest hole {s['largest_hole']} (surface {s['largest_surface_hole']}), "
-                              f"{c['target_cells']} cells\n"
-                              f"{c['complete']} / {c['complete_surface']} of {c['valid']} valid complete (vol / surf)")
+    for set_number, obj in pair_order(cells):
+        for arm, slack in SIZE_FAMILIES[family]:
+            c = by_key.get((arm, obj, set_number))
+            if c is None or "preview" not in c:
+                images.append(blank)
+                labels.append(f"{obj} {set_number}, {slack:.1f}\nno run")
+                continue
+            s = c["selected"]
+            images.append(Path(c["preview"]))
+            done = [name for name, flag in (("vol", s["complete"]), ("surf", s["complete_surface"])) if flag]
+            labels.append(f"{obj} {set_number}, {slack:.1f}{', COMPLETE (' + ' + '.join(done) + ')' if done else ''}\n"
+                          f"fill {s['fill_pct']:.1f}%, surface {s['surface_pct']:.1f}%\n"
+                          f"largest hole {s['largest_hole']} (surface {s['largest_surface_hole']}), "
+                          f"{c['target_cells']} cells\n"
+                          f"{c['complete']} / {c['complete_surface']} of {c['valid']} valid complete (vol / surf)")
     labeled_sheet(images, labels, path, columns=len(SIZE_FAMILIES[family]), width=500)
     return path
 
@@ -1617,7 +1652,7 @@ def step_size_report(args: argparse.Namespace) -> None:
     """The size sweep's tables (``size_report``) and compare pairs, a sheet per family, and the complete candidates
     saved under ``complete_candidates/``."""
     arms = [arm for family in SIZE_FAMILIES.values() for arm, _ in family]
-    cells = [c for obj in OBJECTS for set_number in SWEEP_SETS for arm in arms
+    cells = [c for set_number, obj in args.pairs for arm in arms
              if (c := sweep_cell(args, arm, set_number, obj)) is not None]
     rows = size_rows(cells)
     saved = save_complete_candidates(cells, args.out / "complete_candidates")
@@ -1684,17 +1719,122 @@ def step_hollow_sizing(args: argparse.Namespace) -> None:
     folder.mkdir(parents=True, exist_ok=True)
     cells = []
     for arm in HOLLOW_SIZING_ARMS:
-        for obj in OBJECTS:
-            for set_number in SWEEP_SETS:
-                path = folder / f"{arm}_{set_number}_{obj}.json"
-                if not path.exists():
-                    path.write_text(json.dumps(hollow_sizing_cell(arm, set_number, obj, args.out), indent=1),
-                                    encoding="utf-8")
-                cells.append(json.loads(path.read_text(encoding="utf-8")))
-                print(f"{arm} {obj} {set_number}: done", flush=True)
+        for set_number, obj in args.pairs:
+            path = folder / f"{arm}_{set_number}_{obj}.json"
+            if not path.exists():
+                path.write_text(json.dumps(hollow_sizing_cell(arm, set_number, obj, args.out), indent=1),
+                                encoding="utf-8")
+            cells.append(json.loads(path.read_text(encoding="utf-8")))
+            print(f"{arm} {obj} {set_number}: done", flush=True)
     text = hollow_sizing_report(cells) + "\n"
     (args.out / "hollow_sizing.json").write_text(json.dumps(cells, indent=1), encoding="utf-8")
     (args.out / "hollow_sizing.md").write_text(text, encoding="utf-8")
+    print(text)
+
+
+# Bench: a wider set of pairs, sized before the run (M12c step 5) ---------------------------------------------
+
+BENCH_ARMS = ("creserve", "creserve80")  # the arms the bench is planned for (the size rule picks one later)
+BENCH_WORKERS = 5
+
+
+def bench_sizing_cell(arm: str, set_number: str, obj: str) -> dict:
+    """One pair's target under ``arm``, sized as the run would size it (no generation): its cells, the object's
+    (without support columns), the usable sizing's left-out parts, and the thin-aware scale's result on the object
+    (its thinnest horizontal section, 0 if the scale cut it in two, and its overhang moment)."""
+    source = load_source(set_number)
+    config = resolve(arm_config(arm, obj))
+    clock = time.perf_counter()
+    target, details = sized_target(source, config)
+    obj_mask = scaled_target(source, replace(config, supports=False), details["volume"], DATA_DIR).mask
+    seconds = time.perf_counter() - clock
+    same_grid = obj_mask.shape == target.mask.shape
+    return {"arm": arm, "set": set_number, "object": obj, "slack": config.fill_slack,
+            "inventory_parts": int(sum(source.inventory.values())),
+            "inventory_cells": target_volume(source.inventory, "fillable"), "grid": list(target.mask.shape),
+            "target_cells": int(target.mask.sum()), "object_cells": int(obj_mask.sum()),
+            "support_cells": int((target.mask & ~obj_mask).sum()) if same_grid else None,
+            "left_out": details.get("left_out", {}), "left_out_cells": details.get("left_out_cells", 0),
+            "rounds": details.get("rounds"), "settled": details.get("settled"),
+            "thinnest_section": thinnest_section(obj_mask), "overhang_moment": overhang_moment(obj_mask),
+            "sizing_s": seconds}
+
+
+def run_seconds(out: Path, arms: Sequence[str] = BENCH_ARMS) -> list[dict]:
+    """Every finished run of ``arms`` under ``out``/sweep: its target cells, CPU seconds per candidate (generation and
+    physics) and wall seconds."""
+    runs = []
+    for arm in arms:
+        for path in sorted((out / "sweep" / arm).glob("*/*/stats.json")):
+            stats = json.loads(path.read_text(encoding="utf-8"))
+            cpu = stats["generation_cpu_s"] + stats["physics_cpu_s"]
+            runs.append({"arm": arm, "run": path.parent.as_posix(), "target_cells": stats["shape_cells"],
+                         "candidates": stats["requested"], "cpu_s_per_candidate": cpu / stats["requested"],
+                         "wall_s": stats["wall_time_s"], "parallel_overhead": stats["wall_time_s"] * BENCH_WORKERS / cpu})
+    return runs
+
+
+def time_model(runs: Sequence[dict]) -> dict:
+    """CPU seconds per candidate = a x target cells ** b, fitted in log-log to ``runs``, and the median ratio of a run's
+    wall time to its CPU time over ``BENCH_WORKERS`` workers (the parallel overhead)."""
+    cells = np.log([r["target_cells"] for r in runs])
+    seconds = np.log([r["cpu_s_per_candidate"] for r in runs])
+    b, log_a = np.polyfit(cells, seconds, 1)
+    residual = seconds - (log_a + b * cells)
+    return {"a": float(np.exp(log_a)), "b": float(b), "runs": len(runs),
+            "cells_range": [int(min(r["target_cells"] for r in runs)), int(max(r["target_cells"] for r in runs))],
+            "log_residual_sd": float(residual.std()),
+            "parallel_overhead": float(np.median([r["parallel_overhead"] for r in runs]))}
+
+
+def predicted_minutes(model: dict, target_cells: int, candidates: int = 50) -> float:
+    """Wall minutes of a run of ``candidates`` on ``BENCH_WORKERS`` workers under ``model``."""
+    per_candidate = model["a"] * target_cells ** model["b"]
+    return candidates * per_candidate / BENCH_WORKERS * model["parallel_overhead"] / 60
+
+
+def bench_report(cells: Sequence[dict], model: dict, n: int) -> str:
+    lines = ["| object | set | slack | inventory parts | grid (YxZxX) | target cells | object cells | support cells | "
+             "left out (cells) | usable rounds | thinnest section | overhang moment | est. minutes |",
+             "|---|---|---:|---:|---|---:|---:|---:|---|---:|---:|---:|---:|"]
+    for c in cells:
+        left = ", ".join(f"{name} x{k}" for name, k in c["left_out"].items())
+        lines.append(f"| {c['object']} | {c['set']} | {c['slack']:.1f} | {c['inventory_parts']} | "
+                     f"{'x'.join(map(str, c['grid']))} | {c['target_cells']} | {c['object_cells']} | "
+                     f"{'—' if c['support_cells'] is None else c['support_cells']} | "
+                     f"{c['left_out_cells']}{f' ({left})' if left else ''} | {c['rounds']} | "
+                     f"{'**0 (cut)**' if c['thinnest_section'] == 0 else c['thinnest_section']} | "
+                     f"{c['overhang_moment']:.0f} | {predicted_minutes(model, c['target_cells'], n):.1f} |")
+    totals = []
+    for arm in dict.fromkeys(c["arm"] for c in cells):
+        minutes = sum(predicted_minutes(model, c["target_cells"], n) for c in cells if c["arm"] == arm)
+        totals.append(f"{arm}: {sum(c['arm'] == arm for c in cells)} pairs, {minutes / 60:.1f} h")
+    lines += ["", f"Time model: CPU s per candidate = {model['a']:.3g} x target cells ^ {model['b']:.2f} (fitted on "
+              f"{model['runs']} runs, {model['cells_range'][0]}-{model['cells_range'][1]} cells, log residual sd "
+              f"{model['log_residual_sd']:.2f}), x {model['parallel_overhead']:.2f} parallel overhead, {n} candidates on "
+              f"{BENCH_WORKERS} workers. Totals: " + "; ".join(totals) + "."]
+    return "\n".join(lines)
+
+
+def step_bench_plan(args: argparse.Namespace) -> None:
+    """Sizing only, for ``args.pairs`` under ``BENCH_ARMS``: one json per pair and arm under ``bench_sizing/``
+    (resumable), then the table with an estimated run time per pair (``time_model`` on the cached runs of the arms)."""
+    folder = args.out / "bench_sizing"
+    folder.mkdir(parents=True, exist_ok=True)
+    cells = []
+    for arm in BENCH_ARMS:
+        for set_number, obj in args.pairs:
+            path = folder / f"{arm}_{set_number}_{obj}.json"
+            if not path.exists():
+                path.write_text(json.dumps(bench_sizing_cell(arm, set_number, obj), indent=1), encoding="utf-8")
+            cells.append(json.loads(path.read_text(encoding="utf-8")))
+            print(f"{arm} {obj} {set_number}: {cells[-1]['target_cells']} cells", flush=True)
+    runs = run_seconds(args.out)
+    model = time_model(runs)
+    text = bench_report(cells, model, args.n) + "\n"
+    (args.out / "bench_plan.json").write_text(json.dumps({"cells": cells, "model": model, "runs": runs}, indent=1),
+                                               encoding="utf-8")
+    (args.out / "bench_plan.md").write_text(text, encoding="utf-8")
     print(text)
 
 
@@ -1704,7 +1844,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=Path("out/m12b_complete"))
     parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report", "sweep", "sweep-report", "holes", "old-vs-base",
                                                                            "small-only", "remnants", "size-report",
-                                                                           "hollow-sizing"])
+                                                                           "hollow-sizing", "bench-plan"])
     parser.add_argument("--per-pair", type=int, default=10, help="trace: builds replayed per pair (selected first)")
     parser.add_argument("--workers", type=int, default=5)
     parser.add_argument("--n", type=int, default=50, help="sweep: candidates per run")
@@ -1712,7 +1852,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--arms", nargs="+", choices=list(ARMS), help="sweep, sweep-report: these arms (default: all; "
                         "the small-part comparison: " + " ".join(SMALL_ARMS) + ")")
     parser.add_argument("--report-name", default="sweep", help="sweep-report: file names (<name>.md, .json, sheets)")
+    parser.add_argument("--pairs", type=Path, help="sweep, sweep-report, size-report, hollow-sizing, bench-plan: a JSON "
+                        "file of (set, object) pairs (``load_pairs``; e.g. examples/m12c_bench.json); default: the 9 "
+                        "sweep pairs")
     args = parser.parse_args(argv)
+    args.pairs = load_pairs(args.pairs)
     args.out.mkdir(parents=True, exist_ok=True)
     if "final" in args.steps:
         step_final(args)
@@ -1736,6 +1880,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         step_size_report(args)
     if "hollow-sizing" in args.steps:
         step_hollow_sizing(args)
+    if "bench-plan" in args.steps:
+        step_bench_plan(args)
     return 0
 
 
