@@ -79,7 +79,8 @@ def test_compare_report_marks_each_difference_by_its_direction() -> None:
     def cell(arm: str, fill: float, holes: int, largest: int, valid: int, seconds: float) -> dict:
         return {"arm": arm, "set": "6378-1", "object": "table", "valid": valid, "s_per_candidate": seconds,
                 "stalled": 0, "selected": {"fill_pct": fill, "holes": holes, "largest_hole": largest,
-                                           "surface_pct": 90.0, "tips_pct": 50.0, "complete": False}}
+                                           "surface_pct": 90.0, "largest_surface_hole": largest, "tips_pct": 50.0,
+                                           "complete": False, "complete_surface": False}}
 
     text = compare_report([cell("usable", 80.0, 10, 30, 50, 5.0), cell("connected", 85.0, 12, 30, 49, 4.0)])
     row = text.splitlines()[2]
