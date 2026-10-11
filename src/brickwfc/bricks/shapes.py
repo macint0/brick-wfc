@@ -263,27 +263,76 @@ def from_heights(heights: np.ndarray, cells: float, scale_height: bool) -> tuple
     return extrude(scaled_heights(f)), f
 
 
+def model_occupancy(placed: Sequence[PlacedPart]) -> Mask:
+    """The cells of a (voxelized) model's parts on the grid of its extent."""
+    shape = tuple(max(c[i] for p in placed for c in p.cells()) + 1 for i in range(3))
+    occupied = np.zeros(shape, dtype=bool)
+    for part in placed:
+        for cell in part.cells():
+            occupied[cell] = True
+    return occupied
+
+
 def from_model(placed: Sequence[PlacedPart], cells: float, solid_columns: bool = True, shell: int = 0,
                keep_sections: bool = False) -> Mask:
     """The cells of a (voxelized) model, scaled uniformly so the volume is about ``cells``. With
     ``solid_columns``, each column is filled from the ground to its top cell first: the model's massing
     rather than its exact cells (a voxelized model keeps only the catalog parts on the stud grid, so its
     cells are a sparse, partial view)."""
-    shape = tuple(max(c[i] for p in placed for c in p.cells()) + 1 for i in range(3))
-    occupied = np.zeros(shape, dtype=bool)
-    for part in placed:
-        for cell in part.cells():
-            occupied[cell] = True
-    return scaled_to(occupied, cells, solid_columns, shell, keep_sections)
+    return scaled_to(model_occupancy(placed), cells, solid_columns, shell, keep_sections)
+
+
+def reconnect(mask: Mask) -> tuple[Mask, int]:
+    """``mask`` made one piece across faces where one empty cell per layer can join two pieces, and the cells added.
+
+    Nearest-neighbour resampling can cut a thin diagonal feature (a chair's caster arm, whose rows touch the hub
+    only at a corner) into a separate piece that connected growth cannot reach and that no build can join
+    (results/m12c_stall_6378_chair.md). While the mask has more than one piece: every empty cell that touches two
+    pieces across faces is a candidate; candidates in one column (z, x) joining the same two pieces form a bridge,
+    added in every layer of it (a joint as tall as the contact); the bridge with the fewest cells is added, ties
+    by the lowest index of its first cell. Pieces no single cell can join stay as they are. A mask that is one
+    piece is returned unchanged."""
+    mask = mask.copy()
+    added = 0
+    steps = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
+    while True:
+        labels, count = ndimage.label(mask)
+        if count <= 1:
+            return mask, added
+        padded = np.pad(labels, 1)
+        ny, nz, nx = mask.shape
+        touched = np.stack([padded[1 + dy:1 + dy + ny, 1 + dz:1 + dz + nz, 1 + dx:1 + dx + nx]
+                            for dy, dz, dx in steps])
+        low = np.where(touched > 0, touched, count + 1).min(axis=0)
+        high = touched.max(axis=0)
+        joining = ~mask & (high > 0) & (low < high)
+        if not joining.any():
+            return mask, added
+        bridges: dict[tuple[int, int, int, int], list[int]] = {}
+        for y, z, x in np.argwhere(joining).tolist():  # in index order
+            bridges.setdefault((z, x, int(low[y, z, x]), int(high[y, z, x])), []).append(y)
+        (z, x, _, _), layers = min(bridges.items(), key=lambda item: (
+            len(item[1]), int(np.ravel_multi_index((item[1][0], item[0][0], item[0][1]), mask.shape))))
+        mask[layers, z, x] = True
+        added += len(layers)
 
 
 def scaled_to(occupied: Mask, cells: float, solid_columns: bool = False, shell: int = 0,
               keep_sections: bool = False) -> Mask:
     """A 3D mask in cells (1 stud x 1 stud x 1 plate), scaled uniformly so the volume is about ``cells``
-    and cut to its bounds; with ``solid_columns``, each column filled from the ground to its top cell first;
-    with ``shell`` > 0, hollowed after scaling (``hollow``), so the same volume makes a larger object. With
-    ``keep_sections``, the scale keeps thin parts thick and under the load they carry (``fit_scale`` with
-    ``thinnest_section`` and ``overhang_moment`` of the unhollowed shape)."""
+    and cut to its bounds (``scale_and_join``)."""
+    return scale_and_join(occupied, cells, solid_columns, shell, keep_sections)[0]
+
+
+def scale_and_join(occupied: Mask, cells: float, solid_columns: bool = False, shell: int = 0,
+                   keep_sections: bool = False) -> tuple[Mask, int]:
+    """A 3D mask in cells (1 stud x 1 stud x 1 plate), scaled uniformly so the volume is about ``cells``
+    and cut to its bounds, and the cells added to keep it one piece; with ``solid_columns``, each column filled
+    from the ground to its top cell first; with ``shell`` > 0, hollowed after scaling (``hollow``), so the same
+    volume makes a larger object. With ``keep_sections``, the scale keeps thin parts thick and under the load they
+    carry (``fit_scale`` with ``thinnest_section`` and ``overhang_moment`` of the unhollowed shape). The scaled
+    solid is joined into one piece (``reconnect``, M12c) before it is hollowed; the scale is fitted before that,
+    on the resampled volume."""
     if solid_columns:
         occupied = extrude(np.round(height_map_of(occupied)).astype(np.int64))
 
@@ -296,8 +345,10 @@ def scaled_to(occupied: Mask, cells: float, solid_columns: bool = False, shell: 
     section = (lambda f: thinnest_section(solid(f))) if keep_sections else None
     moment = (lambda f: overhang_moment(solid(f))) if keep_sections else None
     f = fit_scale(lambda f: int(at(f).sum()), cells, 2 if shell else 3, section=section, moment=moment)
-    mask = at(f)
-    return mask[bounds(mask)]
+    mask, added = reconnect(solid(f))
+    if shell:
+        mask = hollow(mask, shell)
+    return mask[bounds(mask)], added
 
 
 SUPPORT_PERIOD, SUPPORT_WIDTH = 4, 2  # hollow: 2 x 2-stud pillars every 4 studs

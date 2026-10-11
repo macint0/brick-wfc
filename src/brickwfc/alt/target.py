@@ -48,10 +48,10 @@ from brickwfc.bricks.shapes import (
     bounds,
     column_heights,
     from_heights,
-    from_model,
+    model_occupancy,
     preferred_colors,
     resample,
-    scaled_to,
+    scale_and_join,
     sized_for,
     with_supports,
 )
@@ -70,6 +70,7 @@ class Target:
     preferred: np.ndarray | None  # (Z, X) color names, "" for no preference
     description: str
     plane: Plane | None = None  # with ``symmetric``: the object's mirror plane
+    reconnected: int = 0  # cells added to join the scaled object into one piece (``shapes.reconnect``)
 
 
 def takes_supports(spec: str) -> bool:
@@ -110,7 +111,8 @@ def load_target(spec: str, cells: float, colors: Sequence[BrickColor], height_ma
             mask = mask | (reflected(extra, plane) & ~obj)
     hollowed = ", supports" + (f" up to {support_height} cells" if support_height else "") if supports else ""
     found = f", mirror plane {plane.name} ({plane.score:.2f})" if plane is not None else ", no mirror plane"
-    return Target(mask, target.preferred, target.description[:-1] + hollowed + found + ")", plane)
+    return Target(mask, target.preferred, target.description[:-1] + hollowed + found + ")", plane,
+                  target.reconnected)
 
 
 def _load(spec: str, cells: float, colors: Sequence[BrickColor], height_map: Path | None, color_map: Path | None,
@@ -146,8 +148,8 @@ def _load(spec: str, cells: float, colors: Sequence[BrickColor], height_map: Pat
                 raise ValueError(f"{spec}: no bricks")
             occupied, kind = brickgpt.occupancy(bricks), "BrickGPT structure"
         kind += ", solid columns" if columns else ", exact cells"
-        return Target(finish(scaled_to(occupied, cells, columns, hollow, keep_sections)), None,
-                      f"{name} ({kind}{hollowed})")
+        mask, added = scale_and_join(occupied, cells, columns, hollow, keep_sections)
+        return Target(finish(mask), None, f"{name} ({kind}{hollowed}{joined_text(added)})", reconnected=added)
     if spec in SHAPES:
         return Target(sized_for(spec, cells), None, f"{spec} (primitive)")
     if is_image:
@@ -172,6 +174,10 @@ def _load(spec: str, cells: float, colors: Sequence[BrickColor], height_map: Pat
     if not placed:
         raise ValueError(f"{spec}: no catalog parts on the stud grid to take a shape from")
     kind = "model, exact cells" if exact else "model, solid columns"
-    return Target(finish(from_model(placed, cells, solid_columns=not exact, shell=hollow, keep_sections=keep_sections)),
-                  None,
-                  f"{path.stem if path.suffix else spec} ({kind}{hollowed})")
+    mask, added = scale_and_join(model_occupancy(placed), cells, not exact, hollow, keep_sections)
+    return Target(finish(mask), None, f"{path.stem if path.suffix else spec} ({kind}{hollowed}{joined_text(added)})",
+                  reconnected=added)
+
+
+def joined_text(added: int) -> str:
+    return f", reconnected {added} cells" if added else ""

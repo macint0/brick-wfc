@@ -1759,7 +1759,8 @@ def bench_sizing_cell(arm: str, set_number: str, obj: str) -> dict:
             "left_out": details.get("left_out", {}), "left_out_cells": details.get("left_out_cells", 0),
             "rounds": details.get("rounds"), "settled": details.get("settled"),
             "thinnest_section": thinnest_section(obj_mask), "overhang_moment": overhang_moment(obj_mask),
-            "pieces": int(ndimage.label(target.mask)[1]), "sizing_s": seconds}
+            "pieces": int(ndimage.label(target.mask)[1]), "reconnected": details.get("reconnected", 0),
+            "sizing_s": seconds}
 
 
 def run_seconds(out: Path, arms: Sequence[str] = BENCH_ARMS) -> list[dict]:
@@ -1797,8 +1798,8 @@ def predicted_minutes(model: dict, target_cells: int, candidates: int = 50) -> f
 
 def bench_report(cells: Sequence[dict], model: dict, n: int) -> str:
     lines = ["| object | set | slack | inventory parts | grid (YxZxX) | target cells | object cells | support cells | "
-             "left out (cells) | usable rounds | thinnest section | overhang moment | pieces | est. minutes |",
-             "|---|---|---:|---:|---|---:|---:|---:|---|---:|---:|---:|---:|---:|"]
+             "left out (cells) | usable rounds | thinnest section | overhang moment | pieces | reconnected | "
+             "est. minutes |", "|---|---|---:|---:|---|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|"]
     for c in cells:
         left = ", ".join(f"{name} x{k}" for name, k in c["left_out"].items())
         lines.append(f"| {c['object']} | {c['set']} | {c['slack']:.1f} | {c['inventory_parts']} | "
@@ -1806,7 +1807,7 @@ def bench_report(cells: Sequence[dict], model: dict, n: int) -> str:
                      f"{'—' if c['support_cells'] is None else c['support_cells']} | "
                      f"{c['left_out_cells']}{f' ({left})' if left else ''} | {c['rounds']} | "
                      f"{'**0 (cut)**' if c['thinnest_section'] == 0 else c['thinnest_section']} | "
-                     f"{c['overhang_moment']:.0f} | {pieces_text(c.get('pieces'))} | "
+                     f"{c['overhang_moment']:.0f} | {pieces_text(c.get('pieces'))} | {c.get('reconnected', '—')} | "
                      f"{predicted_minutes(model, c['target_cells'], n):.1f} |")
     totals = []
     for arm in dict.fromkeys(c["arm"] for c in cells):

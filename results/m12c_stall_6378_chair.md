@@ -116,3 +116,88 @@ Expect, unless fix (1) goes in first:
 - **All 8 chairs:** never complete.
 
 The other 100 bench targets are one piece.
+
+## Fix (1) built: targets are joined after resampling (2026-10-11, m12c-reconnect)
+
+`shapes.reconnect`, called by `shapes.scale_and_join` (and so by `scaled_to`) on the scaled solid, before hollowing
+and before support columns. While the mask has more than one face-connected piece:
+- **Candidates:** every empty cell touching two pieces across faces. The candidates in one column (z, x) that join the
+  same two pieces form a bridge, added in every layer of the contact.
+- **Choice:** the bridge with the fewest cells, ties by the lowest index.
+- **Pieces no single cell can join** stay as they are; `bench-plan`'s `pieces` column would show them.
+
+**Reporting:** the cells added appear in the target description ("reconnected N cells"), in the sizing details
+(`reconnected`, which goes into stats.json), in a pipeline line, and in a `bench-plan` column. The scale is still fitted
+on the resampled volume, so it is unchanged.
+
+**Sizing-only verification** (no generation, one process):
+- **Cached targets:** the 45 cached targets of the creserve, creserve90, creserve80, creserve70 and creserve60 arms,
+  re-sized, are byte-identical to their cache-key masks on 40 of 45. The 5 that differ are exactly the cut 6378-1
+  chair. Its new masks are supersets: only the bridge cells are added, so only these cache keys change.
+- **Bench targets:** all 108 are now one piece. The 100 that were one piece keep their cell counts from the dry run.
+
+| target | slack | pieces before | cells before | cells added | pieces after |
+|---|---:|---:|---:|---:|---:|
+| chair 6378-1 (cached) | 1.0 | 2 | 1326 | 5 | 1 |
+| chair 6378-1 (cached) | 0.9 | 2 | 1204 | 5 | 1 |
+| chair 6378-1 (cached) | 0.8 | 2 | 1138 | 5 | 1 |
+| chair 6378-1 (cached) | 0.7 | 2 | 979 | 4 | 1 |
+| chair 6378-1 (cached) | 0.6 | 4 | 799 | 10 | 1 |
+| chair 7796-1 (bench) | 1.0 | 4 | 219 | 3 | 1 |
+| chair 6370-1 (bench) | 1.0 | 4 | 799 | 10 | 1 |
+| chair 6372-1 (bench) | 1.0 | 2 | 1151 | 5 | 1 |
+| chair 7796-1 (bench) | 0.8 | 3 | 177 | 3 | 1 |
+| chair 6370-1 (bench) | 0.8 | 4 | 682 | 8 | 1 |
+| chair 6372-1 (bench) | 0.8 | 2 | 941 | 4 | 1 |
+| every other bench target (100) | 1.0 / 0.8 | 1 | — | 0 | 1 |
+
+### One piece is not yet a brick joint
+
+**The seed region:** the 6378-1 chair at 0.7 and the 6372-1 chair at 0.8 are now one piece, so their seed region (still
+the largest ground region, a caster at z1, x0) lies on it.
+
+**But a one-cell neck is not reliably buildable:**
+- **The neck:** the arm still meets the hub through one cell per layer (the bridge at z3, x4 meets the hub row only at
+  z4, x4).
+- **Why that matters:** bricks join only by overlapping vertically, so the growth must place a part straddling the
+  neck while resting on something already built.
+- **What happens:** seeded on the far caster, it fills the neck's cells from the arm side first, for example a 3-layer
+  brick at layers 3–5, then a 1×4 plate at layer 6. After that, no placement can join the hub. In seed 1 at 0.7 the
+  growth crosses the bridge into the next arm (18 parts) and still stops at layer 6.
+
+New candidates of the creserve arm (`alt.candidates.generate`, seeds 0–9, nothing written):
+
+| target | bridge | stalled (< 50% fill) | the other seeds: fill % / largest hole |
+|---|---|---:|---|
+| chair 6378-1, 0.7 (before the fix: 50/50 stalled) | 1 cell per layer (as built) | 5/10 | 97.0 / 7, 88.4 / 56, 94.6 / 25, 96.0 / 25, 95.0 / 7 |
+| chair 6378-1, 0.7 | 2 × 2 block per layer (both diagonal cells) | 4/10 | 93.2 / 27, 92.4 / 23, 97.4 / 23, 94.7 / 14, 88.2 / 56, 96.9 / 6 |
+| chair 6372-1, 0.8 | 1 cell per layer | 5/10 | 87.1 / 59, 91.0 / 29, 94.1 / 25, 77.5 / 69, 87.2 / 30 |
+
+- **Selection works again:** half the seeds now build the whole chair, so the best of a run is near the bar. One 0.7
+  candidate is at 97.0% fill, largest hole 7, against none above 4% before. The stalled half costs candidates, not the
+  selection.
+- **Widening the bridge to a 2 × 2 block** changes 5/10 to 4/10, within noise on 10 seeds. Not adopted.
+
+### Is the seed guard (2) still worth it?
+
+**Not as specified.** "Seed in the largest piece's ground region" does nothing once every target is one piece.
+
+**But the condition it was meant for still occurs.** A one-piece target can still give a seed with no buildable path to
+the rest: half the seeds above. The seed rule ranks ground regions by size first, and on these chairs the largest
+region is an outer caster (4 cells) rather than the hub's column (3 cells).
+
+Two guards would do it. Neither is built: each changes generation, so it needs a flag or `BUILDER_VERSION` 3, which
+would drop every cached d2 candidate.
+- **Re-grow on a stall** (about 20 lines). If the growth from the seed region covers less than half the target, start
+  again from the next ranked region with the same Generator. Builds that do not stall are unchanged.
+- **Seed nearest the footprint's centre first, size second** (about 3 lines). It changes the seed of every target whose
+  largest ground region is not the most central one, so most connected runs would change.
+
+**Recommendation:** run the bench with fix (1) as built.
+- **Where stalls remain:** only where the seed region lies on a former island. In the bench (1.0 and 0.8) that is the
+  6372-1 chair at 0.8; in the size sweep it is the 6378-1 chair at 0.7. There about half the candidates stall, but the
+  selection is unaffected.
+- **Elsewhere:** on the other cut chairs the seed was already on the main piece. A failed neck crossing there loses
+  only the arm, as before the fix.
+- **Next:** add "re-grow on a stall" as a flag afterwards if the stall rate matters for the paper's valid-candidate
+  numbers.
