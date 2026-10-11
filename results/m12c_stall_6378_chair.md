@@ -229,3 +229,25 @@ New candidates of the creserve arm on the reconnected targets (no files written)
 - **Cost:** a stalled seed is grown about twice (2–10 s more per candidate here).
 - **On a pair that never stalls** (5891-1 chair at 0.8, seeds 0–4): identical builds, 135 s vs 136 s. The flag costs
   one coverage check.
+
+## 2026-10-12: the reconnected chair at 1.0–0.6, 50 candidates per slack (overnight run)
+
+Arms `cregrow` … `cregrow60` (creserve's flags + `--regrow`) and the `usable` … `usable60` controls on the reconnected
+target (`out/m12c_reconnected`; table `m12c_chair_6378_size.md`, sheet `m12c_chair_6378_size_sheet.png`; 12 min on
+5 workers).
+
+| slack | cregrow: valid | stalled | fill % (sel / mean) | largest hole (sel / mean) | complete candidates (vol / surf) | selected complete | usable control: fill (sel / mean), complete |
+|---:|---:|---:|---:|---:|---:|---|---|
+| 1.0 | 49/50 | 0 | 88.3 / 86.5 | 66 / 84 | 0 / 0 | no | 91.1 / 85.0, 0 |
+| 0.9 | 50/50 | 0 | 92.1 / 90.0 | 26 / 43 | 0 / 0 | no | 91.2 / 84.5, 0 |
+| 0.8 | 48/50 | 0 | 97.1 / 92.5 | 13 / 32 | 0 / 0 | no | 91.6 / 85.8, 0 |
+| 0.7 | 50/50 | 0 | **98.8 / 92.5** | **3 / 34** | **1 / 1** | **yes** | 87.3 / 86.1, 0 |
+| 0.6 | 28/50 | 0 | 95.3 / 92.0 | 10 / 31 | 0 / 0 | no | 98.1 / 58.4, 0 (13 stalled) |
+
+- **No stalls at any slack** with the reconnected target and `--regrow` (before the fix: 50/50 at 0.7, 30/50 tip-overs
+  at 0.6). The chair is completable: one candidate at 0.7 meets both bars (98.8% fill, largest hole 3, surface 98.5%),
+  and completeness-first selects it (`out/m12c_reconnected/complete_candidates/chair_6378-1_cregrow70_seed18.ldr`).
+- **Largest completing slack for this pair: 0.7**, as for the 6378-1 table. At 0.6 the casters shrink to one cell and
+  22 of 50 builds tip over (valid 28), so smaller is not better here.
+- The usable control (default order) completes nothing at any size and stalls 13/50 at 0.6; the same picture as the
+  9-pair size sweep.

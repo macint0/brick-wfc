@@ -79,6 +79,16 @@ def real_row(set_number: str, data: Path, cache: Path, draws: int) -> dict:
     return row
 
 
+def results_path(results: Path, suffix: str) -> Path:
+    """``<results><suffix>``; a dot inside the name (``coherence_0.6``) is not a suffix to replace."""
+    return results.with_name(results.name + suffix)
+
+
+def has_selection(stats_path: Path) -> bool:
+    """False for a finished run whose every candidate failed verify (an all-stall run under a fill floor)."""
+    return bool(json.loads(stats_path.read_text(encoding="utf-8")).get("selected"))
+
+
 def load_build(sweep: Path, arm: str, set_number: str, obj: str,
                seed: int | None = None) -> tuple[tuple[PlacedPart, ...], tuple[int, int, int], int]:
     """(parts, grid, seed) of the selected build of a run (or of seed ``seed`` of it)."""
@@ -215,8 +225,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     builds = []
     for arm in args.arms:
         for set_number, obj in load_pairs(args.pairs):
-            if not (args.sweep / "sweep" / arm / set_number / obj / "stats.json").exists():
+            stats_path = args.sweep / "sweep" / arm / set_number / obj / "stats.json"
+            if not stats_path.exists():
                 print(f"{arm} {obj} {set_number}: no finished run, skipped", flush=True)
+                continue
+            if not has_selection(stats_path):
+                print(f"{arm} {obj} {set_number}: no selected build (every candidate failed verify), skipped", flush=True)
                 continue
             builds.append(build_row(args.sweep, arm, set_number, obj, args.draws))
             print(f"{arm} {obj} {set_number}: seed {builds[-1]['seed']}", flush=True)
@@ -228,9 +242,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args.results.parent.mkdir(parents=True, exist_ok=True)
     if args.recolor:
         return recolor_step(args, real, builds)
-    args.results.with_suffix(".json").write_text(json.dumps({"real": real, "builds": builds}, indent=1),
+    results_path(args.results, ".json").write_text(json.dumps({"real": real, "builds": builds}, indent=1),
                                                  encoding="utf-8")
-    figure(real, [b for b in builds if not b.get("complete")], args.results.with_suffix(".png"))
+    figure(real, [b for b in builds if not b.get("complete")], results_path(args.results, ".png"))
     text = table(builds) + "\n\nReal sets:\n\n" + real_table(real) + "\n"
     (args.cache / "tables.md").write_text(text, encoding="utf-8")
     print(text)
@@ -265,10 +279,10 @@ def recolor_step(args: argparse.Namespace, real: list[dict], builds: list[dict])
             for label, parts in (("before", placed), ("after", after)):
                 _, png = write_build(parts, shape, args.cache / f"complete_chair_{label}", f"Complete chair, {label}")
                 chair_previews.append(png)
-    args.results.with_suffix(".json").write_text(json.dumps({"real": real, "builds": builds}, indent=1),
+    results_path(args.results, ".json").write_text(json.dumps({"real": real, "builds": builds}, indent=1),
                                                  encoding="utf-8")
     shown = [b for b in builds if not b.get("complete")]
-    figure(real, shown, args.results.with_suffix(".png"), (
+    figure(real, shown, results_path(args.results, ".png"), (
         ("real sets", real, "", (70, 70, 70)), ("ours, before", shown, "", (200, 80, 30)),
         ("ours, recoloured", shown, "recolor", (40, 110, 200)), ("ours, shuffled", shown, "shuffled", (235, 170, 140))))
     chair = next(b for b in builds if b.get("complete"))

@@ -71,10 +71,11 @@ def rerank(directory: Path, data: Path) -> dict:
     as_run = stored_rule(stats["config"])
     again = selected_row(run_funnel(candidates, context, style, replace(config, **as_run), 0.0), context, mask)
     saved = stats["selected"][0]["seed"] if stats["selected"] else None
-    if (again and again["seed"]) != saved:
-        raise SystemExit(f"{directory}: rerun with {as_run} selects seed {again and again['seed']}, the run "
-                         f"selected {saved}")
-    cell = {"candidates": len(candidates), "valid": sum(c.valid for c in candidates), "stored_rule": as_run}
+    replayed = again["seed"] if again else None
+    if replayed != saved:  # the funnel changed since the run (a verify-stage fix): say so, and keep both seeds
+        print(f"{directory}: rerun with {as_run} selects seed {replayed}, the run selected {saved}", flush=True)
+    cell = {"candidates": len(candidates), "valid": sum(c.valid for c in candidates), "stored_rule": as_run,
+            "stored_seed": saved, "replayed_seed": replayed}
     for rule, changes in RULES.items():
         cell[rule] = selected_row(run_funnel(candidates, context, style, replace(config, **changes), 0.0), context,
                                   mask)
@@ -98,6 +99,11 @@ def table(cells: list[dict]) -> str:
                      f"{(c['volume'] or {}).get('complete_unique', 0)} / {(c['surface'] or {}).get('complete_unique', 0)} | "
                      f"{sel(c['old'])} | {sel(c['volume'])} | {sel(c['surface'])} |")
     return "\n".join(lines)
+
+
+def output_path(out: Path) -> Path:
+    """``<out>.json``; a dot inside the name (``select_0.6``) is not a suffix to replace."""
+    return out if out.suffix == ".json" else out.with_name(out.name + ".json")
 
 
 def parser() -> argparse.ArgumentParser:
@@ -135,7 +141,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                               **{rule: (watched[rule] or {}).get("seed") == WATCH[3] for rule in RULES}}
         print(f"{' '.join(map(str, WATCH))} selected: " + ", ".join(f"{r} {summary['watched'][r]}" for r in RULES))
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.with_suffix(".json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    output_path(args.out).write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(table(cells))
     return 0
 

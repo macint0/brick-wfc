@@ -399,27 +399,37 @@ def run_funnel(candidates: list[Candidate], context: Context, stats: StyleStats,
     clock = time.perf_counter()
     valid = [c for c in candidates if c.valid]
     found = {c.seed: events(c.placed) for c in valid}
-    floor = int(np.quantile([found[c.seed].count for c in valid], config.min_size_quantile, method="lower")) if valid else 0
-    verified = [c for c in valid if found[c.seed].count >= floor]
-    if len(verified) < len(valid):
-        failures["too_small"] = len(valid) - len(verified)
-    # With a target shape: how much of it each build fills, and a floor relative to the best builds, so a
-    # stub that happens to match the style statistics is not selected over builds that fill the shape.
+    # With a target shape: how much of it each valid build fills and whether it meets the completeness bar, before
+    # any floor, so that a floor never removes a complete build (M12c: the complete 5891-1 chair uses the fewest
+    # parts of its run and the contact-event floor below cut it).
     filled_share: dict[int, float] = {}
-    if context.mask is not None and verified:
-        filled_share = {c.seed: fill(occupancy(c.placed, context.grid), context.mask) for c in verified}
-        fill_floor = max(config.fill_floor * float(np.quantile(list(filled_share.values()), 0.9)), config.min_fill)
-        kept = [c for c in verified if filled_share[c.seed] >= fill_floor]
-        if len(kept) < len(verified):
-            failures["low_fill"] = len(verified) - len(kept)
-        verified = kept
-    # With a target shape: which builds meet the completeness bar. With complete-first they go first into dedupe
-    # (so a complete build is kept over an incomplete near-duplicate) and are selected before the rest.
     complete: dict[int, bool] = {}
     if context.mask is not None:
         bar = bar_of(config)
-        complete = {c.seed: bar.met(completeness(occupancy(c.placed, context.grid), context.mask), filled_share[c.seed])
-                    for c in verified}
+        for c in valid:
+            filled = occupancy(c.placed, context.grid)
+            filled_share[c.seed] = fill(filled, context.mask)
+            complete[c.seed] = bar.met(completeness(filled, context.mask), filled_share[c.seed])
+    # The smallest builds by contact events fail "too_small" (one tiny build cannot shrink every judge sample) unless
+    # they meet the bar.
+    floor = int(np.quantile([found[c.seed].count for c in valid], config.min_size_quantile, method="lower")) if valid else 0
+    verified = [c for c in valid if found[c.seed].count >= floor or complete.get(c.seed, False)]
+    if len(verified) < len(valid):
+        failures["too_small"] = len(valid) - len(verified)
+    # With a target shape: a fill floor relative to the best builds (and the absolute --min-fill), so a stub that
+    # happens to match the style statistics is not selected over builds that fill the shape.
+    if context.mask is not None and verified:
+        fill_floor = max(config.fill_floor * float(np.quantile([filled_share[c.seed] for c in verified], 0.9)),
+                         config.min_fill)
+        kept = [c for c in verified if filled_share[c.seed] >= fill_floor or complete[c.seed]]
+        if len(kept) < len(verified):
+            failures["low_fill"] = len(verified) - len(kept)
+        verified = kept
+    # With complete-first, complete builds go first into dedupe (so a complete build is kept over an incomplete
+    # near-duplicate) and are selected before the rest.
+    if context.mask is not None:
+        filled_share = {c.seed: filled_share[c.seed] for c in verified}
+        complete = {c.seed: complete[c.seed] for c in verified}
         if config.complete_first:
             verified = sorted(verified, key=lambda c: not complete[c.seed])  # stable: seed order within each group
     stages.append(StageStats("verify", len(verified), time.perf_counter() - clock))

@@ -5,7 +5,7 @@ import pytest
 
 from brickwfc.alt.candidates import Candidate, Context
 from brickwfc.alt.features import Bar, completeness
-from brickwfc.alt.pipeline import AltConfig, main, run_funnel
+from brickwfc.alt.pipeline import AltConfig, events, main, run_funnel
 from brickwfc.bricks.style import StyleStats
 from brickwfc.funnel.select import select
 from conftest import BLUE, RED, piece, tiny_model
@@ -110,3 +110,20 @@ def test_no_completeness_without_a_target() -> None:
 def test_cli_rejects_an_unknown_bar() -> None:
     with pytest.raises(SystemExit):
         main(["6372-1", "--bar", "area"])
+
+
+def test_a_complete_build_is_never_too_small() -> None:
+    """The verify stage's contact-event floor (the smallest 10% of builds) cut the complete 5891-1 chair, which used
+    the fewest parts of its run; a build that meets the bar is exempt from the size and fill floors."""
+    stats, context = setup()
+    full = candidate(0, floor() + roof())  # complete, in the fewest, largest parts: the fewest contact events
+    partial = [candidate(1 + i, [piece("plate1x1", y, x, z, RED if (x + z) % 2 else BLUE)
+                                 for y in (0, 1) for z in range(4) for x in range(8) if (y, z) != (1, i)])
+               for i in range(3)]  # 56 / 64 in 1 x 1 plates (an 8-cell hole): incomplete, many contact events
+    config = dict(k=4, diversity=0.0, fill_weight=0.0, **(FUNNEL | {"min_size_quantile": 0.5}))
+    counts = sorted((events(c.placed).count, c.seed) for c in (full, *partial))
+    assert counts[0][1] == 0 and counts[1][0] > counts[0][0]  # precondition: the complete build is the smallest
+    report = run_funnel([full, *partial], context, stats, AltConfig(**config), 0.0)
+    assert not report.check_failures  # the floor (the median count) is binding only on the complete build: exempt
+    assert any(s.candidate.seed == 0 for s in report.selected)
+    assert report.selected[0].candidate.seed == 0 and report.selected[0].complete

@@ -418,12 +418,46 @@ with hollow targets; colour and symmetry; widen the bench before paper tables.
   `bench` = cregrow + `--min-fill 0.5` (`out/m12c_bench`, smallest sets first, the 9 current pairs last), with
   sweep-report, completeness-first re-rank and the colour measurement per slack. Modelled 6–10 h; resumable, rerun
   the same command.
-**Decisions for Mac (2026-10-12 morning):** (a) `--order connected --reserve-small` as the 3D default (now the only
-  order that completes anything; faster too); (b) `--recolor` on by default (metrics 18/18, chair figure); (c)
-  `--min-fill 0.5` as a verify default (a build under half its target is not an alternate build of it); (d) the size
-  rule for the paper tables: per-set "largest slack that completes" (0.6–0.8 on the 6 completing pairs) vs one bench
-  slack; the 4956-1 pairs complete at no size down to 0.6 (hole 20–39 cells), which the hollow1 arms and the bench
-  speak to. Nothing changes until Mac decides; the overnight arms pass every flag explicitly.
+**2026-10-12 morning (the queue ran 20:50–06:18 on 5 workers, every sweep done; cf read it, fixed three things, PC idle):**
+- **The bench — run** (`results/m12c_bench.md`, sheets `m12c_bench_sheet_0.6.png` / `_0.8.png`, raw tables
+  `m12c_bench_sweep_0.6.md` / `_0.8.md`). Arm `bench` = cregrow + `--min-fill 0.5`, 50 candidates per pair, 54 pairs.
+  **At 0.6 the selected build is complete on 30/54 pairs** (433 complete candidates of 2612 valid; mean selected fill
+  96.8%, median largest hole 4), **at 0.8 on 12/54** (108 complete; 10182-1 completes all six objects at 0.8, 7743-1
+  all six at 0.6). By object at 0.6: sofa 8/9, vessel 6/9, table 5/8, bench 5/9, chair 3/8, car 3/9. By set: the
+  three smallest (56–161 parts) one or two each; 7796-1's chair and table (136–160 target cells) stall on every seed
+  and the fill floor leaves nothing selected (the right outcome); 4956-1 only the sofa (its other pairs sit at
+  94.5–98.8% fill with 19–39-cell holes at every slack, as in the 9-pair sweep); 10190-1 misses the car and vessel.
+  Per pair the largest completing slack is 0.8 on 12, 0.6 on 21, none on 21 (17 of those within 3 fill points of the
+  bar, largest hole 6–24; the clear misses are the 6370-1 table, 69%, and the 7796-1 car, 82%). Valid before the fill
+  floor ≥ 22/50 everywhere; stalls only on the four smallest sets. Time: 2.0 h (0.6) and 3.3 h (0.8) for the 45 new
+  pairs, under the plan's model; the Modulars are 60% of it (up to 88 s per candidate).
+- **A hole in the funnel, fixed by construction:** the verify stage's relative size floor (the smallest 10% of valid
+  builds by contact events fail "too_small", a guard for the judge's samples) cut the complete 5891-1 chair at 0.8
+  (seed 1, 98.7 / 4 / 98.3, the fewest parts of its run), so the bench reported a complete candidate that was not
+  selected. A build that meets the bar is now exempt from the size and fill floors (`pipeline.run_funnel`, computed
+  for every valid build before any floor; `test_a_complete_build_is_never_too_small`). Replaying the 181 cached runs (the bench's 108, the 9-pair sweep's 63, the chair's 10) with the fixed stage changes 12 stored picks: 2 incomplete → complete (the 5891-1 chair at 0.8, so the bench's 0.8 count is 13/54 with the fix, and the creserve60 6378-1 table) and 10 complete → another complete build with a higher judge (the admitted builds use fewer parts); no pick gets worse.
+  The re-rank driver now prints and records (`stored_seed` / `replayed_seed`) where a run's stored pick differs from
+  the replay instead of exiting.
+- **Hollow at the solid's scale — measured, not adopted** (`results/m12c_hollow.md`): hollow1 / hollow1_80 worse on
+  15/18 comparisons, 0 complete, and the 5891-1 and 4956-1 chairs and tables stall 50/50 (a 1-stud wall on a 1-plate
+  floor cannot be grown with their parts). Stays a flag, off; the surface bar stays as a reported measure on solids.
+- **The reconnected 6378-1 chair** (`m12c_stall_6378_chair.md`, dated section; `m12c_chair_6378_size.md`, sheet): no
+  stalls at any slack with `--regrow`; **complete at 0.7** (one candidate, 98.8 / 3 / 98.5, selected;
+  `out/m12c_reconnected/complete_candidates/`); at 0.6 the casters shrink to one cell and 22/50 tip over; the usable
+  control completes nothing. Largest completing slack for the 6378-1 chair: 0.7, as for its table.
+- **Colour on the bench:** same-colour seams median 41% vs 65% in the own sets vs 34% shuffled, worse than the own set
+  on 50/52 selections at both slacks; same picture as the 18 earlier ones. `--recolor` not run on the bench (it applies
+  after selection; can be run on the cached builds without generation).
+- Driver fixes (tests in `test_driver_outputs.py`): `select --out x_0.6` and `coherence --results x_0.6` wrote `x_0.json`
+  (`Path.with_suffix` took `.6` as the suffix; the 0.8 step overwrote the 0.6 step); the colour driver crashed on a run
+  with no selected build (all-stall under the fill floor) and now skips it.
+**Decisions for Mac (open):** (a) `--order connected --reserve-small --regrow` as the 3D default (the only order that
+  completes anything; faster too; regrow is free when nothing stalls); (b) `--recolor` on by default (metrics 18/18 +
+  50/52 on the bench say the colouring is near random; the chair figure is the eye test); (c) `--min-fill 0.5` as a
+  verify default (on the bench it kept two all-stall runs from selecting a stub); (d) the size rule for the paper
+  tables: one bench slack (0.8 completes 12/54, 0.6 completes 30/54) vs per-pair "largest slack that completes" (12 at
+  0.8 + 21 at 0.6; 21 pairs at neither, the small inventories' chairs and cars and everything on 4956-1 but the sofa).
+  Nothing changes until Mac decides; every overnight arm passed its flags explicitly.
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT

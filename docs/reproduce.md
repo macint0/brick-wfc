@@ -667,30 +667,63 @@ python -m brickwfc.experiments.select --arms creserve90 creserve70 creserve60 us
   and `size_sheet_usable.png` (scaled to 40% as `results/m12b_size_sheet.png` and `_usable.png`), and the complete
   candidates under `complete_candidates/`. The write-up marks the 6378-1 chair rows as a cut target by hand.
 
+### `results/m12c_hollow.md` (M12c hollow targets at the solid's scale, run), with `m12c_hollow_sweep.md` / `.json`
+
+The first step of the overnight queue (main 06e484c, 2026-10-11 night; 1 h 57 on 5 workers):
+
+```
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep --arms hollow1 hollow1_80 --workers 5
+python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-report \
+    --arms creserve hollow1 creserve80 hollow1_80 --report-name sweep_hollow
+```
+
+- `sweep_hollow.md` / `.json` are copied to `results/m12c_hollow_sweep.md` / `.json`; the write-up reads them.
+
+### `results/m12c_stall_6378_chair.md`, dated section 2026-10-12, with `m12c_chair_6378_size.md` / `.json`, `m12c_chair_6378_size_sheet.png`
+
+The reconnected 6378-1 chair under cregrow (creserve's flags + `--regrow`) and the usable controls at 1.0–0.6 (second
+and third steps of the queue; 12 min + the report):
+
+```
+python -m brickwfc.experiments.complete --out out/m12c_reconnected --steps sweep --workers 5 \
+    --arms cregrow cregrow90 cregrow80 cregrow70 cregrow60 usable usable90 usable80 usable70 usable60 \
+    --pairs examples/m12c_chair_6378.json
+python -m brickwfc.experiments.complete --out out/m12c_reconnected --steps size-report --pairs examples/m12c_chair_6378.json
+```
+
+- `size.md` / `.json` → `results/m12c_chair_6378_size.md` / `.json`; `size_sheet_cregrow.png` →
+  `results/m12c_chair_6378_size_sheet.png`; the complete candidate under `complete_candidates/`.
+
+### `results/m12c_bench.md` (M12c wider bench at 0.6 and 0.8), with `results/m12c_bench_sweep_0.6.md` and `results/m12c_bench_sweep_0.8.md` (+ `.json`), `m12c_bench_sheet_0.6.png` / `_0.8.png`
+
+The rest of the queue (`bash scripts/overnight_m12c.sh 0.6 0.8`; the bench steps 23:10–06:18, resumable). Per slack
+(`bench60` shown; `bench80` the same):
+
+```
+python -m brickwfc.experiments.complete --out out/m12c_bench --steps sweep --arms bench60 \
+    --pairs examples/m12c_bench_new.json --workers 5                      # the 45 new pairs, smallest sets first
+python -m brickwfc.experiments.complete --out out/m12c_bench --steps sweep --arms bench60 --workers 5   # the 9 sweep pairs
+python -m brickwfc.experiments.complete --out out/m12c_bench --steps sweep-report --arms bench60 \
+    --pairs examples/m12c_bench.json --report-name sweep_bench_0.6
+python -m brickwfc.experiments.select --sweep out/m12c_bench --arms bench60 --pairs examples/m12c_bench.json \
+    --out out/m12c_bench/select_0.6
+python -m brickwfc.experiments.coherence --sweep out/m12c_bench --arms bench60 --pairs examples/m12c_bench.json \
+    --results out/m12c_bench/coherence_0.6
+```
+
+- **Runtime:** 2.0 h (0.6) and 3.3 h (0.8) for the 45 new pairs, 30 and 42 min for the 9 sweep pairs, on 5 workers.
+- The select and coherence steps failed in the queue (a `with_suffix` naming bug and an all-stall run with no selection;
+  both fixed the next morning) and were rerun from the cached runs. `sweep_bench_*.md` / `.json` are copied to
+  `results/`; the bench sheets come from a one-off script over each run's selected preview
+  (`results/m12c_bench_sheet_*.png`); the aggregate numbers in the write-up are computed from the `.json` tables and each
+  run's `stats.json`.
+- **Replay after the verify-stage fix** (a complete build exempt from the size and fill floors): the select driver
+  rerun on every cached run (`--out out/m12c_refloor/...`) prints `rerun with ... selects seed X, the run selected Y`
+  where a stored pick changes and records both seeds (`stored_seed`, `replayed_seed`).
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
-
-- **M12c overnight queue** (`scripts/overnight_m12c.sh SLACK [SLACK ...]`, from the main checkout; `--dry-run` prints
-  the commands): hollow1 / hollow1_80 on the 9 sweep pairs, the reconnected 6378-1 chair under cregrow and the usable
-  controls (`out/m12c_reconnected`), then the bench arm (cregrow + `--min-fill 0.5`) per slack on the 45 new pairs
-  small sets first, its reports, and the 9 sweep pairs last (`out/m12c_bench`). The steps are in
-  `brickwfc.experiments.overnight` (`steps`, `estimate`); the log, with the estimated minutes per step and
-  `STEP_DONE` / `STEP_FAILED` / `ALL_DONE` markers, is `out/m12b_complete/overnight.log`.
-
-- **M12c wider bench** (the creserve arm at the size rule's slack on the 54 pairs; plan and estimate in
-  `m12c_bench_plan.md`): `python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report
-  --arms creserve --pairs examples/m12c_bench.json --workers 5 --report-name sweep_bench` (or `creserve80`; the 9 cached
-  pairs are skipped). About 8.4 h at 1.0, 5.5 h at 0.8 (the two Modular sets two thirds of it, extrapolated).
-
-- **M12c hollow targets on the surface bar** (arms `hollow1`, `hollow1_80`, and `hollow2`, `hollow2_80`; creserve's
-  flags plus `--hollow 1|2 --hollow-scale solid --bar surface`), then the joined report with creserve:
-  `python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep sweep-report --arms hollow1 hollow1_80
-  --workers 5 --report-name sweep_hollow` and
-  `python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-report --arms creserve hollow1
-  creserve80 hollow1_80 --report-name sweep_hollow`.
-  - 18 runs of 50 candidates per pair of arms; about 75 minutes on 5 workers if as fast as creserve and creserve80
-    (45 + 30 minutes; not measured).
 
 - **M13 budget curve**:
   `python -m brickwfc.experiments.budget_curve --out out/m13_budget`.
