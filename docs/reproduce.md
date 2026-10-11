@@ -602,6 +602,19 @@ python -m brickwfc.experiments.complete --out out/m12b_complete --steps hollow-s
 - **Outputs:** `hollow_sizing.json` is copied to `results/m12c_hollow_sizing.json`; the table in `hollow_sizing.md` is
   the write-up's.
 
+### `results/m12c_colour_measure.md` (M12c colour coherence of our builds vs the real sets), with `m12c_colour_measure.json`, `m12c_colour_measure.png`
+
+Measures the 28 real sets and the selected creserve / creserve80 builds of the completeness sweep (plus the complete
+chair); generates nothing. At m12c-colour or later, with those runs in `out/m12b_complete/sweep/`:
+
+```
+python -m brickwfc.experiments.coherence --sweep out/m12b_complete --results results/m12c_colour_measure
+```
+
+- **Runtime:** about 5 minutes on one process (1 with the real sets cached under `out/m12c_colour/`; resumable).
+- **Outputs:** `results/m12c_colour_measure.json` and `.png`; the tables in `out/m12c_colour/tables.md` are the
+  write-up's.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):

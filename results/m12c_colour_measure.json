@@ -1,0 +1,1432 @@
+{
+ "real": [
+  {
+   "set": "349-1",
+   "seams": 74,
+   "same_color": 0.918918918918919,
+   "top_windows": 15,
+   "top_colors": 1.0,
+   "side_windows": 36,
+   "side_colors": 1.0,
+   "colors_per_window": 1.0,
+   "skin_cells": 758,
+   "largest_region": 0.48812664907651715,
+   "skin_colors": 2,
+   "shuffled": {
+    "same_color": 0.918918918918919,
+    "colors_per_window": 1.0,
+    "largest_region": 0.48812664907651715
+   },
+   "parts": 59
+  },
+  {
+   "set": "374-1",
+   "seams": 316,
+   "same_color": 0.9145569620253164,
+   "top_windows": 97,
+   "top_colors": 1.0,
+   "side_windows": 323,
+   "side_colors": 1.0154798761609907,
+   "colors_per_window": 1.0119047619047619,
+   "skin_cells": 1888,
+   "largest_region": 0.5222457627118644,
+   "skin_colors": 6,
+   "shuffled": {
+    "same_color": 0.7082278481012659,
+    "colors_per_window": 1.1704761904761904,
+    "largest_region": 0.4164194915254237
+   },
+   "parts": 218
+  },
+  {
+   "set": "377-1",
+   "seams": 206,
+   "same_color": 0.6019417475728155,
+   "top_windows": 1,
+   "top_colors": 2.0,
+   "side_windows": 140,
+   "side_colors": 1.8928571428571428,
+   "colors_per_window": 1.8936170212765957,
+   "skin_cells": 771,
+   "largest_region": 0.383916990920882,
+   "skin_colors": 5,
+   "shuffled": {
+    "same_color": 0.4116504854368932,
+    "colors_per_window": 2.05531914893617,
+    "largest_region": 0.2705577172503243
+   },
+   "parts": 119
+  },
+  {
+   "set": "361-2",
+   "seams": 92,
+   "same_color": 1.0,
+   "top_windows": 91,
+   "top_colors": 1.0,
+   "side_windows": 182,
+   "side_colors": 1.0,
+   "colors_per_window": 1.0,
+   "skin_cells": 614,
+   "largest_region": 0.739413680781759,
+   "skin_colors": 2,
+   "shuffled": {
+    "same_color": 1.0,
+    "colors_per_window": 1.0,
+    "largest_region": 0.739413680781759
+   },
+   "parts": 52
+  },
+  {
+   "set": "6363-1",
+   "seams": 105,
+   "same_color": 0.8952380952380953,
+   "top_windows": 63,
+   "top_colors": 1.0,
+   "side_windows": 136,
+   "side_colors": 1.2426470588235294,
+   "colors_per_window": 1.1658291457286432,
+   "skin_cells": 624,
+   "largest_region": 0.42628205128205127,
+   "skin_colors": 3,
+   "shuffled": {
+    "same_color": 0.758095238095238,
+    "colors_per_window": 1.285427135678392,
+    "largest_region": 0.41057692307692306
+   },
+   "parts": 73
+  },
+  {
+   "set": "6382-1",
+   "seams": 261,
+   "same_color": 0.8582375478927203,
+   "top_windows": 52,
+   "top_colors": 1.0,
+   "side_windows": 338,
+   "side_colors": 1.0828402366863905,
+   "colors_per_window": 1.0717948717948718,
+   "skin_cells": 1780,
+   "largest_region": 0.4752808988764045,
+   "skin_colors": 5,
+   "shuffled": {
+    "same_color": 0.6681992337164752,
+    "colors_per_window": 1.4697435897435898,
+    "largest_region": 0.41595505617977535
+   },
+   "parts": 181
+  },
+  {
+   "set": "6362-1",
+   "seams": 106,
+   "same_color": 0.8584905660377359,
+   "top_windows": 16,
+   "top_colors": 1.0,
+   "side_windows": 63,
+   "side_colors": 1.0158730158730158,
+   "colors_per_window": 1.0126582278481013,
+   "skin_cells": 794,
+   "largest_region": 0.41435768261964734,
+   "skin_colors": 6,
+   "shuffled": {
+    "same_color": 0.70188679245283,
+    "colors_per_window": 1.4531645569620253,
+    "largest_region": 0.42342569269521413
+   },
+   "parts": 77
+  },
+  {
+   "set": "6372-1",
+   "seams": 255,
+   "same_color": 0.7764705882352941,
+   "top_windows": 26,
+   "top_colors": 1.5,
+   "side_windows": 189,
+   "side_colors": 1.0952380952380953,
+   "colors_per_window": 1.1441860465116278,
+   "skin_cells": 1619,
+   "largest_region": 0.3038912909203212,
+   "skin_colors": 6,
+   "shuffled": {
+    "same_color": 0.5631372549019608,
+    "colors_per_window": 1.3869767441860463,
+    "largest_region": 0.2765904879555281
+   },
+   "parts": 161
+  },
+  {
+   "set": "6370-1",
+   "seams": 198,
+   "same_color": 0.8888888888888888,
+   "top_windows": 1,
+   "top_colors": 1.0,
+   "side_windows": 206,
+   "side_colors": 1.0194174757281553,
+   "colors_per_window": 1.0193236714975846,
+   "skin_cells": 1371,
+   "largest_region": 0.5164113785557987,
+   "skin_colors": 6,
+   "shuffled": {
+    "same_color": 0.6545454545454545,
+    "colors_per_window": 1.3381642512077296,
+    "largest_region": 0.4816921954777535
+   },
+   "parts": 128
+  },
+  {
+   "set": "6378-1",
+   "seams": 239,
+   "same_color": 0.7071129707112971,
+   "top_windows": 180,
+   "top_colors": 1.0611111111111111,
+   "side_windows": 230,
+   "side_colors": 1.108695652173913,
+   "colors_per_window": 1.0878048780487806,
+   "skin_cells": 1530,
+   "largest_region": 0.1718954248366013,
+   "skin_colors": 6,
+   "shuffled": {
+    "same_color": 0.4920502092050209,
+    "colors_per_window": 1.4502439024390246,
+    "largest_region": 0.15137254901960784
+   },
+   "parts": 165
+  },
+  {
+   "set": "6380-1",
+   "seams": 192,
+   "same_color": 0.9375,
+   "top_windows": 59,
+   "top_colors": 1.0,
+   "side_windows": 236,
+   "side_colors": 1.0593220338983051,
+   "colors_per_window": 1.047457627118644,
+   "skin_cells": 1119,
+   "largest_region": 0.8623771224307417,
+   "skin_colors": 4,
+   "shuffled": {
+    "same_color": 0.8302083333333334,
+    "colors_per_window": 1.2359322033898306,
+    "largest_region": 0.85218945487042
+   },
+   "parts": 131
+  },
+  {
+   "set": "10182-1",
+   "seams": 2737,
+   "same_color": 0.6328096455973694,
+   "top_windows": 616,
+   "top_colors": 1.3262987012987013,
+   "side_windows": 5268,
+   "side_colors": 1.3580106302201975,
+   "colors_per_window": 1.35469068660775,
+   "skin_cells": 8930,
+   "largest_region": 0.1522956326987682,
+   "skin_colors": 11,
+   "shuffled": {
+    "same_color": 0.2578735842162952,
+    "colors_per_window": 2.4382732834806253,
+    "largest_region": 0.04123180291153415
+   },
+   "parts": 1289
+  },
+  {
+   "set": "10190-1",
+   "seams": 1838,
+   "same_color": 0.6490750816104461,
+   "top_windows": 188,
+   "top_colors": 1.4202127659574468,
+   "side_windows": 4566,
+   "side_colors": 1.5313184406482698,
+   "colors_per_window": 1.5269246949936894,
+   "skin_cells": 7019,
+   "largest_region": 0.1815073372275253,
+   "skin_colors": 10,
+   "shuffled": {
+    "same_color": 0.3261153427638738,
+    "colors_per_window": 2.3449305847707196,
+    "largest_region": 0.09782020230802109
+   },
+   "parts": 850
+  },
+  {
+   "set": "4954-1",
+   "seams": 1607,
+   "same_color": 0.6496577473553204,
+   "top_windows": 67,
+   "top_colors": 1.1044776119402986,
+   "side_windows": 3826,
+   "side_colors": 1.3149503397804496,
+   "colors_per_window": 1.3113280246596455,
+   "skin_cells": 8749,
+   "largest_region": 0.2395702365984684,
+   "skin_colors": 7,
+   "shuffled": {
+    "same_color": 0.5308027380211574,
+    "colors_per_window": 1.6594400205497046,
+    "largest_region": 0.23684992570579494
+   },
+   "parts": 823
+  },
+  {
+   "set": "4956-1",
+   "seams": 924,
+   "same_color": 0.6439393939393939,
+   "top_windows": 8,
+   "top_colors": 2.375,
+   "side_windows": 2015,
+   "side_colors": 1.339454094292804,
+   "colors_per_window": 1.343549184379634,
+   "skin_cells": 5629,
+   "largest_region": 0.3423343400248712,
+   "skin_colors": 9,
+   "shuffled": {
+    "same_color": 0.6606060606060605,
+    "colors_per_window": 1.3803262481463174,
+    "largest_region": 0.34670456564220997
+   },
+   "parts": 543
+  },
+  {
+   "set": "10185-1",
+   "seams": 3586,
+   "same_color": 0.6107083100948132,
+   "top_windows": 361,
+   "top_colors": 2.590027700831025,
+   "side_windows": 5764,
+   "side_colors": 1.4257460097154753,
+   "colors_per_window": 1.4943673469387755,
+   "skin_cells": 11455,
+   "largest_region": 0.4499345264076822,
+   "skin_colors": 20,
+   "shuffled": {
+    "same_color": 0.33301728945900727,
+    "colors_per_window": 2.15330612244898,
+    "largest_region": 0.20719336534264512
+   },
+   "parts": 1698
+  },
+  {
+   "set": "7743-1",
+   "seams": 253,
+   "same_color": 0.4782608695652174,
+   "top_windows": 3,
+   "top_colors": 1.0,
+   "side_windows": 385,
+   "side_colors": 1.542857142857143,
+   "colors_per_window": 1.538659793814433,
+   "skin_cells": 1258,
+   "largest_region": 0.1875993640699523,
+   "skin_colors": 6,
+   "shuffled": {
+    "same_color": 0.39841897233201584,
+    "colors_per_window": 1.7664948453608247,
+    "largest_region": 0.1875993640699523
+   },
+   "parts": 153
+  },
+  {
+   "set": "7796-1",
+   "seams": 102,
+   "same_color": 0.3431372549019608,
+   "top_windows": 0,
+   "top_colors": NaN,
+   "side_windows": 28,
+   "side_colors": 2.6785714285714284,
+   "colors_per_window": 2.6785714285714284,
+   "skin_cells": 329,
+   "largest_region": 0.3252279635258359,
+   "skin_colors": 9,
+   "shuffled": {
+    "same_color": 0.2705882352941177,
+    "colors_per_window": 3.1642857142857146,
+    "largest_region": 0.3252279635258359
+   },
+   "parts": 56
+  },
+  {
+   "set": "10197-1",
+   "seams": 2461,
+   "same_color": 0.6960585127996749,
+   "top_windows": 151,
+   "top_colors": 1.7615894039735098,
+   "side_windows": 3638,
+   "side_colors": 1.2974161627267728,
+   "colors_per_window": 1.3159144893111638,
+   "skin_cells": 8019,
+   "largest_region": 0.2546452176081806,
+   "skin_colors": 12,
+   "shuffled": {
+    "same_color": 0.33904916700528237,
+    "colors_per_window": 1.9278965426233836,
+    "largest_region": 0.25948372615039283
+   },
+   "parts": 1241
+  },
+  {
+   "set": "5891-1",
+   "seams": 735,
+   "same_color": 0.6462585034013606,
+   "top_windows": 20,
+   "top_colors": 1.0,
+   "side_windows": 1458,
+   "side_colors": 1.508230452674897,
+   "colors_per_window": 1.5013531799729365,
+   "skin_cells": 4052,
+   "largest_region": 0.34402764067127345,
+   "skin_colors": 11,
+   "shuffled": {
+    "same_color": 0.4130612244897959,
+    "colors_per_window": 1.9465493910690121,
+    "largest_region": 0.30291214215202367
+   },
+   "parts": 414
+  },
+  {
+   "set": "10218-1",
+   "seams": 2072,
+   "same_color": 0.6003861003861004,
+   "top_windows": 141,
+   "top_colors": 2.049645390070922,
+   "side_windows": 4060,
+   "side_colors": 1.3536945812807881,
+   "colors_per_window": 1.3770530825993812,
+   "skin_cells": 8314,
+   "largest_region": 0.10909309598267981,
+   "skin_colors": 20,
+   "shuffled": {
+    "same_color": 0.2943050193050193,
+    "colors_per_window": 2.1715781956676983,
+    "largest_region": 0.059201347125330775
+   },
+   "parts": 1082
+  },
+  {
+   "set": "5766-1",
+   "seams": 405,
+   "same_color": 0.6345679012345679,
+   "top_windows": 12,
+   "top_colors": 1.0,
+   "side_windows": 275,
+   "side_colors": 2.036363636363636,
+   "colors_per_window": 1.9930313588850175,
+   "skin_cells": 2259,
+   "largest_region": 0.37627268702965916,
+   "skin_colors": 10,
+   "shuffled": {
+    "same_color": 0.45481481481481484,
+    "colors_per_window": 2.2299651567944254,
+    "largest_region": 0.37627268702965916
+   },
+   "parts": 245
+  },
+  {
+   "set": "5771-1",
+   "seams": 691,
+   "same_color": 0.6497829232995659,
+   "top_windows": 6,
+   "top_colors": 1.1666666666666667,
+   "side_windows": 1024,
+   "side_colors": 1.34765625,
+   "colors_per_window": 1.3466019417475728,
+   "skin_cells": 4388,
+   "largest_region": 0.20282588878760255,
+   "skin_colors": 15,
+   "shuffled": {
+    "same_color": 0.4130246020260492,
+    "colors_per_window": 1.6126213592233007,
+    "largest_region": 0.18737465815861443
+   },
+   "parts": 436
+  },
+  {
+   "set": "10224-1",
+   "seams": 3422,
+   "same_color": 0.5917592051431911,
+   "top_windows": 192,
+   "top_colors": 1.1354166666666667,
+   "side_windows": 7451,
+   "side_colors": 1.6275667695611327,
+   "colors_per_window": 1.615203454141044,
+   "skin_cells": 13405,
+   "largest_region": 0.10533383066020141,
+   "skin_colors": 14,
+   "shuffled": {
+    "same_color": 0.2805376972530684,
+    "colors_per_window": 2.267774434122727,
+    "largest_region": 0.048459530026109664
+   },
+   "parts": 1699
+  },
+  {
+   "set": "31009-1",
+   "seams": 359,
+   "same_color": 0.6267409470752089,
+   "top_windows": 8,
+   "top_colors": 1.0,
+   "side_windows": 278,
+   "side_colors": 1.6474820143884892,
+   "colors_per_window": 1.6293706293706294,
+   "skin_cells": 1703,
+   "largest_region": 0.30064591896652965,
+   "skin_colors": 14,
+   "shuffled": {
+    "same_color": 0.41727019498607243,
+    "colors_per_window": 2.2909090909090915,
+    "largest_region": 0.28772753963593656
+   },
+   "parts": 206
+  },
+  {
+   "set": "10243-1",
+   "seams": 2221,
+   "same_color": 0.539846915803692,
+   "top_windows": 175,
+   "top_colors": 2.5314285714285716,
+   "side_windows": 1990,
+   "side_colors": 1.678894472361809,
+   "colors_per_window": 1.7478060046189376,
+   "skin_cells": 6476,
+   "largest_region": 0.09527486102532427,
+   "skin_colors": 17,
+   "shuffled": {
+    "same_color": 0.2884286357496623,
+    "colors_per_window": 2.2540415704387993,
+    "largest_region": 0.07807288449660285
+   },
+   "parts": 1209
+  },
+  {
+   "set": "31048-1",
+   "seams": 299,
+   "same_color": 0.6488294314381271,
+   "top_windows": 12,
+   "top_colors": 1.0,
+   "side_windows": 87,
+   "side_colors": 1.793103448275862,
+   "colors_per_window": 1.696969696969697,
+   "skin_cells": 1370,
+   "largest_region": 0.32554744525547447,
+   "skin_colors": 13,
+   "shuffled": {
+    "same_color": 0.5451505016722409,
+    "colors_per_window": 1.8747474747474748,
+    "largest_region": 0.3381021897810219
+   },
+   "parts": 201
+  },
+  {
+   "set": "10264-1",
+   "seams": 1732,
+   "same_color": 0.6431870669745958,
+   "top_windows": 242,
+   "top_colors": 1.4173553719008265,
+   "side_windows": 3513,
+   "side_colors": 1.3748932536293765,
+   "colors_per_window": 1.37762982689747,
+   "skin_cells": 6337,
+   "largest_region": 0.15448950607543002,
+   "skin_colors": 18,
+   "shuffled": {
+    "same_color": 0.3077367205542725,
+    "colors_per_window": 2.268868175765646,
+    "largest_region": 0.08357266845510494
+   },
+   "parts": 892
+  }
+ ],
+ "builds": [
+  {
+   "arm": "creserve",
+   "set": "6378-1",
+   "object": "chair",
+   "seed": 45,
+   "seams": 400,
+   "same_color": 0.485,
+   "top_windows": 16,
+   "top_colors": 2.75,
+   "side_windows": 234,
+   "side_colors": 2.2777777777777777,
+   "colors_per_window": 2.308,
+   "skin_cells": 985,
+   "largest_region": 0.32893401015228424,
+   "skin_colors": 9,
+   "shuffled": {
+    "same_color": 0.42750000000000005,
+    "colors_per_window": 2.3512,
+    "largest_region": 0.31289340101522845
+   },
+   "parts": 182,
+   "references": {
+    "own": {
+     "same_color": 0.7071129707112971,
+     "colors_per_window": 1.0878048780487806,
+     "largest_region": 0.1718954248366013,
+     "skin_cells": 1530
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.8584905660377359,
+     "colors_per_window": 1.047457627118644,
+     "largest_region": 0.41435768261964734,
+     "sets": [
+      "6380-1",
+      "6362-1",
+      "7743-1",
+      "377-1",
+      "349-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve",
+   "set": "5891-1",
+   "object": "chair",
+   "seed": 46,
+   "seams": 599,
+   "same_color": 0.38397328881469117,
+   "top_windows": 7,
+   "top_colors": 3.142857142857143,
+   "side_windows": 461,
+   "side_colors": 1.9154013015184381,
+   "colors_per_window": 1.9337606837606838,
+   "skin_cells": 1934,
+   "largest_region": 0.4431230610134436,
+   "skin_colors": 13,
+   "shuffled": {
+    "same_color": 0.28213689482470783,
+    "colors_per_window": 2.143589743589744,
+    "largest_region": 0.2803516028955533
+   },
+   "parts": 337,
+   "references": {
+    "own": {
+     "same_color": 0.6462585034013606,
+     "colors_per_window": 1.5013531799729365,
+     "largest_region": 0.34402764067127345,
+     "skin_cells": 4052
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7764705882352941,
+     "colors_per_window": 1.1441860465116278,
+     "largest_region": 0.37627268702965916,
+     "sets": [
+      "374-1",
+      "6382-1",
+      "31009-1",
+      "5766-1",
+      "6372-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve",
+   "set": "4956-1",
+   "object": "chair",
+   "seed": 14,
+   "seams": 760,
+   "same_color": 0.5447368421052632,
+   "top_windows": 56,
+   "top_colors": 3.1964285714285716,
+   "side_windows": 641,
+   "side_colors": 1.3946957878315132,
+   "colors_per_window": 1.539454806312769,
+   "skin_cells": 2558,
+   "largest_region": 0.5089913995308835,
+   "skin_colors": 12,
+   "shuffled": {
+    "same_color": 0.5286842105263159,
+    "colors_per_window": 1.5994261119081778,
+    "largest_region": 0.4692728694292416
+   },
+   "parts": 390,
+   "references": {
+    "own": {
+     "same_color": 0.6439393939393939,
+     "colors_per_window": 1.343549184379634,
+     "largest_region": 0.3423343400248712,
+     "skin_cells": 5629
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7764705882352941,
+     "colors_per_window": 1.1441860465116278,
+     "largest_region": 0.37627268702965916,
+     "sets": [
+      "5766-1",
+      "374-1",
+      "6382-1",
+      "31009-1",
+      "6372-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve",
+   "set": "6378-1",
+   "object": "table",
+   "seed": 43,
+   "seams": 387,
+   "same_color": 0.5064599483204134,
+   "top_windows": 50,
+   "top_colors": 1.44,
+   "side_windows": 126,
+   "side_colors": 1.9523809523809523,
+   "colors_per_window": 1.8068181818181819,
+   "skin_cells": 1225,
+   "largest_region": 0.10285714285714286,
+   "skin_colors": 9,
+   "shuffled": {
+    "same_color": 0.4087855297157622,
+    "colors_per_window": 2.0170454545454546,
+    "largest_region": 0.11493877551020408
+   },
+   "parts": 200,
+   "references": {
+    "own": {
+     "same_color": 0.7071129707112971,
+     "colors_per_window": 1.0878048780487806,
+     "largest_region": 0.1718954248366013,
+     "skin_cells": 1530
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7071129707112971,
+     "colors_per_window": 1.0878048780487806,
+     "largest_region": 0.32554744525547447,
+     "sets": [
+      "7743-1",
+      "6380-1",
+      "31048-1",
+      "6370-1",
+      "6378-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve",
+   "set": "5891-1",
+   "object": "table",
+   "seed": 19,
+   "seams": 638,
+   "same_color": 0.37460815047021945,
+   "top_windows": 48,
+   "top_colors": 3.3541666666666665,
+   "side_windows": 215,
+   "side_colors": 2.483720930232558,
+   "colors_per_window": 2.6425855513307983,
+   "skin_cells": 1722,
+   "largest_region": 0.23577235772357724,
+   "skin_colors": 13,
+   "shuffled": {
+    "same_color": 0.264576802507837,
+    "colors_per_window": 2.9216730038022813,
+    "largest_region": 0.17653890824622534
+   },
+   "parts": 333,
+   "references": {
+    "own": {
+     "same_color": 0.6462585034013606,
+     "colors_per_window": 1.5013531799729365,
+     "largest_region": 0.34402764067127345,
+     "skin_cells": 4052
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7764705882352941,
+     "colors_per_window": 1.0878048780487806,
+     "largest_region": 0.3038912909203212,
+     "sets": [
+      "31009-1",
+      "6382-1",
+      "6372-1",
+      "374-1",
+      "6378-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve",
+   "set": "4956-1",
+   "object": "table",
+   "seed": 28,
+   "seams": 898,
+   "same_color": 0.49888641425389757,
+   "top_windows": 56,
+   "top_colors": 2.2857142857142856,
+   "side_windows": 303,
+   "side_colors": 1.6402640264026402,
+   "colors_per_window": 1.7409470752089136,
+   "skin_cells": 2494,
+   "largest_region": 0.18404170008019247,
+   "skin_colors": 12,
+   "shuffled": {
+    "same_color": 0.47126948775055677,
+    "colors_per_window": 1.7643454038997217,
+    "largest_region": 0.17987169206094628
+   },
+   "parts": 426,
+   "references": {
+    "own": {
+     "same_color": 0.6439393939393939,
+     "colors_per_window": 1.343549184379634,
+     "largest_region": 0.3423343400248712,
+     "skin_cells": 5629
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7764705882352941,
+     "colors_per_window": 1.1441860465116278,
+     "largest_region": 0.37627268702965916,
+     "sets": [
+      "5766-1",
+      "374-1",
+      "6382-1",
+      "31009-1",
+      "6372-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve",
+   "set": "6378-1",
+   "object": "car",
+   "seed": 46,
+   "seams": 349,
+   "same_color": 0.42406876790830944,
+   "top_windows": 4,
+   "top_colors": 2.75,
+   "side_windows": 108,
+   "side_colors": 2.0,
+   "colors_per_window": 2.0267857142857144,
+   "skin_cells": 1040,
+   "largest_region": 0.3038461538461538,
+   "skin_colors": 8,
+   "shuffled": {
+    "same_color": 0.39197707736389686,
+    "colors_per_window": 2.132142857142857,
+    "largest_region": 0.3242307692307692
+   },
+   "parts": 196,
+   "references": {
+    "own": {
+     "same_color": 0.7071129707112971,
+     "colors_per_window": 1.0878048780487806,
+     "largest_region": 0.1718954248366013,
+     "skin_cells": 1530
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.8584905660377359,
+     "colors_per_window": 1.047457627118644,
+     "largest_region": 0.41435768261964734,
+     "sets": [
+      "6380-1",
+      "7743-1",
+      "6362-1",
+      "31048-1",
+      "6370-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve",
+   "set": "5891-1",
+   "object": "car",
+   "seed": 42,
+   "seams": 528,
+   "same_color": 0.3428030303030303,
+   "top_windows": 34,
+   "top_colors": 2.264705882352941,
+   "side_windows": 271,
+   "side_colors": 2.2398523985239853,
+   "colors_per_window": 2.2426229508196722,
+   "skin_cells": 1648,
+   "largest_region": 0.3731796116504854,
+   "skin_colors": 13,
+   "shuffled": {
+    "same_color": 0.284469696969697,
+    "colors_per_window": 2.3285245901639344,
+    "largest_region": 0.3116504854368932
+   },
+   "parts": 338,
+   "references": {
+    "own": {
+     "same_color": 0.6462585034013606,
+     "colors_per_window": 1.5013531799729365,
+     "largest_region": 0.34402764067127345,
+     "skin_cells": 4052
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7764705882352941,
+     "colors_per_window": 1.0878048780487806,
+     "largest_region": 0.3038912909203212,
+     "sets": [
+      "6372-1",
+      "31009-1",
+      "6378-1",
+      "6382-1",
+      "374-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve",
+   "set": "4956-1",
+   "object": "car",
+   "seed": 17,
+   "seams": 761,
+   "same_color": 0.5177398160315374,
+   "top_windows": 56,
+   "top_colors": 1.6071428571428572,
+   "side_windows": 355,
+   "side_colors": 1.476056338028169,
+   "colors_per_window": 1.4939172749391727,
+   "skin_cells": 2511,
+   "largest_region": 0.6463560334528077,
+   "skin_colors": 11,
+   "shuffled": {
+    "same_color": 0.48620236530880423,
+    "colors_per_window": 1.5445255474452555,
+    "largest_region": 0.648426921545201
+   },
+   "parts": 412,
+   "references": {
+    "own": {
+     "same_color": 0.6439393939393939,
+     "colors_per_window": 1.343549184379634,
+     "largest_region": 0.3423343400248712,
+     "skin_cells": 5629
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7764705882352941,
+     "colors_per_window": 1.1441860465116278,
+     "largest_region": 0.37627268702965916,
+     "sets": [
+      "5766-1",
+      "374-1",
+      "6382-1",
+      "31009-1",
+      "6372-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve80",
+   "set": "6378-1",
+   "object": "chair",
+   "seed": 25,
+   "seams": 358,
+   "same_color": 0.4301675977653631,
+   "top_windows": 9,
+   "top_colors": 2.0,
+   "side_windows": 204,
+   "side_colors": 2.4411764705882355,
+   "colors_per_window": 2.4225352112676055,
+   "skin_cells": 900,
+   "largest_region": 0.37555555555555553,
+   "skin_colors": 9,
+   "shuffled": {
+    "same_color": 0.39944134078212296,
+    "colors_per_window": 2.5643192488262914,
+    "largest_region": 0.34555555555555556
+   },
+   "parts": 169,
+   "references": {
+    "own": {
+     "same_color": 0.7071129707112971,
+     "colors_per_window": 1.0878048780487806,
+     "largest_region": 0.1718954248366013,
+     "skin_cells": 1530
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.8584905660377359,
+     "colors_per_window": 1.047457627118644,
+     "largest_region": 0.41435768261964734,
+     "sets": [
+      "6362-1",
+      "377-1",
+      "349-1",
+      "6380-1",
+      "7743-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve80",
+   "set": "5891-1",
+   "object": "chair",
+   "seed": 43,
+   "seams": 576,
+   "same_color": 0.4045138888888889,
+   "top_windows": 25,
+   "top_colors": 1.36,
+   "side_windows": 418,
+   "side_colors": 2.1315789473684212,
+   "colors_per_window": 2.0880361173814896,
+   "skin_cells": 1671,
+   "largest_region": 0.25314183123877915,
+   "skin_colors": 13,
+   "shuffled": {
+    "same_color": 0.3013888888888889,
+    "colors_per_window": 2.242889390519187,
+    "largest_region": 0.17953321364452424
+   },
+   "parts": 295,
+   "references": {
+    "own": {
+     "same_color": 0.6462585034013606,
+     "colors_per_window": 1.5013531799729365,
+     "largest_region": 0.34402764067127345,
+     "skin_cells": 4052
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7764705882352941,
+     "colors_per_window": 1.0878048780487806,
+     "largest_region": 0.3038912909203212,
+     "sets": [
+      "31009-1",
+      "6372-1",
+      "6382-1",
+      "6378-1",
+      "374-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve80",
+   "set": "4956-1",
+   "object": "chair",
+   "seed": 49,
+   "seams": 650,
+   "same_color": 0.5584615384615385,
+   "top_windows": 49,
+   "top_colors": 1.2857142857142858,
+   "side_windows": 505,
+   "side_colors": 1.5900990099009902,
+   "colors_per_window": 1.5631768953068592,
+   "skin_cells": 2241,
+   "largest_region": 0.4917447568049978,
+   "skin_colors": 12,
+   "shuffled": {
+    "same_color": 0.5464615384615383,
+    "colors_per_window": 1.5487364620938626,
+    "largest_region": 0.48888888888888893
+   },
+   "parts": 358,
+   "references": {
+    "own": {
+     "same_color": 0.6439393939393939,
+     "colors_per_window": 1.343549184379634,
+     "largest_region": 0.3423343400248712,
+     "skin_cells": 5629
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7764705882352941,
+     "colors_per_window": 1.1441860465116278,
+     "largest_region": 0.37627268702965916,
+     "sets": [
+      "5766-1",
+      "374-1",
+      "6382-1",
+      "31009-1",
+      "6372-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve80",
+   "set": "6378-1",
+   "object": "table",
+   "seed": 37,
+   "seams": 372,
+   "same_color": 0.48655913978494625,
+   "top_windows": 13,
+   "top_colors": 3.1538461538461537,
+   "side_windows": 75,
+   "side_colors": 2.04,
+   "colors_per_window": 2.2045454545454546,
+   "skin_cells": 866,
+   "largest_region": 0.1374133949191686,
+   "skin_colors": 9,
+   "shuffled": {
+    "same_color": 0.4338709677419355,
+    "colors_per_window": 2.161363636363636,
+    "largest_region": 0.20461893764434178
+   },
+   "parts": 184,
+   "references": {
+    "own": {
+     "same_color": 0.7071129707112971,
+     "colors_per_window": 1.0878048780487806,
+     "largest_region": 0.1718954248366013,
+     "skin_cells": 1530
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.8952380952380953,
+     "colors_per_window": 1.047457627118644,
+     "largest_region": 0.42628205128205127,
+     "sets": [
+      "6362-1",
+      "377-1",
+      "349-1",
+      "6380-1",
+      "6363-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve80",
+   "set": "5891-1",
+   "object": "table",
+   "seed": 1,
+   "seams": 694,
+   "same_color": 0.3472622478386167,
+   "top_windows": 80,
+   "top_colors": 3.625,
+   "side_windows": 184,
+   "side_colors": 2.472826086956522,
+   "colors_per_window": 2.821969696969697,
+   "skin_cells": 1427,
+   "largest_region": 0.14085494043447794,
+   "skin_colors": 13,
+   "shuffled": {
+    "same_color": 0.30403458213256485,
+    "colors_per_window": 2.9916666666666663,
+    "largest_region": 0.18542396636299932
+   },
+   "parts": 334,
+   "references": {
+    "own": {
+     "same_color": 0.6462585034013606,
+     "colors_per_window": 1.5013531799729365,
+     "largest_region": 0.34402764067127345,
+     "skin_cells": 4052
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7071129707112971,
+     "colors_per_window": 1.1441860465116278,
+     "largest_region": 0.3038912909203212,
+     "sets": [
+      "6370-1",
+      "31048-1",
+      "6378-1",
+      "7743-1",
+      "6372-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve80",
+   "set": "4956-1",
+   "object": "table",
+   "seed": 30,
+   "seams": 687,
+   "same_color": 0.5589519650655022,
+   "top_windows": 125,
+   "top_colors": 1.608,
+   "side_windows": 292,
+   "side_colors": 1.9109589041095891,
+   "colors_per_window": 1.8201438848920863,
+   "skin_cells": 2025,
+   "largest_region": 0.20493827160493827,
+   "skin_colors": 12,
+   "shuffled": {
+    "same_color": 0.5344978165938865,
+    "colors_per_window": 1.9414868105515588,
+    "largest_region": 0.2030617283950617
+   },
+   "parts": 327,
+   "references": {
+    "own": {
+     "same_color": 0.6439393939393939,
+     "colors_per_window": 1.343549184379634,
+     "largest_region": 0.3423343400248712,
+     "skin_cells": 5629
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7764705882352941,
+     "colors_per_window": 1.1441860465116278,
+     "largest_region": 0.37627268702965916,
+     "sets": [
+      "374-1",
+      "5766-1",
+      "6382-1",
+      "31009-1",
+      "6372-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve80",
+   "set": "6378-1",
+   "object": "car",
+   "seed": 11,
+   "seams": 315,
+   "same_color": 0.526984126984127,
+   "top_windows": 3,
+   "top_colors": 1.0,
+   "side_windows": 106,
+   "side_colors": 2.1132075471698113,
+   "colors_per_window": 2.0825688073394497,
+   "skin_cells": 887,
+   "largest_region": 0.44081172491544535,
+   "skin_colors": 9,
+   "shuffled": {
+    "same_color": 0.45396825396825397,
+    "colors_per_window": 2.056880733944954,
+    "largest_region": 0.33393461104847805
+   },
+   "parts": 181,
+   "references": {
+    "own": {
+     "same_color": 0.7071129707112971,
+     "colors_per_window": 1.0878048780487806,
+     "largest_region": 0.1718954248366013,
+     "skin_cells": 1530
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.8584905660377359,
+     "colors_per_window": 1.047457627118644,
+     "largest_region": 0.41435768261964734,
+     "sets": [
+      "6362-1",
+      "377-1",
+      "349-1",
+      "6380-1",
+      "7743-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve80",
+   "set": "5891-1",
+   "object": "car",
+   "seed": 29,
+   "seams": 528,
+   "same_color": 0.3314393939393939,
+   "top_windows": 6,
+   "top_colors": 5.166666666666667,
+   "side_windows": 125,
+   "side_colors": 2.528,
+   "colors_per_window": 2.648854961832061,
+   "skin_cells": 1460,
+   "largest_region": 0.21438356164383562,
+   "skin_colors": 13,
+   "shuffled": {
+    "same_color": 0.26780303030303027,
+    "colors_per_window": 2.706870229007633,
+    "largest_region": 0.12315068493150685
+   },
+   "parts": 318,
+   "references": {
+    "own": {
+     "same_color": 0.6462585034013606,
+     "colors_per_window": 1.5013531799729365,
+     "largest_region": 0.34402764067127345,
+     "skin_cells": 4052
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7071129707112971,
+     "colors_per_window": 1.1441860465116278,
+     "largest_region": 0.3038912909203212,
+     "sets": [
+      "6378-1",
+      "6370-1",
+      "31048-1",
+      "6372-1",
+      "7743-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve80",
+   "set": "4956-1",
+   "object": "car",
+   "seed": 19,
+   "seams": 626,
+   "same_color": 0.4904153354632588,
+   "top_windows": 38,
+   "top_colors": 2.5,
+   "side_windows": 326,
+   "side_colors": 1.5552147239263803,
+   "colors_per_window": 1.6538461538461537,
+   "skin_cells": 1981,
+   "largest_region": 0.6047450782433115,
+   "skin_colors": 12,
+   "shuffled": {
+    "same_color": 0.4798722044728435,
+    "colors_per_window": 1.6818681318681317,
+    "largest_region": 0.6225138818778395
+   },
+   "parts": 375,
+   "references": {
+    "own": {
+     "same_color": 0.6439393939393939,
+     "colors_per_window": 1.343549184379634,
+     "largest_region": 0.3423343400248712,
+     "skin_cells": 5629
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7764705882352941,
+     "colors_per_window": 1.1441860465116278,
+     "largest_region": 0.37627268702965916,
+     "sets": [
+      "374-1",
+      "6382-1",
+      "5766-1",
+      "31009-1",
+      "6372-1"
+     ]
+    }
+   }
+  },
+  {
+   "arm": "creserve80",
+   "set": "5891-1",
+   "object": "chair",
+   "seed": 1,
+   "seams": 578,
+   "same_color": 0.3166089965397924,
+   "top_windows": 25,
+   "top_colors": 2.44,
+   "side_windows": 489,
+   "side_colors": 2.2229038854805725,
+   "colors_per_window": 2.2334630350194553,
+   "skin_cells": 1687,
+   "largest_region": 0.22465915826911678,
+   "skin_colors": 13,
+   "shuffled": {
+    "same_color": 0.26782006920415224,
+    "colors_per_window": 2.4038910505836575,
+    "largest_region": 0.22833432128037937
+   },
+   "parts": 292,
+   "complete": true,
+   "references": {
+    "own": {
+     "same_color": 0.6462585034013606,
+     "colors_per_window": 1.5013531799729365,
+     "largest_region": 0.34402764067127345,
+     "skin_cells": 4052
+    },
+    "median": {
+     "same_color": 0.6489522565242867,
+     "colors_per_window": 1.3506463141776615,
+     "largest_region": 0.3253877043906552
+    },
+    "nearest": {
+     "same_color": 0.7764705882352941,
+     "colors_per_window": 1.0878048780487806,
+     "largest_region": 0.3038912909203212,
+     "sets": [
+      "31009-1",
+      "6372-1",
+      "6382-1",
+      "6378-1",
+      "374-1"
+     ]
+    }
+   }
+  }
+ ]
+}
