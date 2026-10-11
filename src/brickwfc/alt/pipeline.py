@@ -128,6 +128,8 @@ class AltConfig:
     # holes with a 3D target
     reserve_small: bool = False  # d2: the main pass tries parts of <= 3 cells only where no larger part fits
     small_last: float | None = None  # d2: the main pass weighs parts of <= 3 cells down, by (cells / 4) ** this
+    regrow: bool = False  # d2, connected order: on a stall (under half the target), grow again from the next ground
+    # region (``bricks/bottomup.py``, M12c)
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = 1111.0  # physics: keep builds needing at most this clutch per stud, in plate-cell weights;
     # 1111 is a real stud (calibrated in results/m12b_overhangs_tables.md); inf: no limit
@@ -305,7 +307,7 @@ def make_context(source: Source, stats: StyleStats, config: AltConfig, target: T
                    config.bridge, config.connect, config.connect_rounds, config.open_tops and target is not None,
                    config.order, config.proposal or "", config.skin and target is not None,
                    target.plane if target is not None and config.symmetric else None, config.skin_power,
-                   config.holes, config.hang, config.reserve_small, config.small_last)
+                   config.holes, config.hang, config.reserve_small, config.small_last, config.regrow)
 
 
 # Generation, resumable ---------------------------------------------------------------------------
@@ -343,6 +345,8 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
         key["reserve_small"] = True
     if context.small_last is not None:  # likewise
         key["small_last"] = context.small_last
+    if context.regrow:  # likewise
+        key["regrow"] = True
     if context.proposal:  # the model by content, so retrained weights are not mixed with old candidates
         key["proposal"] = hashlib.sha256(Path(context.proposal).read_bytes()).hexdigest()[:16]
     return json.loads(json.dumps(key))
@@ -603,6 +607,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--small-last", type=float, metavar="A",
                         help="d2: the main pass weighs parts of at most 3 cells down by (cells / 4) ** A (a soft "
                         "--reserve-small)")
+    parser.add_argument("--regrow", action="store_true",
+                        help="d2 with --order connected: when the growth stalls (covers under half the target), grow "
+                        "again from the next ground region; keep the best attempt")
     parser.add_argument("--k", type=int, default=defaults.k, help="builds to select")
     parser.add_argument("--n", type=int, default=defaults.n, help="candidates to generate")
     parser.add_argument("--seed", type=int, default=defaults.seed)
@@ -659,6 +666,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                                    or args.holes or args.hang or args.reserve_small or args.small_last is not None):
         parser.error("--order, --proposal, --skin, --symmetric, --holes, --hang, --reserve-small and --small-last "
                      "apply to --generator d2 only")
+    if args.regrow and args.order != "connected":
+        parser.error("--regrow goes with --order connected")
     if args.reserve_small and args.small_last is not None:
         parser.error("--reserve-small and --small-last are alternatives")
     if args.skin_power is not None and not args.skin:
@@ -676,6 +685,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         symmetric=args.symmetric, symmetrize_min_score=args.symmetrize_min_score, sizing=args.sizing,
         fill_slack=args.fill_slack,
         holes=args.holes, hang=args.hang, reserve_small=args.reserve_small, small_last=args.small_last,
+        regrow=args.regrow,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, min_fill=args.min_fill, fill_weight=args.fill_weight,
         complete_first=not args.no_complete_first, bar=args.bar, complete_fill=args.complete_fill,

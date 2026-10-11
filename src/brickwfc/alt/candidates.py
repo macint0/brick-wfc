@@ -81,6 +81,7 @@ class Context:
     hang: bool = False  # d2 with holes: the hole pass may hang parts from parts above (support then hanging=True)
     reserve_small: bool = False  # d2: main pass tries small parts only where no larger one fits (see bottomup)
     small_last: float | None = None  # d2: main pass weighs small parts down by (cells / 4) ** this (see bottomup)
+    regrow: bool = False  # d2, connected order: regrow from the next ground region on a stall (see bottomup)
 
 
 @dataclass(frozen=True)
@@ -124,7 +125,8 @@ def d2_builder(context: Context, parts: PartSet, bias: StyleBias) -> BottomUpBui
                            open_tops=context.open_tops, order=context.order,
                            proposal=load_proposal(context.proposal) if context.proposal else None,
                            skin=context.skin, skin_power=context.skin_power, holes=context.holes, hang=context.hang,
-                           small_reserve=context.reserve_small, small_power=context.small_last)
+                           small_reserve=context.reserve_small, small_power=context.small_last,
+                           regrow=context.regrow)
 
 
 def build(context: Context, parts: PartSet, bias: StyleBias, seed: int) -> np.ndarray | None:

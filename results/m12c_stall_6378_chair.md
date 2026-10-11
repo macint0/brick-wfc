@@ -201,3 +201,31 @@ would drop every cached d2 candidate.
   only the arm, as before the fix.
 - **Next:** add "re-grow on a stall" as a flag afterwards if the stall rate matters for the paper's valid-candidate
   numbers.
+
+## Re-grow on a stall, as a flag (2026-10-11, m12c-regrow)
+
+`--regrow` (`AltConfig.regrow`, `BottomUpBuilder(regrow=True)`, default off; in the cache key only when on). With
+`--order connected`:
+- **When:** the growth's result, after the balance cut-back, covers less than `REGROW_FILL` (0.5) of the target.
+- **What:** the growth starts again on an empty build from the next ground region in the same ranking, with the same
+  Generator.
+- **After every region is tried:** the attempt covering the most is kept.
+- **Unchanged builds:** a growth that does not stall is returned as it is, the same build as without the flag.
+  Cached connected builds still replay identically, among them the complete 5891-1 chair, seed 1.
+- **Arms:** `cregrow`, `cregrow80`, `cregrow70` and `cregrow60` are creserve's flags + `--regrow`, compared with
+  creserve at the same slack.
+
+New candidates of the creserve arm on the reconnected targets (no files written):
+
+| target | regrow | stalled (< 50% fill) | fill % per seed 0–9 | largest hole per seed | total s |
+|---|---|---:|---|---|---:|
+| chair 6378-1, 0.7 | off | 5/10 | 97.0, 3.9, 2.8, 88.4, 94.6, 96.0, 3.3, 95.0, 3.7, 2.8 | 7, 945, 955, 56, 25, 25, 951, 7, 947, 955 | 28 |
+| chair 6378-1, 0.7 | on | **0/10** | 97.0, 92.8, 89.0, 88.4, 94.6, 96.0, 95.5, 95.0, 87.9, 92.6 | 7, 28, 56, 56, 25, 25, 13, 7, 56, 28 | 37 |
+| chair 6372-1, 0.8 | off | 5/10 | 3.0, 2.5, 87.1, 2.5, 91.0, 2.5, 94.1, 4.0, 77.5, 87.2 | 917, 921, 59, 921, 29, 921, 25, 907, 69, 30 | 48 |
+| chair 6372-1, 0.8 | on | **0/10** | 80.3, 91.0, 87.1, 82.4, 91.0, 79.3, 94.1, 87.8, 77.5, 87.2 | 42, 34, 59, 59, 29, 99, 25, 71, 69, 30 | 84 |
+
+- **Every stall recovers:** all 10 candidates are valid in every row.
+- **Seeds that did not stall are identical** with the flag (6378-1 seeds 0, 3, 4, 5, 7; 6372-1 seeds 2, 4, 6, 8, 9).
+- **Cost:** a stalled seed is grown about twice (2–10 s more per candidate here).
+- **On a pair that never stalls** (5891-1 chair at 0.8, seeds 0–4): identical builds, 135 s vs 136 s. The flag costs
+  one coverage check.
