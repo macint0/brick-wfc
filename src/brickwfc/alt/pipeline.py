@@ -14,7 +14,9 @@ statistics, from the fold that held the set out if it is one of the M10 sets, el
             floor: candidates with fewer contact events than the ``--min-size-quantile`` quantile of the
             verified ones fail "too_small", so one tiny build cannot shrink every judge sample; with a
             target shape, a fill floor: candidates filling less than ``--fill-floor`` x the 90th
-            percentile of the verified ones' fill fail "low_fill" (M12b)
+            percentile of the verified ones' fill fail "low_fill" (M12b), and with ``--min-fill`` (M12c, off by
+            default) less than that share of the target in absolute terms: a run where every candidate stalls
+            (results/m12c_stall_6378_chair.md: 3.4% fill, all 50 "valid") then selects nothing
   dedupe    near-duplicates in feature space (``features.py``, ``funnel.dedupe``)
   judge     minus the divergence of the build's contact statistics from the learned ones (``style``),
             size-matched: every build subsampled to the smallest one's number of contact events
@@ -132,6 +134,8 @@ class AltConfig:
     wfc_time_limit_s: float = 30.0
     min_size_quantile: float = 0.1
     fill_floor: float = 0.5  # with a target: fail builds filling < this x the 90th-percentile fill (0: off)
+    min_fill: float = 0.0  # with a target: also fail builds filling < this share of it (0: off; the floor above is
+    # relative, so it passes a run in which every candidate stalls)
     fill_weight: float = 1.0  # with a target: selection score z(judge) + this x z(fill) (0: judge only)
     complete_first: bool = True  # with a target: builds that meet the bar are selected before the rest (M12c)
     bar: str = "volume"  # what complete means (``features.Bar``): volume (fill, largest hole, surface) or surface
@@ -394,7 +398,7 @@ def run_funnel(candidates: list[Candidate], context: Context, stats: StyleStats,
     filled_share: dict[int, float] = {}
     if context.mask is not None and verified:
         filled_share = {c.seed: fill(occupancy(c.placed, context.grid), context.mask) for c in verified}
-        fill_floor = config.fill_floor * float(np.quantile(list(filled_share.values()), 0.9))
+        fill_floor = max(config.fill_floor * float(np.quantile(list(filled_share.values()), 0.9)), config.min_fill)
         kept = [c for c in verified if filled_share[c.seed] >= fill_floor]
         if len(kept) < len(verified):
             failures["low_fill"] = len(verified) - len(kept)
@@ -613,6 +617,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--min-size-quantile", type=float, default=defaults.min_size_quantile)
     parser.add_argument("--fill-floor", type=float, default=defaults.fill_floor,
                         help="target shape: fail builds filling less than this x the 90th-percentile fill (0: off)")
+    parser.add_argument("--min-fill", type=float, default=defaults.min_fill,
+                        help="target shape: also fail builds filling less than this share of it (absolute; 0: off)")
     parser.add_argument("--fill-weight", type=float, default=defaults.fill_weight,
                         help="target shape: selection score z(judge) + this x z(fill) (0: judge only)")
     parser.add_argument("--no-complete-first", action="store_true",
@@ -665,7 +671,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         fill_slack=args.fill_slack,
         holes=args.holes, hang=args.hang, reserve_small=args.reserve_small, small_last=args.small_last,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
-        min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, fill_weight=args.fill_weight,
+        min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, min_fill=args.min_fill, fill_weight=args.fill_weight,
         complete_first=not args.no_complete_first, bar=args.bar, complete_fill=args.complete_fill,
         complete_hole=args.complete_hole, complete_surface=args.complete_surface,
         dedupe_threshold=args.dedupe_threshold, diversity=args.diversity, recolor=args.recolor,
