@@ -384,7 +384,27 @@ with hollow targets; colour and symmetry; widen the bench before paper tables.
   their skin on one-colour part types). **Decision for Mac:** `--recolor` on by default with a 3D target (the metrics say
   yes on 18/18; the eye decides from the chair figure). Beyond this space: spare inventory as extra colours, or a
   decode-time colour term.
-- Next, prepared as code while the PC is busy: the wider bench (9 sets × 6 objects, pair-list driver, sizing dry run).
+- **Wider bench — planned, not run** (cdf0a0d; `examples/m12c_bench.json`, `--pairs FILE` on the complete / select /
+  coherence drivers, defaults keep the 9 sweep pairs; `results/m12c_bench_plan.md`): 9 sets (7796-1, 6370-1, 6372-1,
+  6378-1, 7743-1, 5891-1, 4956-1, 10190-1, 10182-1; 270–9720 inventory cells) × 6 objects (chair, table, car, sofa,
+  vessel, bench). Every target sizes cleanly. Time model (CPU s per candidate ∝ cells^1.93, checked on the cached
+  runs): the creserve arm on the 45 new pairs is 8.4 h at 1.0, 5.5 h at 0.8; the two Modular sets are two thirds of it.
+- **The 6378-1 chair stall, diagnosed and half fixed** (e5d3c48, 2df464e; `results/m12c_stall_6378_chair.md`). The
+  early size-sweep arms showed creserve70 6378-1 chair with all 50 candidates at 3.5% fill, every one "valid", and
+  creserve60 at 18% mean. Cause (replays with no rng draws): nearest-neighbour resampling cuts the chair's diagonal
+  caster arms into separate face-connected pieces at every slack (2 pieces at 1.0–0.7, 4 at 0.6), so the growth seed
+  (largest ground region) lands on an island (0.7: total stall) or the chair stands on one foot and tips (0.6: 30/50);
+  the chair was never completable in any arm, and 8 of the 108 bench targets (chairs on the 4 smallest sets) are cut
+  the same way. Fix by construction: `shapes.reconnect` (in `scale_and_join`, before hollowing and supports) adds the
+  fewest bridging cells (+3 to +10); one-piece targets are byte-identical, only cut targets' cache keys change. After
+  it the 0.7 chair stalls on 5/10 seeds instead of 50/50 (a one-cell neck is one piece but not a brick joint; the seed
+  caster outranks the hub column), so the best of a run is near the bar again. `--min-fill F` (absolute fill floor at
+  verify, default 0) stops an all-stall run from selecting a stub; `--regrow` (restart growth from the next ground
+  region on a stall) is being built as a flag. The verify stage's relative fill floor was the hole: 0.5 × the run's
+  90th-percentile fill is 1.8% when every candidate stalls.
+- **Early size-sweep read (selected builds under the old rule, fill / largest hole):** 5891-1 car 95.8/15 (0.9) →
+  97.0/11 (0.7) → 98.8/4 (0.6, meets the bar); 5891-1 table 92.3/31 → 94.4/40 → 99.4/3 (bar); 6378-1 table 81.5/96 →
+  99.4/1 (0.7, bar) → 97.9/8. Size is the lever; the full table is Session B's `results/m12b_size.md`.
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
