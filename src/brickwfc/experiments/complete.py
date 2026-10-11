@@ -33,6 +33,11 @@ structure, a chair's casters, a table's feet, a car's wheel corners) and how man
 fill under half the target; single-seed growth that could not get across) with the layers their builds top out at.
 Where a report holds both arms of a ``COMPARE`` pair (same target, same seeds), it also compares their selected
 builds metric by metric (``compare_report``).
+
+``size-report`` reads the size arms (``SIZE_FAMILIES``: creserve and the default from slack 1.0 down to 0.6): per pair,
+family and slack the valid candidates' mean completeness, the selected build's, the candidates meeting the bar and the
+time per candidate; per pair and family the largest slack at which any candidate, and the selected build, is complete
+(``size.md``, ``size.json``, ``size_sheet_<family>.png``); complete candidates go to ``complete_candidates/``.
 """
 
 from __future__ import annotations
@@ -722,7 +727,21 @@ ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed a
                    ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--order", "connected", "--small-last", "1"]),
     "csmall2_80": ("connected + small-last 2, 0.8",
                    ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--order", "connected", "--small-last", "2"]),
+    # size below 0.8 with the reserve inside connected growth (cf, 2026-10-11: the largest size the set can complete),
+    # with the default at the same slack as the control
+    "creserve90": ("connected + reserve-small, 0.9",
+                   ["--sizing", "usable", "--fill-slack", "0.9", *HANG, "--order", "connected", "--reserve-small"]),
+    "creserve70": ("connected + reserve-small, 0.7",
+                   ["--sizing", "usable", "--fill-slack", "0.7", *HANG, "--order", "connected", "--reserve-small"]),
+    "creserve60": ("connected + reserve-small, 0.6",
+                   ["--sizing", "usable", "--fill-slack", "0.6", *HANG, "--order", "connected", "--reserve-small"]),
+    "usable70": ("usable 0.7 + hang", ["--sizing", "usable", "--fill-slack", "0.7", *HANG]),
+    "usable60": ("usable 0.6 + hang", ["--sizing", "usable", "--fill-slack", "0.6", *HANG]),
 }
+SIZE_COMPARE = (  # size: the default vs creserve at each slack, then creserve from one slack to the next smaller
+    ("usable", "creserve"), ("usable90", "creserve90"), ("usable80", "creserve80"), ("usable70", "creserve70"),
+    ("usable60", "creserve60"), ("creserve", "creserve90"), ("creserve90", "creserve80"), ("creserve", "creserve80"),
+    ("creserve80", "creserve70"), ("creserve70", "creserve60"))
 SMALL_ARMS = ("usable", "reserve", "small1", "small2", "usable80", "reserve80", "small1_80", "small2_80")
 COMPARE = (("usable", "connected"), ("usable90", "connected90"), ("usable80", "connected80"),
            # connected growth with the small parts kept: vs the same option in random order, and vs plain connected
@@ -733,6 +752,7 @@ COMPARE = (("usable", "connected"), ("usable90", "connected90"), ("usable80", "c
            # and vs the default at their slack (cf, 2026-10-10: the adoption rule's comparison)
            ("usable", "creserve"), ("usable", "csmall1"), ("usable", "csmall2"), ("usable80", "creserve80"),
            ("usable80", "csmall1_80"), ("usable80", "csmall2_80"))
+COMPARE += tuple(pair for pair in SIZE_COMPARE if pair not in COMPARE)
 CONNECTED_SMALL_ARMS = ("connected", "creserve", "csmall1", "csmall2", "connected80", "creserve80", "csmall1_80",
                         "csmall2_80")
 STALL_FILL = 50.0  # a candidate under this fill % of its target stalled
@@ -793,6 +813,9 @@ def step_sweep(args: argparse.Namespace) -> None:
                 stats = out / "stats.json"
                 if stats.exists() and json.loads(stats.read_text(encoding="utf-8"))["requested"] == args.n:
                     continue
+                target, _ = sized_target(load_source(set_number), arm_config(arm, obj))
+                print(f"{arm} {obj} {set_number}: slack {arm_config(arm, obj).fill_slack}, "
+                      f"target cells {int(target.mask.sum())}", flush=True)
                 argv = [set_number, "--shape", "brickgpt:" + STRUCTURES[obj], "--n", str(args.n), "--k", "1",
                         "--workers", str(args.workers), "--out", str(out), *ARMS[arm][1]]
                 print(f"{arm} {obj} {set_number}: python -m brickwfc.alt {' '.join(argv)}", flush=True)
@@ -826,7 +849,8 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
             "target_cells": int(mask.sum()), "object_cells": int(obj_target.mask.sum()), "sizing": sizing,
             "valid": len(valid), "candidates": len(candidates),
             "s_per_candidate": stats["generation_cpu_s"] / max(1, len(candidates)),
-            "complete": sum(complete(r) for r in rows.values()), "tip_cells": int(tips.sum()),
+            "complete": sum(complete(r) for r in rows.values()),
+            "complete_seeds": sorted(seed for seed, r in rows.items() if complete(r)), "tip_cells": int(tips.sum()),
             "stalled": sum(stall_tops.values()), "stalled_valid": sum(r["fill_pct"] < STALL_FILL for r in rows.values()),
             "stall_tops": sorted(stall_tops.items())}
     for name in ("fill_pct", "holes", "largest_hole", "surface_pct", "tips_pct"):
@@ -1373,12 +1397,160 @@ def step_remnants(args: argparse.Namespace) -> None:
     print(text)
 
 
+# Size: the largest target the set completes -----------------------------------------------------------------
+
+SIZE_FAMILIES = {  # family: its arms from the largest target to the smallest, with their slacks
+    "creserve": (("creserve", 1.0), ("creserve90", 0.9), ("creserve80", 0.8), ("creserve70", 0.7), ("creserve60", 0.6)),
+    "usable": (("usable", 1.0), ("usable90", 0.9), ("usable80", 0.8), ("usable70", 0.7), ("usable60", 0.6)),
+}
+
+
+def size_rows(cells: list[dict]) -> list[dict]:
+    """One row per pair, family and slack present in ``cells`` (sweep cells): the target, the valid candidates' mean
+    completeness, the selected build's, how many candidates meet the bar, and the time per candidate."""
+    by_key = {(c["arm"], c["object"], c["set"]): c for c in cells}
+    rows = []
+    for obj in OBJECTS:
+        for set_number in SWEEP_SETS:
+            for family, arms in SIZE_FAMILIES.items():
+                for arm, slack in arms:
+                    c = by_key.get((arm, obj, set_number))
+                    if c is None:
+                        continue
+                    s = c.get("selected", {})
+                    rows.append({
+                        "object": obj, "set": set_number, "family": family, "slack": slack, "arm": arm,
+                        "target_cells": c["target_cells"], "valid": c["valid"], "candidates": c["candidates"],
+                        "mean_fill_pct": c["mean_fill_pct"], "mean_largest_hole": c["mean_largest_hole"],
+                        "mean_surface_pct": c["mean_surface_pct"], "complete": c["complete"],
+                        "complete_seeds": c.get("complete_seeds", []), "s_per_candidate": c["s_per_candidate"],
+                        "selected_seed": s.get("seed"), "selected_fill_pct": s.get("fill_pct", math.nan),
+                        "selected_largest_hole": s.get("largest_hole"),
+                        "selected_surface_pct": s.get("surface_pct", math.nan),
+                        "selected_complete": bool(s) and complete(s)})
+    return rows
+
+
+def size_rules(rows: list[dict]) -> list[dict]:
+    """Per pair and family: the largest slack at which any candidate is complete, and at which the selected build
+    is (None: at no slack run), with the slacks that were run."""
+    rules = {}
+    for r in rows:
+        rule = rules.setdefault((r["object"], r["set"], r["family"]),
+                                {"object": r["object"], "set": r["set"], "family": r["family"], "slacks": [],
+                                 "complete_by_slack": {}, "any_complete": None, "selected_complete": None})
+        rule["slacks"].append(r["slack"])
+        rule["complete_by_slack"][r["slack"]] = r["complete"]
+        if r["complete"] and (rule["any_complete"] is None or r["slack"] > rule["any_complete"]):
+            rule["any_complete"] = r["slack"]
+        if r["selected_complete"] and (rule["selected_complete"] is None or r["slack"] > rule["selected_complete"]):
+            rule["selected_complete"] = r["slack"]
+    return list(rules.values())
+
+
+def size_report(rows: list[dict]) -> str:
+    """The per pair, family and slack table, then the per pair largest complete slacks."""
+    lines = ["| object | set | family | slack | target cells | valid | fill % (mean) | largest hole (mean) | "
+             "surface % (mean) | fill % (sel) | largest hole (sel) | surface % (sel) | complete (sel) | "
+             "candidates meeting the bar | s / candidate |",
+             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for r in rows:
+        hole = "" if r["selected_largest_hole"] is None else str(r["selected_largest_hole"])
+        lines.append(
+            f"| {r['object']} | {r['set']} | {r['family']} | {r['slack']:.1f} | {r['target_cells']} | "
+            f"{r['valid']}/{r['candidates']} | {r['mean_fill_pct']:.1f} | {r['mean_largest_hole']:.0f} | "
+            f"{r['mean_surface_pct']:.1f} | {r['selected_fill_pct']:.1f} | {hole} | {r['selected_surface_pct']:.1f} | "
+            f"{'yes' if r['selected_complete'] else 'no'} | {r['complete']} | {r['s_per_candidate']:.1f} |")
+    slacks = sorted({r["slack"] for r in rows}, reverse=True)
+    lines += ["", "| object | set | family | largest slack, any candidate complete | largest slack, selected complete | "
+              "candidates meeting the bar (" + " / ".join(f"{s:.1f}" for s in slacks) + ") |",
+              "|---|---|---|---:|---:|---:|"]
+    for rule in size_rules(rows):
+        counts = " / ".join(str(rule["complete_by_slack"].get(s, "-")) for s in slacks)
+        lines.append(f"| {rule['object']} | {rule['set']} | {rule['family']} | {slack_text(rule['any_complete'])} | "
+                     f"{slack_text(rule['selected_complete'])} | {counts} |")
+    return "\n".join(lines)
+
+
+def slack_text(slack: float | None) -> str:
+    return "none" if slack is None else f"{slack:.1f}"
+
+
+def save_complete_candidates(cells: list[dict], out: Path) -> list[Path]:
+    """Each complete candidate of ``cells`` as <object>_<set>_<arm>_seedNN.ldr (+ preview and missing map) under
+    ``out``; files already there are kept."""
+    from brickwfc.alt.output import write_build
+
+    out.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for c in cells:
+        if not c.get("complete_seeds"):
+            continue
+        key, _, candidates = load_run(Path(c["run"]))
+        mask = key_mask(key)
+        for seed in c["complete_seeds"]:
+            stem = out / f"{c['object']}_{c['set']}_{c['arm']}_seed{seed:02d}"
+            if not stem.with_suffix(".ldr").exists():
+                chosen = next(x for x in candidates if x.seed == seed)
+                write_build(chosen.placed, mask.shape, stem,
+                            f"Complete {c['object']} from {c['set']} ({c['arm']}, seed {seed})")
+                missing_png(chosen.placed, mask, stem.with_name(stem.name + "_missing.png"))
+            paths.append(stem.with_suffix(".ldr"))
+    return paths
+
+
+def size_sheet(cells: list[dict], out: Path, family: str, path: Path) -> Path:
+    """The selected builds of ``family``, pairs as rows and slacks (largest first) as columns."""
+    from PIL import Image
+
+    by_key = {(c["arm"], c["object"], c["set"]): c for c in cells}
+    blank = out / "sweep_missing" / "none.png"
+    blank.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (8, 8), (255, 255, 255)).save(blank)
+    images, labels = [], []
+    for obj in OBJECTS:
+        for set_number in SWEEP_SETS:
+            for arm, slack in SIZE_FAMILIES[family]:
+                c = by_key.get((arm, obj, set_number))
+                if c is None or "preview" not in c:
+                    images.append(blank)
+                    labels.append(f"{obj} {set_number}, {slack:.1f}\nno run")
+                    continue
+                s = c["selected"]
+                images.append(Path(c["preview"]))
+                labels.append(f"{obj} {set_number}, {slack:.1f}{', COMPLETE' if s['complete'] else ''}\n"
+                              f"fill {s['fill_pct']:.1f}%, surface {s['surface_pct']:.1f}%\n"
+                              f"largest hole {s['largest_hole']}, {c['target_cells']} cells\n"
+                              f"{c['complete']} of {c['valid']} valid complete")
+    labeled_sheet(images, labels, path, columns=len(SIZE_FAMILIES[family]), width=500)
+    return path
+
+
+def step_size_report(args: argparse.Namespace) -> None:
+    """The size sweep's tables (``size_report``) and compare pairs, a sheet per family, and the complete candidates
+    saved under ``complete_candidates/``."""
+    arms = [arm for family in SIZE_FAMILIES.values() for arm, _ in family]
+    cells = [c for obj in OBJECTS for set_number in SWEEP_SETS for arm in arms
+             if (c := sweep_cell(args, arm, set_number, obj)) is not None]
+    rows = size_rows(cells)
+    saved = save_complete_candidates(cells, args.out / "complete_candidates")
+    sheets = [size_sheet(cells, args.out, family, args.out / f"size_sheet_{family}.png") for family in SIZE_FAMILIES]
+    (args.out / "size.json").write_text(json.dumps({"rows": rows, "rules": size_rules(rows), "cells": cells},
+                                                   indent=1), encoding="utf-8")
+    text = size_report(rows) + "\n"
+    if compared := compare_report(cells, SIZE_COMPARE):
+        text += "\nSelected builds compared (+ the second arm better, - worse):\n\n" + compared + "\n"
+    (args.out / "size.md").write_text(text, encoding="utf-8")
+    print(text)
+    print(f"wrote size.json, size.md, {', '.join(p.name for p in sheets)}; {len(saved)} complete candidates", flush=True)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.complete", description=__doc__.splitlines()[0])
     parser.add_argument("--runs", type=Path, default=Path("out"), help="folder holding m12b_sizing_fig and m12b_sizing")
     parser.add_argument("--out", type=Path, default=Path("out/m12b_complete"))
     parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report", "sweep", "sweep-report", "holes", "old-vs-base",
-                                                                           "small-only", "remnants"])
+                                                                           "small-only", "remnants", "size-report"])
     parser.add_argument("--per-pair", type=int, default=10, help="trace: builds replayed per pair (selected first)")
     parser.add_argument("--workers", type=int, default=5)
     parser.add_argument("--n", type=int, default=50, help="sweep: candidates per run")
@@ -1406,6 +1578,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         step_small_only(args)
     if "remnants" in args.steps:
         step_remnants(args)
+    if "size-report" in args.steps:
+        step_size_report(args)
     return 0
 
 
