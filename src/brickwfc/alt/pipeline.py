@@ -240,7 +240,7 @@ def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -
         volume = config.fill_slack * target_volume(kept, config.sizing)
         target = scaled_target(source, config, volume, data_dir)
         if config.sizing != "usable":
-            return target, {"volume": volume}
+            return target, {"volume": volume} | joined(target)
         now = unusable(source.inventory, target.mask)
         if now == left_out:
             settled = True
@@ -250,7 +250,13 @@ def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -
         left_out = now
     dropped = {k: n for k, n in source.inventory.items() if k[0] in left_out}
     return target, {"volume": volume, "left_out": left_out, "left_out_cells": target_volume(dropped, "fillable"),
-                    "rounds": round_, "settled": settled}
+                    "rounds": round_, "settled": settled} | joined(target)
+
+
+def joined(target: Target) -> dict:
+    """The sizing detail of a target that resampling cut into pieces: the cells added to join it
+    (``shapes.reconnect``); nothing for a target that came out one piece."""
+    return {"reconnected": target.reconnected} if target.reconnected else {}
 
 
 def solid_scale_shell(source: Source, config: AltConfig, data_dir: Path,
@@ -281,7 +287,7 @@ def solid_scale_shell(source: Source, config: AltConfig, data_dir: Path,
         "removed": int(solid.mask.sum() - mask.sum()), "budget_cells": target_volume(kept, config.sizing),
         "fit_nowhere": nowhere, "fit_nowhere_cells": target_volume(nowhere_parts, "fillable")}}
     description = solid.description[:-1] + f", hollow {config.hollow} at the solid's scale)"
-    return Target(mask, solid.preferred, description, solid.plane), details
+    return Target(mask, solid.preferred, description, solid.plane, solid.reconnected), details
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
@@ -689,6 +695,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     target, sizing = sized_target(source, config, args.data)
     if target is not None:
         print(f"shape: {target.description}, {int(target.mask.sum())} cells, grid {target.mask.shape} (Y, Z, X)")
+    if sizing.get("reconnected"):
+        print(f"reconnected: {sizing['reconnected']} cells added to join the scaled target into one piece")
     if sizing.get("left_out"):
         print(f"usable sizing: left out {sizing['left_out_cells']} cells of parts that fit nowhere in the target "
               f"({', '.join(f'{name} x{n}' for name, n in sizing['left_out'].items())}), {sizing['rounds']} rounds")
