@@ -31,8 +31,8 @@ table, previews and missing maps (``--report-name``, default ``sweep``). Besides
 selected build's clutch, the share of the target's tip cells filled (``tip_cells``: the far ends of the low
 structure, a chair's casters, a table's feet, a car's wheel corners) and how many candidates stalled (``STALL_FILL``:
 fill under half the target; single-seed growth that could not get across) with the layers their builds top out at.
-Where a report holds both arms of a ``COMPARE`` pair (same target, same seeds), it also compares their selected
-builds metric by metric (``compare_report``).
+Where a report holds both arms of a ``COMPARE`` pair, it also compares their selected builds metric by metric
+(``compare_report``; same seeds, and a column says whether the two targets are the same).
 
 ``size-report`` reads the size arms (``SIZE_FAMILIES``: creserve and the default from slack 1.0 down to 0.6): per pair,
 family and slack the valid candidates' mean completeness, the selected build's, the candidates meeting the bar and the
@@ -41,19 +41,26 @@ time per candidate; per pair and family the largest slack at which any candidate
 
 Completeness is counted under both bars (``complete``; ``features.Bar``): the volume bar (fill, largest hole, surface)
 and the surface bar (surface share and largest surface hole: interior cells are invisible), side by side in every
-report. The hollow arms (``hollow``, ``hollow80``: creserve's flags with a 2-cell shell, selected on the surface bar)
-are judged on the surface; their ``HOLLOW_COMPARE`` pairs against creserve compare different targets.
+report. The hollow arms (``HOLLOW_ARMS``: creserve's flags with a shell cut from the solid target at the solid's scale,
+``--hollow-scale solid``, selected on the surface bar) are judged on the surface; their ``HOLLOW_COMPARE`` pairs against
+creserve compare different targets (the same object, its interior removed).
+
+``hollow-sizing`` (no generation) sizes creserve's and creserve80's solid targets on the 9 pairs, cuts a shell of each
+thickness in ``HOLLOW_THICKNESSES`` from them at their scale, and reports per pair the cells kept, the exposed cells
+(equal to the solid's when the void is enclosed), the part budget against the shell's cells and the parts that fit
+nowhere in the shell (``hollow_sizing.md``, ``.json``; one json per pair under ``hollow_sizing/``, so it resumes).
 """
 
 from __future__ import annotations
 
 import argparse
 import functools
+import hashlib
 import json
 import math
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import fields
+from dataclasses import fields, replace
 from pathlib import Path
 from typing import Sequence
 
@@ -62,8 +69,8 @@ from scipy import ndimage
 
 from brickwfc.alt.candidates import Candidate, Context, d2_builder
 from brickwfc.alt.features import Bar, exposed, largest_component, occupancy
-from brickwfc.alt.inputs import learned_style, load_source
-from brickwfc.alt.pipeline import AltConfig, cache_key, make_context, make_target, sized_target
+from brickwfc.alt.inputs import DATA_DIR, learned_style, load_source
+from brickwfc.alt.pipeline import AltConfig, cache_key, make_context, make_target, sized_target, solid_scale_shell
 from brickwfc.alt.pipeline import main as pipeline_main
 from brickwfc.bricks.bottomup import SMALL_CELLS, BottomUpBuilder, _FitMap
 from brickwfc.bricks.build import placed_colors, slope_profiles
@@ -760,16 +767,16 @@ ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed a
     "usable70": ("usable 0.7 + hang", ["--sizing", "usable", "--fill-slack", "0.7", *HANG]),
     "usable60": ("usable 0.6 + hang", ["--sizing", "usable", "--fill-slack", "0.6", *HANG]),
     # hollow targets judged on the surface (cf, 2026-10-10 night: interior cells are invisible): creserve's flags, a
-    # 2-cell shell with internal pillars (``shapes.hollow``; the shell is scaled to the inventory's volume, so the
-    # object grows) and the surface bar at selection
-    "hollow": ("connected + reserve-small, hollow 2, surface bar",
-               ["--sizing", "usable", *HANG, "--order", "connected", "--reserve-small", "--hollow", "2",
-                "--bar", "surface"]),
-    "hollow80": ("connected + reserve-small, 0.8, hollow 2, surface bar",
-                 ["--sizing", "usable", "--fill-slack", "0.8", *HANG, "--order", "connected", "--reserve-small",
-                  "--hollow", "2", "--bar", "surface"]),
+    # 1- or 2-cell shell with internal pillars cut from creserve's solid target at its scale (``--hollow-scale solid``:
+    # the same object, the interior's parts left over; results/m12c_hollow_sizing.md) and the surface bar at selection
+    **{f"hollow{t}{suffix}": (f"connected + reserve-small{title}, hollow {t} at the solid's scale, surface bar",
+                              ["--sizing", "usable", *slack, *HANG, "--order", "connected", "--reserve-small",
+                               "--hollow", str(t), "--hollow-scale", "solid", "--bar", "surface"])
+       for suffix, title, slack in (("", "", []), ("_80", ", 0.8", ["--fill-slack", "0.8"])) for t in (1, 2)},
 }
-HOLLOW_COMPARE = (("creserve", "hollow"), ("creserve80", "hollow80"))  # different targets: the hollow one is a shell
+HOLLOW_ARMS = ("hollow1", "hollow2", "hollow1_80", "hollow2_80")
+HOLLOW_COMPARE = (("creserve", "hollow1"), ("creserve", "hollow2"), ("hollow2", "hollow1"),  # the same object, less
+                  ("creserve80", "hollow1_80"), ("creserve80", "hollow2_80"), ("hollow2_80", "hollow1_80"))
 SIZE_COMPARE = (  # size: the default vs creserve at each slack, then creserve from one slack to the next smaller
     ("usable", "creserve"), ("usable90", "creserve90"), ("usable80", "creserve80"), ("usable70", "creserve70"),
     ("usable60", "creserve60"), ("creserve", "creserve90"), ("creserve90", "creserve80"), ("creserve", "creserve80"),
@@ -821,9 +828,15 @@ def arm_config(arm: str, obj: str, **changes) -> AltConfig:
     sizing = flags[flags.index("--sizing") + 1] if "--sizing" in flags else "fillable"
     slack = float(flags[flags.index("--fill-slack") + 1]) if "--fill-slack" in flags else 1.0
     shell = int(flags[flags.index("--hollow") + 1]) if "--hollow" in flags else 0
+    scale = flags[flags.index("--hollow-scale") + 1] if "--hollow-scale" in flags else "shell"
     bar = flags[flags.index("--bar") + 1] if "--bar" in flags else "volume"
-    return AltConfig(shape="brickgpt:" + STRUCTURES[obj], sizing=sizing, fill_slack=slack, hollow=shell, bar=bar,
-                     **changes)
+    return AltConfig(shape="brickgpt:" + STRUCTURES[obj], sizing=sizing, fill_slack=slack, hollow=shell,
+                     hollow_scale=scale, bar=bar, **changes)
+
+
+def target_hash(mask: np.ndarray) -> str:
+    """A short fingerprint of a target mask (its shape and cells), to tell whether two runs built the same target."""
+    return hashlib.sha256(repr(mask.shape).encode() + np.packbits(mask).tobytes()).hexdigest()[:16]
 
 
 def same_target(arm: str, other: str, set_number: str, obj: str) -> bool:
@@ -882,7 +895,8 @@ def sweep_cell(args: argparse.Namespace, arm: str, set_number: str, obj: str) ->
     stall_tops = Counter(top_layer(c.placed) for c in candidates
                          if 100 * (occupancy(c.placed, mask.shape) & mask).sum() < STALL_FILL * mask.sum())
     cell = {"arm": arm, "set": set_number, "object": obj, "run": directory.as_posix(), "same_as": alias,
-            "target_cells": int(mask.sum()), "object_cells": int(obj_target.mask.sum()), "sizing": sizing,
+            "target_cells": int(mask.sum()), "target_hash": target_hash(mask), "object_cells": int(obj_target.mask.sum()),
+            "sizing": sizing,
             "valid": len(valid), "candidates": len(candidates),
             "s_per_candidate": stats["generation_cpu_s"] / max(1, len(candidates)),
             "bar": arm_config(config_arm, obj).bar,  # the bar the run selected on
@@ -956,12 +970,14 @@ COMPARED = (  # (label, value of a sweep cell, higher is better, format)
 
 
 def compare_report(cells: list[dict], pairs: Sequence[tuple[str, str]] = COMPARE) -> str:
-    """Per pair and per (base, arm) in ``pairs`` present in ``cells``: the selected builds' metrics, base -> arm,
-    marked + where the arm is better, - where worse, = where equal; and the count of each."""
+    """Per pair and per (base, arm) in ``pairs`` present in ``cells``: whether the two runs had the same target
+    (``target_hash``; "-" if unknown), the selected builds' metrics, base -> arm, marked + where the arm is better,
+    - where worse, = where equal; and the count of each. Where the targets differ (another slack, a hollow), the
+    metrics are each against its own target."""
     by_key = {(c["arm"], c["object"], c["set"]): c for c in cells}
-    lines = ["| object | set | base -> arm | " + " | ".join(name for name, *_ in COMPARED)
+    lines = ["| object | set | base -> arm | same target | " + " | ".join(name for name, *_ in COMPARED)
              + " | complete (sel, vol / surf) | stalled | better / worse |",
-             "|---|---|---|" + "---:|" * (len(COMPARED) + 3)]
+             "|---|---|---|---|" + "---:|" * (len(COMPARED) + 3)]
     for base, arm in pairs:
         for obj in OBJECTS:
             for set_number in SWEEP_SETS:
@@ -978,7 +994,9 @@ def compare_report(cells: list[dict], pairs: Sequence[tuple[str, str]] = COMPARE
                     else:
                         mark, worse = "-", worse + 1
                     row.append(f"{x:{spec}} -> {y:{spec}} {mark}")
-                lines.append(f"| {obj} | {set_number} | {ARMS[base][0]} -> {ARMS[arm][0]} | " + " | ".join(row)
+                same = ("-" if a.get("target_hash") is None or b.get("target_hash") is None
+                        else "yes" if a["target_hash"] == b["target_hash"] else "no")
+                lines.append(f"| {obj} | {set_number} | {ARMS[base][0]} -> {ARMS[arm][0]} | {same} | " + " | ".join(row)
                              + f" | {bars_text(int(a['selected']['complete']), int(a['selected']['complete_surface']))} -> "
                              f"{bars_text(int(b['selected']['complete']), int(b['selected']['complete_surface']))} | "
                              f"{a.get('stalled', 0)} -> {b.get('stalled', 0)} | {better} / {worse} |")
@@ -1024,7 +1042,7 @@ def step_sweep_report(args: argparse.Namespace) -> None:
     sheets = sweep_sheets(cells, args.out, arms, name)
     text = sweep_report(cells) + "\n"
     if compared := compare_report(cells):
-        text += "\nSelected builds compared (same target, same seeds; + the second arm better, - worse):\n\n"
+        text += "\nSelected builds compared (same seeds; + the second arm better, - worse; each against its own target):\n\n"
         text += compared + "\n"
     (args.out / f"{name}.md").write_text(text, encoding="utf-8")
     print(text)
@@ -1614,12 +1632,79 @@ def step_size_report(args: argparse.Namespace) -> None:
     print(f"wrote size.json, size.md, {', '.join(p.name for p in sheets)}; {len(saved)} complete candidates", flush=True)
 
 
+# Hollow targets at the solid's scale: sizing only -------------------------------------------------------------
+
+HOLLOW_SIZING_ARMS = ("creserve", "creserve80")  # the solid targets the hollow arms are cut from
+HOLLOW_THICKNESSES = (1, 2)
+
+
+def hollow_sizing_cell(arm: str, set_number: str, obj: str, out: Path) -> dict:
+    """One pair at one slack: the solid target (checked against the arm's cached run, if any) and a shell of each
+    thickness cut from it at its scale (``pipeline.solid_scale_shell``)."""
+    source = load_source(set_number)
+    config = arm_config(arm, obj)
+    solid, details = sized_target(source, config)
+    cached = arm_dir(out, arm, set_number, obj, Path("out")) / "candidates.jsonl"
+    same = None
+    if cached.exists():
+        with cached.open(encoding="utf-8") as f:
+            cached_mask = key_mask(json.loads(f.readline())["key"])
+        same = cached_mask.shape == solid.mask.shape and bool((cached_mask == solid.mask).all())
+    outer = exposed(solid.mask)
+    cell = {"arm": arm, "set": set_number, "object": obj, "slack": config.fill_slack,
+            "solid_cells": int(solid.mask.sum()), "solid_exposed": int(outer.sum()), "grid": list(solid.mask.shape),
+            "same_as_cached": same, "left_out": details.get("left_out", {}), "shells": []}
+    for thickness in HOLLOW_THICKNESSES:
+        shell, info = solid_scale_shell(source, replace(config, hollow=thickness, hollow_scale="solid"), DATA_DIR,
+                                        (solid, details))
+        h = info["hollow"]
+        cell["shells"].append(h | {
+            "kept_pct": 100 * h["cells"] / h["solid_cells"], "exposed": int(exposed(shell.mask).sum()),
+            "enclosed": bool((exposed(shell.mask) == outer).all()),
+            "spare_cells": h["budget_cells"] - h["cells"], "spare_pct": 100 * (h["budget_cells"] - h["cells"]) / h["budget_cells"]})
+    return cell
+
+
+def hollow_sizing_report(cells: list[dict]) -> str:
+    lines = ["| object | set | slack | solid cells | exposed | part budget (cells) | hollow | cells kept (%) | exposed "
+             "(shell) | void enclosed | budget - shell cells (% of budget) | fit nowhere in the shell (cells) |",
+             "|---|---|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|"]
+    for c in cells:
+        for h in c["shells"]:
+            nowhere = ", ".join(f"{name} x{n}" for name, n in h["fit_nowhere"].items())
+            lines.append(f"| {c['object']} | {c['set']} | {c['slack']:.1f} | {c['solid_cells']} | {c['solid_exposed']} | "
+                         f"{h['budget_cells']} | {h['thickness']} | {h['cells']} ({h['kept_pct']:.0f}) | {h['exposed']} | "
+                         f"{'yes' if h['enclosed'] else 'no'} | {h['spare_cells']} ({h['spare_pct']:.0f}) | "
+                         f"{h['fit_nowhere_cells']}{f' ({nowhere})' if nowhere else ''} |")
+    return "\n".join(lines)
+
+
+def step_hollow_sizing(args: argparse.Namespace) -> None:
+    folder = args.out / "hollow_sizing"
+    folder.mkdir(parents=True, exist_ok=True)
+    cells = []
+    for arm in HOLLOW_SIZING_ARMS:
+        for obj in OBJECTS:
+            for set_number in SWEEP_SETS:
+                path = folder / f"{arm}_{set_number}_{obj}.json"
+                if not path.exists():
+                    path.write_text(json.dumps(hollow_sizing_cell(arm, set_number, obj, args.out), indent=1),
+                                    encoding="utf-8")
+                cells.append(json.loads(path.read_text(encoding="utf-8")))
+                print(f"{arm} {obj} {set_number}: done", flush=True)
+    text = hollow_sizing_report(cells) + "\n"
+    (args.out / "hollow_sizing.json").write_text(json.dumps(cells, indent=1), encoding="utf-8")
+    (args.out / "hollow_sizing.md").write_text(text, encoding="utf-8")
+    print(text)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.complete", description=__doc__.splitlines()[0])
     parser.add_argument("--runs", type=Path, default=Path("out"), help="folder holding m12b_sizing_fig and m12b_sizing")
     parser.add_argument("--out", type=Path, default=Path("out/m12b_complete"))
     parser.add_argument("--steps", nargs="+", default=["final"], choices=["final", "trace", "report", "sweep", "sweep-report", "holes", "old-vs-base",
-                                                                           "small-only", "remnants", "size-report"])
+                                                                           "small-only", "remnants", "size-report",
+                                                                           "hollow-sizing"])
     parser.add_argument("--per-pair", type=int, default=10, help="trace: builds replayed per pair (selected first)")
     parser.add_argument("--workers", type=int, default=5)
     parser.add_argument("--n", type=int, default=50, help="sweep: candidates per run")
@@ -1649,6 +1734,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         step_remnants(args)
     if "size-report" in args.steps:
         step_size_report(args)
+    if "hollow-sizing" in args.steps:
+        step_hollow_sizing(args)
     return 0
 
 

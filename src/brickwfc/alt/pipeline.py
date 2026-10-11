@@ -59,7 +59,7 @@ from brickwfc.alt.inputs import (CATALOGS, DATA_DIR, SETS_FILE, STYLE_DIR, STYLE
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
 from brickwfc.alt.target import Target, load_target, takes_supports
 from brickwfc.bricks.inventory import SIZINGS, inventory_cells, target_volume, unusable, utilization
-from brickwfc.bricks.shapes import SHAPES, fill, iou
+from brickwfc.bricks.shapes import SHAPES, fill, hollow, iou
 from brickwfc.bricks.style import StyleStats, events, matched_divergence
 from brickwfc.bricks.symmetry import SYMMETRIZE_MIN_SCORE
 from brickwfc.bricks.voxelize import voxelize
@@ -97,6 +97,8 @@ class AltConfig:
     voxels: int = 32  # mesh target: cells along its longest side before scaling
     mesh_up: str = "y"
     hollow: int = 0  # 3D target: shell thickness in cells, plus internal pillars (0: solid)
+    hollow_scale: str = "shell"  # with hollow: shell (the shell is scaled to the volume, a larger object) or solid
+    # (the solid target is sized as without hollow, then hollowed: the same object, the interior's parts left over)
     supports: bool = True  # 3D target: support columns under overhangs out of a part's reach (M12b 1d)
     support_height: int = 6  # with supports: only columns at most this many cells tall (0: any); 6 props the
     # chair's caster hub without towers under a table top (results/m12b_brickgpt.md)
@@ -187,6 +189,19 @@ def make_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) ->
     return sized_target(source, config, data_dir)[0]
 
 
+HOLLOW_SCALES = ("shell", "solid")
+
+
+def scaled_target(source: Source, config: AltConfig, volume: float, data_dir: Path) -> Target:
+    """``config``'s target scaled to ``volume`` cells (``target.load_target``)."""
+    return load_target(config.shape, volume, source.colors, Path(config.height_map) if config.height_map else None,
+                       Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
+                       config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
+                       hollow=config.hollow, supports=config.supports and takes_supports(config.shape),
+                       support_height=config.support_height, symmetric=config.symmetric,
+                       keep_sections=config.sizing != "box", symmetrize_min_score=config.symmetrize_min_score)
+
+
 def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -> tuple[Target | None, dict]:
     """The target scaled to ``fill_slack`` x the inventory's volume under ``sizing``, and how it was sized.
 
@@ -194,24 +209,23 @@ def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -
     inside the scaled target (``inventory.unusable``: any orientation and position, every rule but the shape off),
     rescales, and repeats until the left-out parts no longer change: a smaller target can leave out more parts. The
     left-out parts stay in the inventory (they just cannot go in). The details: the volume the target was scaled to
-    and, with usable sizing, the left-out parts (name -> count), their cells, the rounds and whether they settled."""
+    and, with usable sizing, the left-out parts (name -> count), their cells, the rounds and whether they settled.
+    With ``hollow`` and ``hollow_scale="solid"``, see ``solid_scale_shell``."""
     if config.shape is None:
         return None, {}
     config = resolve(config)
     if not 0 < config.fill_slack <= 1:
         raise ValueError(f"fill_slack must be in (0, 1], not {config.fill_slack}")
+    if config.hollow_scale not in HOLLOW_SCALES:
+        raise ValueError(f"hollow_scale must be one of {HOLLOW_SCALES}, not {config.hollow_scale!r}")
+    if config.hollow and config.hollow_scale == "solid":
+        return solid_scale_shell(source, config, data_dir)
     left_out: dict[str, int] = {}  # the parts left out of the volume the target is scaled to
     settled = False
     for round_ in range(1, USABLE_ROUNDS + 1):
         kept = {k: n for k, n in source.inventory.items() if k[0] not in left_out}
         volume = config.fill_slack * target_volume(kept, config.sizing)
-        target = load_target(config.shape, volume, source.colors,
-                             Path(config.height_map) if config.height_map else None,
-                             Path(config.color_map) if config.color_map else None, config.shape_height, data_dir,
-                             config.shape_exact, config.shape_columns, voxels=config.voxels, up=config.mesh_up,
-                             hollow=config.hollow, supports=config.supports and takes_supports(config.shape),
-                             support_height=config.support_height, symmetric=config.symmetric,
-                             keep_sections=config.sizing != "box", symmetrize_min_score=config.symmetrize_min_score)
+        target = scaled_target(source, config, volume, data_dir)
         if config.sizing != "usable":
             return target, {"volume": volume}
         now = unusable(source.inventory, target.mask)
@@ -224,6 +238,37 @@ def sized_target(source: Source, config: AltConfig, data_dir: Path = DATA_DIR) -
     dropped = {k: n for k, n in source.inventory.items() if k[0] in left_out}
     return target, {"volume": volume, "left_out": left_out, "left_out_cells": target_volume(dropped, "fillable"),
                     "rounds": round_, "settled": settled}
+
+
+def solid_scale_shell(source: Source, config: AltConfig, data_dir: Path,
+                      solid: tuple[Target, dict] | None = None) -> tuple[Target, dict]:
+    """The solid target, sized as without ``hollow`` (with its usable fixpoint), then hollowed at that scale
+    (``shapes.hollow``: a ``hollow``-cell shell plus internal pillars): the same object as the solid one, with the
+    interior's share of the part budget left over for the surface (M12c). Support columns are the solid's (the
+    outside is unchanged; the pillars hold the shell over the void). The scale is not refit: parts that fit in the
+    solid but nowhere in the shell are counted (``fit_nowhere``), not taken out of the volume. The details add, under
+    "hollow": the thickness, the solid's and the shell's cells, the part budget (fillable cells of the parts not left
+    out) and the parts that fit nowhere in the shell with their cells. ``solid``: the solid target and its details,
+    if already sized (``sized_target`` with ``hollow=0``)."""
+    config = resolve(config)
+    solid_config = replace(config, hollow=0)
+    solid, details = solid or sized_target(source, solid_config, data_dir)
+    obj = solid.mask
+    if solid_config.supports and takes_supports(config.shape):  # the object without its support columns
+        obj = scaled_target(source, replace(solid_config, supports=False), details["volume"], data_dir).mask
+        if obj.shape != solid.mask.shape or (obj & ~solid.mask).any():
+            raise RuntimeError("the solid target without supports is not inside the solid target with them")
+    mask = hollow(obj, config.hollow) | (solid.mask & ~obj)
+    left_out = details.get("left_out", {})
+    kept = {k: n for k, n in source.inventory.items() if k[0] not in left_out}
+    nowhere = {name: n for name, n in unusable(source.inventory, mask).items() if name not in left_out}
+    nowhere_parts = {k: n for k, n in source.inventory.items() if k[0] in nowhere}
+    details = details | {"hollow": {
+        "thickness": config.hollow, "scale": "solid", "solid_cells": int(solid.mask.sum()), "cells": int(mask.sum()),
+        "removed": int(solid.mask.sum() - mask.sum()), "budget_cells": target_volume(kept, config.sizing),
+        "fit_nowhere": nowhere, "fit_nowhere_cells": target_volume(nowhere_parts, "fillable")}}
+    description = solid.description[:-1] + f", hollow {config.hollow} at the solid's scale)"
+    return Target(mask, solid.preferred, description, solid.plane), details
 
 
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
@@ -472,6 +517,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--voxels", type=int, default=defaults.voxels,
                         help="mesh target: cells along its longest side before scaling (detail kept)")
     parser.add_argument("--mesh-up", choices=("y", "z"), default=defaults.mesh_up, help="mesh target: up axis")
+    parser.add_argument("--hollow-scale", choices=HOLLOW_SCALES, default=defaults.hollow_scale,
+                        help="with --hollow: shell (the shell is scaled to the inventory's volume: a larger object) or "
+                        "solid (the solid target is sized, then hollowed: the same object, the interior's parts free)")
     parser.add_argument("--hollow", type=int, default=defaults.hollow,
                         help="3D target: a shell this many cells thick plus internal pillars (0: solid)")
     parser.add_argument("--no-open-tops", action="store_true",
@@ -579,7 +627,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         connect=not args.no_connect, connect_rounds=args.connect_rounds,
         shape=args.shape, height_map=args.height_map, color_map=args.color_map, shape_height=args.shape_height,
         shape_exact=args.shape_exact, shape_columns=args.shape_columns, voxels=args.voxels, mesh_up=args.mesh_up,
-        hollow=args.hollow, supports=args.supports, support_height=args.support_height, open_tops=not args.no_open_tops,
+        hollow=args.hollow, hollow_scale=args.hollow_scale, supports=args.supports, support_height=args.support_height, open_tops=not args.no_open_tops,
         order=args.order, proposal=args.proposal, skin=args.skin, skin_power=args.skin_power,
         symmetric=args.symmetric, symmetrize_min_score=args.symmetrize_min_score, sizing=args.sizing,
         fill_slack=args.fill_slack,
@@ -606,6 +654,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     if sizing.get("left_out"):
         print(f"usable sizing: left out {sizing['left_out_cells']} cells of parts that fit nowhere in the target "
               f"({', '.join(f'{name} x{n}' for name, n in sizing['left_out'].items())}), {sizing['rounds']} rounds")
+    if shell := sizing.get("hollow"):
+        nowhere = ", ".join(f"{name} x{n}" for name, n in shell["fit_nowhere"].items()) or "none"
+        print(f"hollow {shell['thickness']} at the solid's scale: {shell['cells']} of {shell['solid_cells']} cells kept "
+              f"({shell['removed']} removed); part budget {shell['budget_cells']} cells, "
+              f"{shell['budget_cells'] - shell['cells']} more than the shell; fit nowhere in the shell: "
+              f"{shell['fit_nowhere_cells']} cells ({nowhere})")
     context = make_context(source, stats, config, target)
     cache = out / "candidates.jsonl"
     if args.fresh and cache.exists():
