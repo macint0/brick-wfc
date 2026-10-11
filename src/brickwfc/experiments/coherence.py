@@ -185,7 +185,7 @@ def g_value(row: dict, key: str, which: str) -> float:
     return row[which][key] if which else row[key]
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.coherence",
                                      description=__doc__.splitlines()[0])
     parser.add_argument("--sweep", type=Path, default=Path("out/m12b_complete"), help="the completeness sweep's --out")
@@ -200,14 +200,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                         "measure it after (bricks.recolor)")
     parser.add_argument("--pairs", type=Path, help="a JSON file of (set, object) pairs (complete.load_pairs); "
                         "default: the 9 sweep pairs; a pair without a finished run is skipped")
-    args = parser.parse_args(argv)
+    parser.add_argument("--arms", nargs="+", default=list(ARMS),
+                        help="arm folders under <sweep>/sweep/ (default: " + " ".join(ARMS) + ")")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = parser().parse_args(argv)
     args.cache.mkdir(parents=True, exist_ok=True)
     real = []
     for set_number in json.loads(args.sets_file.read_text(encoding="utf-8"))["selected"]:
         real.append(real_row(set_number, args.data, args.cache, args.draws))
         print(f"real {set_number}: {real[-1]['parts']} parts", flush=True)
     builds = []
-    for arm in ARMS:
+    for arm in args.arms:
         for set_number, obj in load_pairs(args.pairs):
             if not (args.sweep / "sweep" / arm / set_number / obj / "stats.json").exists():
                 print(f"{arm} {obj} {set_number}: no finished run, skipped", flush=True)
@@ -215,7 +221,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             builds.append(build_row(args.sweep, arm, set_number, obj, args.draws))
             print(f"{arm} {obj} {set_number}: seed {builds[-1]['seed']}", flush=True)
     arm, set_number, obj, seed = COMPLETE_CHAIR
-    builds.append(build_row(args.sweep, arm, set_number, obj, args.draws, seed) | {"complete": True})
+    if (args.sweep / "sweep" / arm / set_number / obj / "stats.json").exists():  # in the completeness sweep only
+        builds.append(build_row(args.sweep, arm, set_number, obj, args.draws, seed) | {"complete": True})
     for b in builds:
         b["references"] = references(b, real, args.nearest)
     args.results.parent.mkdir(parents=True, exist_ok=True)

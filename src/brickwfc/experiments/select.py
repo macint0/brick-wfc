@@ -100,7 +100,7 @@ def table(cells: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.select", description=__doc__.splitlines()[0])
     parser.add_argument("--sweep", type=Path, default=Path("out/m12b_complete"), help="the completeness sweep's --out")
     parser.add_argument("--data", type=Path, default=DATA_DIR, help="OMR download cache")
@@ -109,7 +109,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=Path("out/m12c_select/select"), help="writes <out>.json")
     parser.add_argument("--pairs", type=Path, help="a JSON file of (set, object) pairs (complete.load_pairs); "
                         "default: the 9 sweep pairs")
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = parser().parse_args(argv)
     cells, missing = [], []
     for arm in args.arms:
         for set_number, obj in load_pairs(args.pairs):

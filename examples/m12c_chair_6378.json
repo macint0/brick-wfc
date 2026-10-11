@@ -1,0 +1,9 @@
+{
+ "description": "The 6378-1 chair alone: its target was cut by resampling and is reconnected since 2df464e (results/m12c_stall_6378_chair.md); scripts/overnight_m12c.sh reruns its arms on it.",
+ "pairs": [
+  [
+   "6378-1",
+   "chair"
+  ]
+ ]
+}

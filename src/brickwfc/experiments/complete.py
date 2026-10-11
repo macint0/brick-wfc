@@ -817,12 +817,21 @@ ARMS = {  # name: (title, pipeline flags; explicit, since the defaults changed a
     # creserve at each slack + --regrow; a pair whose growth never stalls builds the same candidates as creserve
     **{f"cregrow{suffix}": (f"connected + reserve-small{title}, regrow",
                             ["--sizing", "usable", *slack, *HANG, "--order", "connected", "--reserve-small", "--regrow"])
-       for suffix, title, slack in (("", "", []), ("80", ", 0.8", ["--fill-slack", "0.8"]),
-                                    ("70", ", 0.7", ["--fill-slack", "0.7"]), ("60", ", 0.6", ["--fill-slack", "0.6"]))},
+       for suffix, title, slack in (("", "", []), ("90", ", 0.9", ["--fill-slack", "0.9"]),
+                                    ("80", ", 0.8", ["--fill-slack", "0.8"]), ("70", ", 0.7", ["--fill-slack", "0.7"]),
+                                    ("60", ", 0.6", ["--fill-slack", "0.6"]))},
+    # the wider bench (M12c, results/m12c_bench_plan.md): cregrow at each slack, and builds under half the target
+    # fail at verify (--min-fill 0.5, the sweep's STALL_FILL), so a run where every candidate stalls selects nothing
+    **{f"bench{suffix}": (f"bench: connected + reserve-small{title}, regrow, min-fill 0.5",
+                          ["--sizing", "usable", *slack, *HANG, "--order", "connected", "--reserve-small", "--regrow",
+                           "--min-fill", "0.5"])
+       for suffix, title, slack in (("", "", []), ("90", ", 0.9", ["--fill-slack", "0.9"]),
+                                    ("80", ", 0.8", ["--fill-slack", "0.8"]), ("70", ", 0.7", ["--fill-slack", "0.7"]),
+                                    ("60", ", 0.6", ["--fill-slack", "0.6"]))},
 }
 HOLLOW_ARMS = ("hollow1", "hollow2", "hollow1_80", "hollow2_80")
-REGROW_COMPARE = (("creserve", "cregrow"), ("creserve80", "cregrow80"), ("creserve70", "cregrow70"),
-                  ("creserve60", "cregrow60"))  # same targets, same seeds
+REGROW_COMPARE = (("creserve", "cregrow"), ("creserve90", "cregrow90"), ("creserve80", "cregrow80"),
+                  ("creserve70", "cregrow70"), ("creserve60", "cregrow60"))  # same targets, same seeds
 HOLLOW_COMPARE = (("creserve", "hollow1"), ("creserve", "hollow2"), ("hollow2", "hollow1"),  # the same object, less
                   ("creserve80", "hollow1_80"), ("creserve80", "hollow2_80"), ("hollow2_80", "hollow1_80"))
 SIZE_COMPARE = (  # size: the default vs creserve at each slack, then creserve from one slack to the next smaller
@@ -1513,6 +1522,7 @@ def step_remnants(args: argparse.Namespace) -> None:
 SIZE_FAMILIES = {  # family: its arms from the largest target to the smallest, with their slacks
     "creserve": (("creserve", 1.0), ("creserve90", 0.9), ("creserve80", 0.8), ("creserve70", 0.7), ("creserve60", 0.6)),
     "usable": (("usable", 1.0), ("usable90", 0.9), ("usable80", 0.8), ("usable70", 0.7), ("usable60", 0.6)),
+    "cregrow": (("cregrow", 1.0), ("cregrow90", 0.9), ("cregrow80", 0.8), ("cregrow70", 0.7), ("cregrow60", 0.6)),
 }
 
 
@@ -1664,7 +1674,9 @@ def step_size_report(args: argparse.Namespace) -> None:
              if (c := sweep_cell(args, arm, set_number, obj)) is not None]
     rows = size_rows(cells)
     saved = save_complete_candidates(cells, args.out / "complete_candidates")
-    sheets = [size_sheet(cells, args.out, family, args.out / f"size_sheet_{family}.png") for family in SIZE_FAMILIES]
+    run = {c["arm"] for c in cells}
+    sheets = [size_sheet(cells, args.out, family, args.out / f"size_sheet_{family}.png") for family, arms in
+              SIZE_FAMILIES.items() if run & {arm for arm, _ in arms}]  # a family with no run gets no sheet
     (args.out / "size.json").write_text(json.dumps({"rows": rows, "rules": size_rules(rows), "cells": cells},
                                                    indent=1), encoding="utf-8")
     text = size_report(rows) + "\n"
@@ -1856,6 +1868,16 @@ def step_bench_plan(args: argparse.Namespace) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    args = parser().parse_args(argv)
+    args.pairs = load_pairs(args.pairs)
+    args.out.mkdir(parents=True, exist_ok=True)
+    for name, step in STEPS.items():
+        if name in args.steps:
+            step(args)
+    return 0
+
+
+def parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.complete", description=__doc__.splitlines()[0])
     parser.add_argument("--runs", type=Path, default=Path("out"), help="folder holding m12b_sizing_fig and m12b_sizing")
     parser.add_argument("--out", type=Path, default=Path("out/m12b_complete"))
@@ -1872,34 +1894,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--pairs", type=Path, help="sweep, sweep-report, size-report, hollow-sizing, bench-plan: a JSON "
                         "file of (set, object) pairs (``load_pairs``; e.g. examples/m12c_bench.json); default: the 9 "
                         "sweep pairs")
-    args = parser.parse_args(argv)
-    args.pairs = load_pairs(args.pairs)
-    args.out.mkdir(parents=True, exist_ok=True)
-    if "final" in args.steps:
-        step_final(args)
-    if "trace" in args.steps:
-        step_trace(args)
-    if "report" in args.steps:
-        step_report(args)
-    if "sweep" in args.steps:
-        step_sweep(args)
-    if "sweep-report" in args.steps:
-        step_sweep_report(args)
-    if "holes" in args.steps:
-        step_holes(args)
-    if "old-vs-base" in args.steps:
-        step_old_vs_base(args)
-    if "small-only" in args.steps:
-        step_small_only(args)
-    if "remnants" in args.steps:
-        step_remnants(args)
-    if "size-report" in args.steps:
-        step_size_report(args)
-    if "hollow-sizing" in args.steps:
-        step_hollow_sizing(args)
-    if "bench-plan" in args.steps:
-        step_bench_plan(args)
-    return 0
+    return parser
+
+
+STEPS = {"final": step_final, "trace": step_trace, "report": step_report, "sweep": step_sweep,
+         "sweep-report": step_sweep_report, "holes": step_holes, "old-vs-base": step_old_vs_base,
+         "small-only": step_small_only, "remnants": step_remnants, "size-report": step_size_report,
+         "hollow-sizing": step_hollow_sizing, "bench-plan": step_bench_plan}  # run in this order
 
 
 if __name__ == "__main__":
