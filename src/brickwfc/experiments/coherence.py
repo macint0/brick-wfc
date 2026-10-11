@@ -17,6 +17,13 @@ real model of the build's own set (same colours) and the 28 sets' median; the la
 reference is also the median of the ``--nearest`` real sets closest in skin cells. Writes ``<results>.json`` and
 ``<results>.png`` (real vs ours vs shuffled, per metric); the tables go to ``<cache>/tables.md``, and per-set
 measures are cached under ``--cache`` (resumable).
+
+With ``--recolor`` (results/m12c_recolour.md): each of those builds is also recoloured within part types
+(``bricks.recolor``, seeded as the pipeline's ``--recolor``: [build seed, ``RECOLOR_STREAM``]) and measured before and
+after, against its shuffle and its own set; the headroom above the shuffle, the share of its skin on part types that
+come in one colour (which no recolouring can change), and the seconds. Writes ``<results>.json``, ``<results>.png``
+(real vs ours before / after / shuffled) and ``<results>_chair.png`` (the complete chair before and after); the table
+goes to ``<cache>/recolor_tables.md``.
 """
 
 from __future__ import annotations
@@ -33,10 +40,14 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from brickwfc.alt.inputs import DATA_DIR, SETS_FILE
+from brickwfc.alt.output import write_build
+from brickwfc.alt.pipeline import RECOLOR_STREAM
 from brickwfc.bricks.coherence import coherence, shuffled
+from brickwfc.bricks.recolor import recolor
 from brickwfc.bricks.parts import BY_FILE, PlacedPart
 from brickwfc.bricks.voxelize import grid_shape, voxelize
 from brickwfc.experiments.complete import OBJECTS, SWEEP_SETS, load_run
+from brickwfc.experiments.demo import labeled_sheet
 from brickwfc.ldraw.fetch import fetch_set
 from brickwfc.ldraw.mpd import flatten
 
@@ -68,14 +79,26 @@ def real_row(set_number: str, data: Path, cache: Path, draws: int) -> dict:
     return row
 
 
+def load_build(sweep: Path, arm: str, set_number: str, obj: str,
+               seed: int | None = None) -> tuple[tuple[PlacedPart, ...], tuple[int, int, int], int]:
+    """(parts, grid, seed) of the selected build of a run (or of seed ``seed`` of it)."""
+    key, stats, candidates = load_run(sweep / "sweep" / arm / set_number / obj)
+    seed = stats["selected"][0]["seed"] if seed is None else seed
+    return next(c for c in candidates if c.seed == seed).placed, tuple(key["grid"]), seed
+
+
 def build_row(sweep: Path, arm: str, set_number: str, obj: str, draws: int, seed: int | None = None) -> dict:
     """The selected build of a run (or seed ``seed`` of it)."""
-    directory = sweep / "sweep" / arm / set_number / obj
-    key, stats, candidates = load_run(directory)
-    seed = stats["selected"][0]["seed"] if seed is None else seed
-    chosen = next(c for c in candidates if c.seed == seed)
-    return {"arm": arm, "set": set_number, "object": obj, "seed": seed,
-            **measure(chosen.placed, tuple(key["grid"]), draws)}
+    placed, shape, seed = load_build(sweep, arm, set_number, obj, seed)
+    return {"arm": arm, "set": set_number, "object": obj, "seed": seed, **measure(placed, shape, draws)}
+
+
+def recolor_row(placed: Sequence[PlacedPart], shape: tuple[int, int, int], seed: int) -> tuple[dict, list[PlacedPart]]:
+    """The build recoloured as the pipeline's ``--recolor`` would: its coherence after, and the recoloured parts."""
+    done = recolor(placed, shape, np.random.default_rng([seed, RECOLOR_STREAM]))
+    return {**asdict(done.after), "swaps": done.swaps, "proposals": done.proposals, "seconds": done.seconds,
+            "visible_parts": done.visible_parts, "movable_parts": done.movable_parts,
+            "fixed_skin_share": done.fixed_skin_share}, done.placed
 
 
 def median(values: Sequence[float]) -> float:
@@ -125,27 +148,29 @@ def real_table(real: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def figure(real: list[dict], builds: list[dict], path: Path) -> Path:
-    """Per metric, one strip per group (real sets, real shuffled, ours, ours shuffled), a dot per model or build,
-    the median as a bar."""
+def figure(real: list[dict], builds: list[dict], path: Path, groups: Sequence[tuple] | None = None) -> Path:
+    """Per metric, one strip per group (default: real sets, real shuffled, ours, ours shuffled; or ``groups`` of
+    (name, rows, which, rgb) with which a key of the rows holding the metrics, or "" for the rows themselves), a dot
+    per model or build, the median as a bar."""
     width, panel, left, pad = 900, 150, 170, 30
-    groups = (("real sets", real, False, (70, 70, 70)), ("real, shuffled", real, True, (170, 170, 170)),
-              ("ours (selected)", builds, False, (200, 80, 30)), ("ours, shuffled", builds, True, (235, 170, 140)))
+    groups = groups or (("real sets", real, "", (70, 70, 70)), ("real, shuffled", real, "shuffled", (170, 170, 170)),
+                        ("ours (selected)", builds, "", (200, 80, 30)),
+                        ("ours, shuffled", builds, "shuffled", (235, 170, 140)))
     image = Image.new("RGB", (width, len(METRICS) * panel + pad), "white")
     draw = ImageDraw.Draw(image)
     for m, (key, label, higher, scale) in enumerate(METRICS):
         top = m * panel + pad // 2
-        values = [g_value(r, key, s) * scale for _, rows, s, _ in groups for r in rows]
+        values = [g_value(r, key, which) * scale for _, rows, which, _ in groups for r in rows]
         values = [v for v in values if not math.isnan(v)]
         lo, hi = min(values), max(values)
         x = lambda v: left + 10 + (width - left - 50) * (v - lo) / ((hi - lo) or 1)  # noqa: E731
         draw.text((10, top), f"{label} ({'higher' if higher else 'lower'} is more coherent)", fill="black")
         for v in (lo, hi):  # the data's range, at its ends
             draw.text((x(v) - 10, top + panel - 30), f"{v:.2f}" if scale == 1 else f"{v:.0f}", fill="black")
-        for g, (name, rows, shuffle, rgb) in enumerate(groups):
+        for g, (name, rows, which, rgb) in enumerate(groups):
             y = top + 25 + g * 25
             draw.text((10, y - 6), name, fill=rgb)
-            group = [g_value(r, key, shuffle) * scale for r in rows]
+            group = [g_value(r, key, which) * scale for r in rows]
             group = [v for v in group if not math.isnan(v)]
             for v in group:
                 draw.ellipse([x(v) - 3, y - 3, x(v) + 3, y + 3], fill=rgb)
@@ -156,8 +181,8 @@ def figure(real: list[dict], builds: list[dict], path: Path) -> Path:
     return path
 
 
-def g_value(row: dict, key: str, shuffle: bool) -> float:
-    return row["shuffled"][key] if shuffle else row[key]
+def g_value(row: dict, key: str, which: str) -> float:
+    return row[which][key] if which else row[key]
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -170,7 +195,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--nearest", type=int, default=5, help="real sets closest in skin cells, for the largest region")
     parser.add_argument("--cache", type=Path, default=Path("out/m12c_colour"))
     parser.add_argument("--results", type=Path, default=Path("results/m12c_colour_measure"),
-                        help="writes <results>.json, .png")
+                        help="writes <results>.json, .png (with --recolor also <results>_chair.png)")
+    parser.add_argument("--recolor", action="store_true", help="also recolour each build within part types and "
+                        "measure it after (bricks.recolor)")
     args = parser.parse_args(argv)
     args.cache.mkdir(parents=True, exist_ok=True)
     real = []
@@ -188,11 +215,59 @@ def main(argv: Sequence[str] | None = None) -> int:
     for b in builds:
         b["references"] = references(b, real, args.nearest)
     args.results.parent.mkdir(parents=True, exist_ok=True)
+    if args.recolor:
+        return recolor_step(args, real, builds)
     args.results.with_suffix(".json").write_text(json.dumps({"real": real, "builds": builds}, indent=1),
                                                  encoding="utf-8")
     figure(real, [b for b in builds if not b.get("complete")], args.results.with_suffix(".png"))
     text = table(builds) + "\n\nReal sets:\n\n" + real_table(real) + "\n"
     (args.cache / "tables.md").write_text(text, encoding="utf-8")
+    print(text)
+    return 0
+
+
+def recolor_table(builds: list[dict]) -> str:
+    lines = ["| build | skin on one-colour types % | same-colour seams %: before / after / shuffled / own set | "
+             "colours per 4x4 window: before / after / shuffled / own set | seams above the shuffle: before / after | "
+             "s |", "|---|---:|---|---|---|---:|"]
+    for b in builds:
+        name = f"{b['object']} {b['set']}, {b['arm']}" + (f" (seed {b['seed']}, complete)" if b.get("complete") else "")
+        r, own = b["recolor"], b["references"]["own"]
+        lines.append(
+            f"| {name} | {100 * r['fixed_skin_share']:.0f} | {100 * b['same_color']:.0f} / {100 * r['same_color']:.0f} / "
+            f"{100 * b['shuffled']['same_color']:.0f} / {100 * own['same_color']:.0f} | "
+            f"{b['colors_per_window']:.2f} / {r['colors_per_window']:.2f} / {b['shuffled']['colors_per_window']:.2f} / "
+            f"{own['colors_per_window']:.2f} | "
+            f"{100 * (b['same_color'] - b['shuffled']['same_color']):+.0f} / "
+            f"{100 * (r['same_color'] - b['shuffled']['same_color']):+.0f} | {r['seconds']:.1f} |")
+    return "\n".join(lines)
+
+
+def recolor_step(args: argparse.Namespace, real: list[dict], builds: list[dict]) -> int:
+    chair_previews = []
+    for b in builds:
+        placed, shape, seed = load_build(args.sweep, b["arm"], b["set"], b["object"], b["seed"])
+        b["recolor"], after = recolor_row(placed, shape, seed)
+        print(f"recolor {b['arm']} {b['object']} {b['set']} seed {seed}: seams {100 * b['same_color']:.0f} -> "
+              f"{100 * b['recolor']['same_color']:.0f}%, {b['recolor']['seconds']:.1f} s", flush=True)
+        if b.get("complete"):
+            for label, parts in (("before", placed), ("after", after)):
+                _, png = write_build(parts, shape, args.cache / f"complete_chair_{label}", f"Complete chair, {label}")
+                chair_previews.append(png)
+    args.results.with_suffix(".json").write_text(json.dumps({"real": real, "builds": builds}, indent=1),
+                                                 encoding="utf-8")
+    shown = [b for b in builds if not b.get("complete")]
+    figure(real, shown, args.results.with_suffix(".png"), (
+        ("real sets", real, "", (70, 70, 70)), ("ours, before", shown, "", (200, 80, 30)),
+        ("ours, recoloured", shown, "recolor", (40, 110, 200)), ("ours, shuffled", shown, "shuffled", (235, 170, 140))))
+    chair = next(b for b in builds if b.get("complete"))
+    labels = [f"complete chair 5891-1, as built\nsame-colour seams {100 * chair['same_color']:.0f}%\n"
+              f"{chair['colors_per_window']:.2f} colours per 4x4 window",
+              f"recoloured within part types\nsame-colour seams {100 * chair['recolor']['same_color']:.0f}%\n"
+              f"{chair['recolor']['colors_per_window']:.2f} colours per 4x4 window"]
+    labeled_sheet(chair_previews, labels, args.results.with_name(args.results.name + "_chair.png"), columns=2, width=800)
+    text = recolor_table(builds) + "\n"
+    (args.cache / "recolor_tables.md").write_text(text, encoding="utf-8")
     print(text)
     return 0
 

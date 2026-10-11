@@ -615,6 +615,19 @@ python -m brickwfc.experiments.coherence --sweep out/m12b_complete --results res
 - **Outputs:** `results/m12c_colour_measure.json` and `.png`; the tables in `out/m12c_colour/tables.md` are the
   write-up's.
 
+### `results/m12c_recolour.md` (M12c recolouring within part types on the cached selections), with `m12c_recolour.json`, `m12c_recolour.png`, `m12c_recolour_chair.png`
+
+Recolours the builds of `m12c_colour_measure.md` (the selected creserve / creserve80 builds and the complete chair),
+seeded as the pipeline's `--recolor`, and measures them before and after; generates nothing. At m12c-recolour or later:
+
+```
+python -m brickwfc.experiments.coherence --recolor --sweep out/m12b_complete --results results/m12c_recolour
+```
+
+- **Runtime:** about 1 minute on one process with the real sets cached under `out/m12c_colour/` (5 without).
+- **Outputs:** `results/m12c_recolour.json`, `.png` and `_chair.png`; the table in `out/m12c_colour/recolor_tables.md`
+  is the write-up's.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
