@@ -359,9 +359,16 @@ with hollow targets; colour and symmetry; widen the bench before paper tables.
   only complete candidate of 850 valid. The surface bar picks the same build on all 18 pairs (the binding threshold is the
   surface share, 78–96% on the other old picks), though the largest surface hole is smaller than the largest hole on 12/18
   (4956-1 car 345 → 38: holes are mostly interior).
-- **Size sweep below 0.8 — running** (`experiments/complete.py` arms creserve90 / creserve70 / creserve60 and the
-  usable70 / usable60 controls, `--steps sweep`, 5 workers, started 17:02; `size-report` → `results/m12b_size.md`):
-  per pair the largest slack at which any candidate, and the selected build, is complete.
+- **Size sweep below 0.8 — done** (Session B, 17:01–20:18 on 5 workers, no crash; arms creserve90 / 70 / 60 and the
+  usable70 / 60 controls, 50 candidates per pair; `results/m12b_size.md`, `m12b_size_sheet.png`). **Size is the
+  lever, but only with the reserve inside connected growth.** creserve on the 8 uncut pairs, 1.0 → 0.9 → 0.8 → 0.7 →
+  0.6: complete candidates 0 / 0 / 1 / 1 / **15** (18 under the surface bar), mean selected fill 87.6 → 97.5%, largest
+  hole 149 → 16, surface 86 → 97%; the default order has 0 complete of 1881 valid at every slack (selected fill 80.9 →
+  89.1). Largest completing slack per pair (any candidate): 5891-1 chair 0.8 (one candidate, none below), 6378-1 table
+  0.7 (10 candidates at 0.6), 5891-1 table 0.6, 5891-1 car 0.6, 6378-1 car 0.6 surface bar only; **none down to 0.6 on
+  the three 4956-1 pairs** (best 94.5–98.8% fill, holes 20–39). Under completeness-first the volume bar changes one
+  stored pick (creserve60 6378-1 table → a complete build). creserve is also faster (16–27 s vs 27–43 s per
+  candidate). 20 complete candidates saved under `out/m12b_complete/complete_candidates/`.
 - creserve as the 3D default waits for the size sweep (decision (2) is yes in principle; the default changes with the
   size rule in one commit).
 - **Hollow at the solid's scale — built, not run** (69dc76e; `--hollow-scale solid`: size the solid target as usual, then
@@ -402,9 +409,21 @@ with hollow targets; colour and symmetry; widen the bench before paper tables.
   verify, default 0) stops an all-stall run from selecting a stub; `--regrow` (restart growth from the next ground
   region on a stall) is being built as a flag. The verify stage's relative fill floor was the hole: 0.5 × the run's
   90th-percentile fill is 1.8% when every candidate stalls.
-- **Early size-sweep read (selected builds under the old rule, fill / largest hole):** 5891-1 car 95.8/15 (0.9) →
-  97.0/11 (0.7) → 98.8/4 (0.6, meets the bar); 5891-1 table 92.3/31 → 94.4/40 → 99.4/3 (bar); 6378-1 table 81.5/96 →
-  99.4/1 (0.7, bar) → 97.9/8. Size is the lever; the full table is Session B's `results/m12b_size.md`.
+- `--regrow` merged (044b8f6): on a stall, growth restarts from the next ground region with the same Generator;
+  non-stalling builds byte-identical; 6378-1 chair at 0.7 and 6372-1 chair at 0.8 stall 5/10 → 0/10 seeds.
+- **Overnight run (launched 2026-10-11 night from the main checkout, `scripts/overnight_m12c.sh 0.6 0.8`; log
+  `out/m12b_complete/overnight.log`, markers `STEP_DONE` / `STEP_FAILED` / `ALL_DONE`; main's `src/` is frozen until
+  it ends):** hollow1 + hollow1_80 on the 9 pairs (surface bar); the reconnected 6378-1 chair at 1.0–0.6 under
+  cregrow and the usable controls (`out/m12c_reconnected`); the bench's 45 new pairs at 0.6 then 0.8 under arm
+  `bench` = cregrow + `--min-fill 0.5` (`out/m12c_bench`, smallest sets first, the 9 current pairs last), with
+  sweep-report, completeness-first re-rank and the colour measurement per slack. Modelled 6–10 h; resumable, rerun
+  the same command.
+**Decisions for Mac (2026-10-12 morning):** (a) `--order connected --reserve-small` as the 3D default (now the only
+  order that completes anything; faster too); (b) `--recolor` on by default (metrics 18/18, chair figure); (c)
+  `--min-fill 0.5` as a verify default (a build under half its target is not an alternate build of it); (d) the size
+  rule for the paper tables: per-set "largest slack that completes" (0.6–0.8 on the 6 completing pairs) vs one bench
+  slack; the 4956-1 pairs complete at no size down to 0.6 (hole 20–39 cells), which the hollow1 arms and the bench
+  speak to. Nothing changes until Mac decides; the overnight arms pass every flag explicitly.
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
