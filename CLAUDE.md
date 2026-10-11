@@ -363,7 +363,28 @@ with hollow targets; colour and symmetry; widen the bench before paper tables.
   usable70 / usable60 controls, `--steps sweep`, 5 workers, started 17:02; `size-report` → `results/m12b_size.md`):
   per pair the largest slack at which any candidate, and the selected build, is complete.
 - creserve as the 3D default waits for the size sweep (decision (2) is yes in principle; the default changes with the
-  size rule in one commit). Next in the order, prepared as code while the PC is busy: hollow arms under the surface bar.
+  size rule in one commit).
+- **Hollow at the solid's scale — built, not run** (69dc76e; `--hollow-scale solid`: size the solid target as usual, then
+  cut the shell at that scale, so the object keeps its size and the interior's parts are freed; `shell` is the old path).
+  Sizing-only measurement on the 18 cached targets (`results/m12c_hollow_sizing.md`): hollowing at the inventory's volume
+  frees no parts and keeps 82–100% of these thin objects' cells; at the solid's scale hollow 1 keeps 65–90% and frees a
+  median 25% of the part budget (12–34%), hollow 2 only 8% (about what slack 0.9 frees); every void enclosed, exposed
+  cells unchanged. Arms hollow1 / hollow1_80 (creserve flags + `--hollow 1 --hollow-scale solid --bar surface`) run after
+  the size sweep. Risks: 1-stud walls and 1-plate roofs on 2×2 pillars; parts that fit nowhere in the shell eat most of the
+  gain on the 6378-1 car; the freed budget is large parts, not the small parts the remnants need.
+- **Colour coherence — measured, then the cheap fix built** (36e11bf, 7ec5522). `bricks/coherence.py` on the skin:
+  same-colour share of visible part seams, colours per 4×4 window, largest one-colour region (tracks supply, not used).
+  Our 18 cached selections vs the 28 real sets (`results/m12c_colour_measure.md`): worse than the own set on 18/18
+  (seams median 49% vs 64–71%, 2.05 vs 1.1–1.5 colours per window) and within 1–11 points of a random within-type
+  shuffle: the builder's colouring is near random. `bricks/recolor.py` + `--recolor` (**off by default**): simulated
+  annealing over colour permutations within part types, applied after select (judge and selection untouched;
+  placements and (part, colour) counts kept, so every guarantee holds by construction), 2–4 s per build.
+  On the 18 selections + the complete chair (`results/m12c_recolour.md`, `m12c_recolour_chair.png`): seams +16 points
+  median (+7 to +25), gap to the own set −22 → −7, colours per window −0.49; the 4956-1 pairs are capped (68–76% of
+  their skin on one-colour part types). **Decision for Mac:** `--recolor` on by default with a 3D target (the metrics say
+  yes on 18/18; the eye decides from the chair figure). Beyond this space: spare inventory as extra colours, or a
+  decode-time colour term.
+- Next, prepared as code while the PC is busy: the wider bench (9 sets × 6 objects, pair-list driver, sizing dry run).
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
