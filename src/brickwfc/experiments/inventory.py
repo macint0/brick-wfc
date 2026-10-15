@@ -46,7 +46,7 @@ from brickwfc.bricks.inventory import (
     overuse,
     utilization,
 )
-from brickwfc.bricks.parts import CATALOG, PLATES, PartSet, extract_parts, part_tileset
+from brickwfc.bricks.parts import CATALOG, PLATES, PartSet, extract_parts, part_tileset, wfc_inventory
 from brickwfc.bricks.physics import required_clutch
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.support import is_stable
@@ -277,9 +277,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                 summary_path.write_text(json.dumps(summaries, indent=2), encoding="utf-8")
                 print(f"{set_number} {condition}: not run, backtracking would need {history_mb:.0f} MB", flush=True)
                 continue
-            build = make_generator(condition, parts, inventory, shape, args.max_attempts, args.max_backtracks, time_limit)
+            # M12d: WFC's inventory and tileset leave out parts it cannot place soundly (parts.Part.wfc)
+            run_inventory, run_parts = inventory, parts
+            if wfc and wfc_inventory(inventory) != inventory:
+                run_inventory = wfc_inventory(inventory)
+                wfc_list = [CATALOG[name] for name in sorted({name for name, _ in run_inventory})]
+                run_parts = part_tileset(wfc_list, colors, len(wfc_list) * (args.room - 1),
+                                         coverage=inventory_coverage(run_inventory))
+            build = make_generator(condition, run_parts, run_inventory, shape, args.max_attempts, args.max_backtracks,
+                                   time_limit)
             start = time.perf_counter()
-            batch = [run_one(set_number, condition, seed, parts, inventory, build) for seed in range(args.seeds)]
+            batch = [run_one(set_number, condition, seed, run_parts, run_inventory, build) for seed in range(args.seeds)]
             summaries.append(summarize(batch, info))
             with runs_path.open("a", encoding="utf-8") as runs_file:
                 runs_file.writelines(json.dumps(asdict(r)) + "\n" for r in batch)

@@ -284,6 +284,8 @@ class Job:
 
 def run_job(job: Job) -> Record:
     real = list(job.real)
+    if job.condition == "WFC_free":  # M12d: WFC builds from the parts it can place soundly (parts.Part.wfc)
+        real = [p for p in real if p.shape.part.wfc]
     inventory, parts = setup(real, job.room - 1, job.stats if job.style != "uniform" else None)
     shape = grid_for(inventory, job.height, job.room)
     bias = StyleBias(job.stats, parts, job.strength) if job.style == "contacts" else None

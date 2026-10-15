@@ -26,6 +26,9 @@ from brickwfc.wfc import Cell, Wave
 
 class SupportConstraint:
     def __init__(self, parts: PartSet) -> None:
+        unsound = sorted({info.shape.part.name for info in parts.infos if info.solid and not info.shape.part.wfc})
+        if unsound:  # M12d: their rules are not adjacency rules; build WFC tilesets from parts.wfc_inventory
+            raise ValueError(f"WFC cannot place {unsound} soundly (Part.wfc); leave them out of its tileset")
         self.stud_top = parts.stud_top
         # Bottom-layer tiles grouped by footprint (offsets from the cell to every seated cell of its part's
         # layer); tiles of different colors share a footprint, so each group is checked once per layer.

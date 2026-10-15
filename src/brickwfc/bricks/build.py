@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-from brickwfc.bricks.parts import PartSet, PlacedPart, turn_rotation
+from brickwfc.bricks.parts import PartSet, PlacedPart, build_placements, turn_rotation
 from brickwfc.bricks.support import studded
 from brickwfc.ldraw.export import write_ldr
 from brickwfc.render3d import save_voxels_png
@@ -72,6 +72,6 @@ def save_preview(placed: list[PlacedPart], shape: tuple[int, int, int], png_path
 
 
 def export_build(grid: np.ndarray, placed: list[PlacedPart], parts: PartSet, ldr_path: Path, png_path: Path | None, title: str) -> None:
-    write_ldr((p.placement() for p in sorted(placed, key=lambda p: (p.layer, p.z, p.x))), ldr_path, title)
+    write_ldr(build_placements(sorted(placed, key=lambda p: (p.layer, p.z, p.x))), ldr_path, title)
     if png_path is not None:
         save_preview(placed, grid.shape, png_path)

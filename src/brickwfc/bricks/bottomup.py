@@ -41,7 +41,9 @@ Corner and slope parts (M12b): parts whose footprint is not a full box, or whose
 partly studded or flat, are checked cell by cell (``_fits_cells``): their seated cells need a stud below,
 nothing may be above their studless top cells (a slope's face) or below their open bottom cells (an
 inverted slope's underside). Rectangular parts keep the box checks, so builds from an M8 catalog are unchanged.
-A ground-only part (M12d: a baseplate) goes on layer 0 only, also in the hole pass with ``hang``.
+A ground-only part (M12d: a baseplate) goes on layer 0 only, also in the hole pass with ``hang``, and only on an
+empty ground layer; once one is placed, nothing else goes on layer 0 (``_ground_ok``). So a baseplate is the whole
+ground under the build: no part can rest both on it (4 LDU thick, modelled as a plate) and on a part beside it.
 
 Speed (M12b): above the ground, a cell with no stud below within a part's reach (``_reachable``) cannot
 take any part, so its placement attempts are skipped; the random draws they would have made are still made,
@@ -320,7 +322,8 @@ class BottomUpBuilder:
                             rng.permutation(len(part_shape.footprint))
                         continue
                     part = self._place(part_shape, color, y, z, x, state.filled, state.studs, allowed, rng,
-                                       state.owner, state.balance, fit_map, state.open_bottom)
+                                       state.owner, state.balance, fit_map, state.open_bottom,
+                                       ground_closed=state.ground_closed)
                     if part is None:
                         failed.add(box)
                     else:
@@ -510,7 +513,7 @@ class BottomUpBuilder:
                 continue
             part = self._place(part_shape, color, y, z, x, state.filled, state.studs, allowed, rng,
                                state.owner, state.balance, fit_map, state.open_bottom,
-                               state.open_bottom if self.hang else None, joined)
+                               state.open_bottom if self.hang else None, joined, state.ground_closed)
             if part is None:
                 failed.add(box)
                 continue
@@ -548,6 +551,7 @@ class BottomUpBuilder:
             state.grid[cy, cz, cx] = self.index[TileInfo(part.shape, cx - part.x, cz - part.z, part.color, cy - part.layer)]
         for cell in part.stud_cells():
             state.studs[cell] = True
+        state.ground_closed |= part.shape.part.ground_only
         for cell in set(part.bottom_cells()) - set(part.seated_cells()):
             state.open_bottom[cell] = True
         if state.balance is not None:
@@ -584,7 +588,7 @@ class BottomUpBuilder:
         else:
             studless = self._studless_top(part.shape) if self.open_tops else None
             fits = self._fits(part, state.filled, state.studs, allowed, studless, open_bottom, hang_bottom)
-        if not fits:
+        if not fits or not _ground_ok(part, state.filled, state.ground_closed):
             return False
         links = self._links(part, state.owner) if hang else self._below(part, state.owner)
         if joined and part.layer == 0 and not links:
@@ -619,12 +623,14 @@ class BottomUpBuilder:
         filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray, rng: np.random.Generator,
         owner: np.ndarray | None = None, balance: Balance | None = None, fit_map: "_FitMap | None" = None,
         open_bottom: np.ndarray | None = None, hang_bottom: np.ndarray | None = None, joined: bool = False,
+        ground_closed: bool = False,
     ) -> PlacedPart | None:
         """A fitting placement of the part with its bottom layer covering cell (y, z, x), or None.
         ``fit_map`` (the current layer's, up to date) answers ``_fits`` by lookup for rectangular parts;
         other parts are checked cell by cell (``_fits_cells``). ``hang_bottom`` (the build's open bottoms): the
         part may also hang from a part above (see the module docstring); ``joined``: a part on the ground must
-        hang from the structure (the connected order)."""
+        hang from the structure (the connected order); ``ground_closed``: a ground-only part is on layer 0, so nothing
+        else goes there (``_ground_ok``)."""
         open_bottom = open_bottom if self.open_bottoms else None
         cells = self.cell_masks.get(part_shape)
         valid = None if fit_map is None or cells is not None else fit_map.corners(part_shape)
@@ -640,7 +646,7 @@ class BottomUpBuilder:
                 fits = self._fits(part, filled, studs, allowed, studless, open_bottom, hang_bottom)
             else:
                 fits = 0 <= part.z < valid.shape[0] and 0 <= part.x < valid.shape[1] and bool(valid[part.z, part.x])
-            if not fits:
+            if not fits or not _ground_ok(part, filled, ground_closed):
                 return False
             if joined and part.layer == 0 and not links(part):
                 return False
@@ -847,6 +853,17 @@ class _State:
         self.session: Session | None = None  # the proposal model's view of this build
         self.skin: np.ndarray | None = None  # skin=True: the target's outer surface cells
         self.plane: Plane | None = None  # symmetric decoding: the mirror plane
+        self.ground_closed = False  # a ground-only part (a baseplate) is on layer 0: nothing else goes there
+
+
+def _ground_ok(part: PlacedPart, filled: np.ndarray, ground_closed: bool) -> bool:
+    """The ground rule for ground-only parts (M12d): on layer 0 a ground-only part needs the layer empty, and once one is
+    there (``ground_closed``) nothing else goes on it."""
+    if part.layer != 0:
+        return True
+    if ground_closed:
+        return False
+    return not (part.shape.part.ground_only and filled[0].any())
 
 
 def _fit_key(shape: Shape) -> tuple:

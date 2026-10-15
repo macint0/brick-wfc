@@ -26,7 +26,7 @@ from typing import Literal, Mapping, Sequence
 import numpy as np
 
 from brickwfc.bricks.colors import BrickColor
-from brickwfc.ldraw.export import IDENTITY, Placement, stud_position
+from brickwfc.ldraw.export import IDENTITY, PLATE_LDU, Placement, stud_position
 from brickwfc.tileset import GRID3D, Tileset
 
 EMPTY = "empty"
@@ -80,6 +80,12 @@ class Part:
         # Equal parts have the same name and file; hashing every field (a baseplate's 512 cells, three times) on each
         # cached ``geometry`` lookup dominated build time (M12d).
         return hash((self.name, self.ldraw))
+
+    @property
+    def wfc(self) -> bool:
+        """Whether WFC can place the part soundly: its rules are local adjacency and stud support, so it leaves out
+        ground-only parts (a baseplate must be the whole ground) (M12d; ``wfc_inventory``)."""
+        return not self.ground_only
 
     @property
     def origin_layer(self) -> int:
@@ -305,7 +311,29 @@ _M12D_SLOPES = [
     _roof("curved1x1x2_49307", "49307", 1, 1, height=2, origin_top=False),
 ]
 M12D_BATCH1 = _M12D_PLAIN + _M12D_LOOKALIKES + _M12D_CELLS + _M12D_SLOPES
-CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES + _M12B_LOOKALIKES + _CORNERS + _SLOPES + M12D_BATCH1}
+# M12d batch 2: window and door frames and fences, boxes with their studs. The glass, panes and doors that sit in a
+# frame are contained accessories without cells (``bricks.accessories``). The 4 LDU collars over the end cells of
+# 60594 / 60596 / 6556 / 30179 rise above the box, over studless top cells only, so nothing may be placed there anyway.
+# 30044 has one stud between its two cells (off the grid): its top counts as studless. Composite files of a frame and
+# its glass (60592c01, 60593c01) are aliases of the frame; the accessories module adds the glass.
+M12D_FRAMES = [
+    _box("window1x2x2_60592", "60592", "brick", 2, 1, 6, aliases=("60592c01",)),
+    _box("window1x2x3_60593", "60593", "brick", 2, 1, 9, aliases=("60593c01",)),
+    _box("window1x2x2_2377", "2377", "brick", 2, 1, 6),
+    _box("window1x4x2_4863", "4863", "brick", 4, 1, 6),
+    _box("window1x4x5_2493b", "2493b", "brick", 4, 1, 15),
+    _box("window1x2x3_4035", "4035", "brick", 2, 1, 9),
+    _box("window1x2x2_30044", "30044", "brick", 2, 1, 8, studs=False),
+    _mapped("window1x4x3_60594", "60594", "brick", 9, ["#SS#"], (-1.5, 0)),
+    _mapped("window1x4x3_6556", "6556", "brick", 9, ["#SS#"], (-1.5, 0)),
+    _mapped("doorframe1x4x6_60596", "60596", "brick", 18, ["#SS#"], (-1.5, 0)),
+    _mapped("doorframe1x4x6_30179", "30179", "brick", 18, ["#SS#"], (-1.5, 0)),
+    _mapped("fence1x4x2_30055", "30055", "brick", 6, ["S##S"], (-1.5, 0)),
+    _box("fence1x4x1_3633", "3633", "brick", 4, 1, 3, studs=False),
+    _box("fence1x4x2_3185", "3185", "brick", 4, 1, 6, studs=False),
+]
+CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES + _M12B_LOOKALIKES + _CORNERS + _SLOPES + M12D_BATCH1
+                            + M12D_FRAMES}
 BY_FILE: dict[str, Part] = {file: p for p in CATALOG.values() for file in (p.ldraw, *p.aliases)}
 # The M8 catalog (before corners and slopes) and the M12b one (before M12d), for before/after comparisons.
 M8_FILES: dict[str, Part] = {p.ldraw: p for p in _PLAIN + _LOOKALIKES}
@@ -315,6 +343,11 @@ M12B_FILES: dict[str, Part] = {file: p for p in _PLAIN + _LOOKALIKES + _M12B_LOO
 # M4-M11 used these four plates only; experiments that reproduce those tables still do.
 PLATES: dict[str, Part] = {name: CATALOG[name] for name in ("plate1x1", "plate1x2", "plate2x2", "plate2x4")}
 PLATE_FILES: dict[str, Part] = {p.ldraw: p for p in PLATES.values()}
+
+
+def wfc_inventory(inventory: Mapping[tuple[str, str], int]) -> dict[tuple[str, str], int]:
+    """The (part name, color name) -> count entries of parts WFC can place (``Part.wfc``)."""
+    return {key: n for key, n in inventory.items() if CATALOG[key[0]].wfc}
 
 
 def family(kind: Kind, lookalikes: bool = False) -> list[Part]:
@@ -680,6 +713,28 @@ class PlacedPart:
         height = self.layer + self.shape.part.origin_layer
         position = stud_position(self.x + origin_x, self.z + origin_z, height)
         return Placement(self.color.ldraw, position, rotation, self.shape.part.ldraw)
+
+
+BASEPLATE_DROP_LDU = PLATE_LDU - 4  # a baseplate is 4 LDU thick, modelled as one plate (8 LDU)
+
+
+def build_placements(placed: Sequence[PlacedPart], build: Sequence[PlacedPart] | None = None) -> list[Placement]:
+    """The LDraw placements of ``placed`` (parts of ``build``, by default all of it), in order. A build standing on a
+    ground-only part (a baseplate, which the builders make the whole ground) is lowered by ``BASEPLATE_DROP_LDU``, so
+    the baseplate lies on the table and every part on it sits on its studs: exact, although the model counts the
+    baseplate as a full plate."""
+    drop = export_drop(placed if build is None else build)
+    return [lowered(part.placement(), drop) for part in placed]
+
+
+def export_drop(build: Sequence[PlacedPart]) -> float:
+    """LDU a build is lowered by on export (``build_placements``)."""
+    return BASEPLATE_DROP_LDU if any(p.shape.part.ground_only and p.layer == 0 for p in build) else 0
+
+
+def lowered(placement: Placement, drop: float) -> Placement:
+    x, y, z = placement.position
+    return replace(placement, position=(x, y + drop, z)) if drop else placement
 
 
 def extract_parts(grid: np.ndarray, parts: PartSet) -> tuple[list[PlacedPart], list[str]]:

@@ -3,7 +3,8 @@
 Only parts the generator knows (``parts.CATALOG`` by default) are kept, and only when they sit on the stud
 grid: rotated by a multiple of 90 degrees about the vertical axis, at stud/plate-aligned
 positions. Everything else is counted in the report and ignored, so a voxelized model is a
-partial view of the real one.
+partial view of the real one. Accessories (M12d: glass, panes, doors; no cells of their own) in a kept frame are
+counted in ``report.contained``.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from typing import Mapping
 
 import numpy as np
 
+from brickwfc.bricks.accessories import contained
 from brickwfc.bricks.colors import color_for_code
 from brickwfc.bricks.parts import BY_FILE, Part, PartSet, PlacedPart, Shape, TileInfo, canonical, turn_rotation
 from brickwfc.ldraw.export import PLATE_LDU, STUD_LDU
@@ -31,6 +33,7 @@ class VoxelizeReport:
     overlapping: int = 0  # cells already taken by an earlier part
     kept: int = 0
     unrecognized_top: list[tuple[str, int]] = field(default_factory=list)
+    contained: int = 0  # M12d: accessories (glass, panes, doors) in a kept frame; no cells of their own
 
 
 def quarter_turns(rotation: np.ndarray) -> int | None:
@@ -61,7 +64,8 @@ def voxelize(instances: list[PartInstance], known: Mapping[str, Part] = BY_FILE)
     unrecognized: Counter[str] = Counter()
     # (shape, color, corner x, corner z, layer) in fractional cell units before snapping.
     candidates: list[tuple[Shape, int, float, float, float]] = []
-    for inst in instances:
+    sources: list[int] = []  # the instance each candidate came from
+    for index, inst in enumerate(instances):
         part = known.get(inst.part.lower())
         if part is None:
             report.unrecognized += 1
@@ -78,24 +82,26 @@ def voxelize(instances: list[PartInstance], known: Mapping[str, Part] = BY_FILE)
         layer = -py / PLATE_LDU - part.origin_layer  # -Y is up
         # A turn with the same cells as an earlier one (a rectangle turned twice) is that shape.
         candidates.append((canonical(part, turn), inst.color, corner_x, corner_z, layer))
+        sources.append(index)
     report.unrecognized_top = unrecognized.most_common(10)
 
     offsets = [most_common_fraction([c[i] for c in candidates]) for i in (2, 3, 4)]
     snapped = []
-    for shape, color, *coords in candidates:
+    for source, (shape, color, *coords) in zip(sources, candidates):
         cells = [v - o for v, o in zip(coords, offsets)]
         if any(abs(v - round(v)) > TOLERANCE for v in cells):
             report.off_grid += 1
             continue
-        snapped.append((shape, color, *(int(round(v)) for v in cells)))
+        snapped.append((shape, color, *(int(round(v)) for v in cells), source))
 
     placed: list[PlacedPart] = []
     if snapped:
+        kept_sources = []
         min_x = min(s[2] for s in snapped)
         min_z = min(s[3] for s in snapped)
         min_layer = min(s[4] for s in snapped)
         taken: set[tuple[int, int, int]] = set()
-        for shape, color, x, z, layer in snapped:
+        for shape, color, x, z, layer, source in snapped:
             part = PlacedPart(shape, color_for_code(color), layer - min_layer, x - min_x, z - min_z)
             cells = part.cells()
             if taken.intersection(cells):
@@ -103,6 +109,8 @@ def voxelize(instances: list[PartInstance], known: Mapping[str, Part] = BY_FILE)
                 continue
             taken.update(cells)
             placed.append(part)
+            kept_sources.append(source)
+        report.contained = contained(instances, kept_sources)
     report.kept = len(placed)
     return placed, report
 
