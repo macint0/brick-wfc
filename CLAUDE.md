@@ -573,8 +573,15 @@ open; nothing changes there now.
   edge dropped (251 parts). **Of the pool's 228,479 part instances 52.7% are encoded**, 27.1% have no catalog part,
   19.7% are recognized but off grid, 0.3% ride in frames; per model the median not-encoded share is 48.9% (6378-1:
   167 of 348 parts encoded). So the model learns from about half of each real set; state that next to any "learned
-  from real sets" claim. Commit 3 (Colab notebook, `training/train.py` additions, `results/m12e_training_plan.md`)
-  follows.
+  from real sets" claim. - **M12e (3) merged (55c2ef0, 679 tests): Colab and the plan.** `training/colab_v2.ipynb` (clone via a `GITHUB_TOKEN`
+  Colab secret, Colab's CUDA torch, tokens copied from `MyDrive/brick-wfc/tokens_v2` with a catalog-fingerprint check
+  against the checkout, resumable run folder on Drive, parity check, loss table; configs smoke 0.65M / base 5.25M /
+  scaled 26.2M params (d512 / 8 layers / 8 heads), early stopping patience 5). `training/train.py`: `setval.npz` is the
+  real-set validation, selection = mean(BrickGPT val, setval), demo sets reported only; `--patience` kept across
+  resumes; atomic checkpoints; prefetched batches (same batches as before). `results/m12e_training_plan.md`: checklist,
+  configs, evaluation with the adoption rule stated before any numbers. **For Mac:** upload `data/tokens_v2` (6 files,
+  ~16 MB) to Drive as `MyDrive/brick-wfc/tokens_v2`, add the `GITHUB_TOKEN` secret, push main (the notebook clones
+  `BRANCH=main`; the catalog fingerprint must be 475df2114737), run the smoke config first.
 - Coordinator (this session): merges on main, full pytest per merge, CLAUDE.md; no experiments on the PC.
 
 ### M13 — Experiments for the paper
