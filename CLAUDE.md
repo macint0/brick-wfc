@@ -564,8 +564,17 @@ open; nothing changes there now.
   which would have been 22% of the on-grid parts); 228,479 instances, 72.9% recognized, 121,521 on grid (53.2%),
   27 / 94 / 448 on-grid parts per model at the 10th / 50th / 90th percentile. Off-grid split in the pool: tilted 13.7%
   of instances, off the stud grid 5.3%, overlapping 0.6%: **tilted is 2.6× the jumper kind, so sideways building is the
-  next catalog step**, not half-stud offsets. Both demo sets are in the pool. Commits 2 (token export) and 3 (Colab
-  notebook, training plan) follow.
+  next catalog step**, not half-stud offsets. Both demo sets are in the pool.
+- **M12e (2) merged (3f73bed): token export for the pool** (`export_tokens --pool`, `data/tokens_v2`, gitignored).
+  Vocabulary from `parts.CATALOG` at export time: 835 tokens (421 shapes, 78 colours). Train = BrickGPT 42,604
+  sequences (4.58M parts) + 432 sets × 8 symmetries = 4,408 sequences (911k parts; real sets are 16.6% of training
+  parts, the notebook's default `--set-share`); val = BrickGPT test (4,785); setval = 23 sets (seeded 5%); heldout =
+  6378-1 and 31048-1 with its two alternates. 14 oversized models are cropped to 64×64×192 blocks, parts across a block
+  edge dropped (251 parts). **Of the pool's 228,479 part instances 52.7% are encoded**, 27.1% have no catalog part,
+  19.7% are recognized but off grid, 0.3% ride in frames; per model the median not-encoded share is 48.9% (6378-1:
+  167 of 348 parts encoded). So the model learns from about half of each real set; state that next to any "learned
+  from real sets" claim. Commit 3 (Colab notebook, `training/train.py` additions, `results/m12e_training_plan.md`)
+  follows.
 - Coordinator (this session): merges on main, full pytest per merge, CLAUDE.md; no experiments on the PC.
 
 ### M13 — Experiments for the paper
