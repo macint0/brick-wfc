@@ -39,7 +39,7 @@ from PIL import Image, ImageDraw
 
 from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.inventory import Inventory, InventoryConstraint, inventory_coverage, inventory_from_mpd, overuse, utilization
-from brickwfc.bricks.parts import CATALOG, PartSet, extract_parts, part_tileset
+from brickwfc.bricks.parts import CATALOG, PartSet, extract_parts, part_tileset, wfc_inventory
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.support import is_stable
 from brickwfc.experiments.inventory import grid_for
@@ -88,6 +88,7 @@ def setup(set_number: str, data: Path, height: int, room: float) -> tuple[Invent
     """M9b's full-catalog setup for one set."""
     text = fetch_set(set_number, data).read_text(encoding="utf-8", errors="replace")
     inventory, _, colors = inventory_from_mpd(text)
+    inventory = wfc_inventory(inventory)  # M12d: only parts WFC can place soundly
     part_list = [CATALOG[name] for name in sorted({name for name, _ in inventory})]
     shape = grid_for(inventory, height, room)
     parts = part_tileset(part_list, colors, len(part_list) * (room - 1), coverage=inventory_coverage(inventory))

@@ -3,7 +3,8 @@
 The input is an OMR set number (downloaded to ``data/omr`` once), an LDraw model file (.mpd/.ldr), or a
 parts list (.csv: part file, LDraw color code, count). A set number without an OMR model falls back to its
 Rebrickable inventory (``bricks.rebrickable``; ``rebrickable:6372-1`` forces that source), which has no model. The inventory is every part in ``parts.CATALOG``,
-in any position; other parts are reported as ignored (LDraw primitives, which only appear inside custom
+in any position; the glass, panes and doors that frames hold are kept apart (``Source.accessories``, M12d; not read
+from Rebrickable inventories); other parts are reported as ignored (LDraw primitives, which only appear inside custom
 parts defined in a model file, are not parts and are left out of that report).
 """
 
@@ -11,10 +12,11 @@ from __future__ import annotations
 
 import json
 import urllib.error
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Sequence
 
+from brickwfc.bricks.accessories import ACCESSORY_FILES, Accessories, accessories_from_csv, accessories_in
 from brickwfc.bricks.colors import BrickColor
 from brickwfc.bricks import rebrickable
 from brickwfc.bricks.inventory import Inventory, inventory_from_csv, inventory_from_mpd
@@ -23,6 +25,7 @@ from brickwfc.bricks.style import StyleStats, merged
 from brickwfc.experiments.coverage import PRIMITIVE
 from brickwfc.experiments.style import folds
 from brickwfc.ldraw.fetch import fetch_set
+from brickwfc.ldraw.mpd import flatten
 
 DATA_DIR = Path("data/omr")
 STYLE_DIR = Path("results/m10_style_stats")  # style_fold{i}.json from the M10 run, *_v2.json relearned in M12b
@@ -43,6 +46,7 @@ class Source:
     colors: tuple[BrickColor, ...]
     ignored: dict[str, int]  # LDraw file -> number of parts not in the catalog
     model: str | None  # LDraw text of the real model; None for a parts list
+    accessories: Accessories = field(default_factory=dict)  # M12d: (LDraw file, color code) -> count
 
     @property
     def recognized_parts(self) -> int:
@@ -74,6 +78,7 @@ def load_source(spec: str, data_dir: Path = DATA_DIR, rebrickable_dir: Path = re
     if suffix == ".csv":
         text, model = path.read_text(encoding="utf-8"), None
         inventory, ignored, colors = inventory_from_csv(text, known)
+        accessories = accessories_from_csv(text)
     else:
         if suffix in (".mpd", ".ldr"):
             model = path.read_text(encoding="utf-8", errors="replace")
@@ -85,11 +90,15 @@ def load_source(spec: str, data_dir: Path = DATA_DIR, rebrickable_dir: Path = re
                     raise
                 return rebrickable_source(spec, rebrickable_dir, catalog)  # no OMR model for this set
         inventory, ignored, colors = inventory_from_mpd(model, known)
+        accessories = accessories_in(flatten(model))
     if not inventory:
         raise ValueError(f"{spec}: none of its parts are in the part catalog")
     name = path.stem if suffix in (".csv", ".mpd", ".ldr") else spec
-    ignored = {file: count for file, count in ignored.items() if not PRIMITIVE.search(file)}
-    return Source(name, inventory, tuple(colors), ignored, model)
+    ignored = {file: count for file, count in ignored.items()
+               if not PRIMITIVE.search(file) and file.lower() not in ACCESSORY_FILES}
+    if catalog == "m8":  # the M8 catalog has no frames to hold them
+        accessories = {}
+    return Source(name, inventory, tuple(colors), ignored, model, accessories)
 
 
 def all_from_folds(fold_stats: Sequence[StyleStats]) -> StyleStats:

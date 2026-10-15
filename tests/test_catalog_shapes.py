@@ -240,6 +240,26 @@ LDRAW.update({
     # Brick 1 x 1 x 0.667 with Curved Top
     "49307.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (-16, 0)},
 })
+# M12d batch 2: frames and fences. ``rise``: cells (studless on top) over which the body rises above the box by less
+# than a plate (a collar); ``offgrid_studs``: studs between cell centres (not usable on the grid).
+LDRAW.update({
+    "60592.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 48)},
+    "60593.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 72)},
+    "2377.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 48)},
+    "4863.dat": {"studs": [(-30, 0), (-10, 0), (10, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10), "y": (0, 48)},
+    "2493b.dat": {"studs": [(-30, 0), (-10, 0), (10, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10), "y": (0, 120)},
+    "4035.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 72)},
+    "30044.dat": {"studs": [], "offgrid_studs": [(0, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 64)},
+    "60594.dat": {"studs": [(-10, 0), (10, 0)], "rise": [(-30, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10), "y": (-4, 72)},
+    "6556.dat": {"studs": [(-10, 0), (10, 0)], "rise": [(-30, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10), "y": (-4, 72)},
+    "60596.dat": {"studs": [(-10, 0), (10, 0)], "rise": [(-30, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10),
+                  "y": (-4, 144)},
+    "30179.dat": {"studs": [(-10, 0), (10, 0)], "rise": [(-30, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10),
+                  "y": (-4, 144)},
+    "30055.dat": {"studs": [(-30, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10), "y": (0, 48)},
+    "3633.dat": {"studs": [], "x": (-40, 40), "z": (-10, 10), "y": (0, 24)},
+    "3185.dat": {"studs": [], "x": (-40, 40), "z": (-10, 10), "y": (0, 48)},
+})
 SLOPES = [p for p in CATALOG.values() if p.kind == "slope"]
 CORNERS = [CATALOG["plate2x2_corner"], CATALOG["brick2x2_corner"]]
 FAMILY = CORNERS + [CATALOG[n] for n in ("plate1x1", "plate1x2", "brick1x2", "brick2x2", "tile1x1")]
@@ -288,8 +308,15 @@ def test_placement_matches_the_ldraw_part(file: str) -> None:
             flat = cells(facts["flat"]) if "flat" in facts else bottom
             assert flat == {(x, z) for _, z, x in placed.seated_cells()}, shape.name
         assert cells(facts.get("lower_studs", [])) <= bottom - {(x, z) for _, z, x in placed.stud_cells()}
+        for x, z in facts.get("offgrid_studs", []):  # half a stud from every cell centre along x or z
+            sx, sz = (r @ (x, 0, z) + origin)[[0, 2]] / STUD_LDU
+            assert sx % 1 == 0.5 or sz % 1 == 0.5, shape.name  # cell centres are at whole studs
+        rise, y_facts = facts.get("rise", []), facts["y"]
+        if rise:  # a collar under a plate tall, over studless top cells: nothing may be placed above those anyway
+            assert cells(rise) <= bottom - {(x, z) for _, z, x in placed.stud_cells()} and -PLATE_LDU < y_facts[0] < 0
+            y_facts = (0, y_facts[1])
         corners = np.array([r @ (x, 0, z) + origin for x in facts["x"] for z in facts["z"]]) / STUD_LDU
-        top, low = (-(origin[1] + y) / PLATE_LDU for y in facts["y"])
+        top, low = (-(origin[1] + y) / PLATE_LDU for y in y_facts)
         box = ((placed.x - 0.5, placed.x + shape.size_x - 0.5), (placed.z - 0.5, placed.z + shape.size_z - 0.5),
                (placed.layer, placed.top + 1))
         real = ((corners[:, 0].min(), corners[:, 0].max()), (corners[:, 2].min(), corners[:, 2].max()), (low, top))

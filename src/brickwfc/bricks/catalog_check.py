@@ -16,7 +16,9 @@ plates under its flat cells only, none of which may cut into the sloped undersid
 
 M12d parts follow the same rules: arches stand one plate up on markers under their two end cells (none may cut
 into the arch), parts with studs on some cells carry markers on those only, and a baseplate lies on the ground with
-a marker on each stud.
+a marker on each stud. Window and door frames carry their glass, panes and doors in every slot
+(``accessories.FRAMES``): each must sit inside its frame, nothing sticking out of the frame's box. The baseplate is not
+lowered onto the table here (``parts.build_placements``): the check is about the parts relative to each other.
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ import argparse
 from pathlib import Path
 from typing import Sequence
 
+from brickwfc.bricks.accessories import ACCESSORY_FILES, fit
 from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.parts import CATALOG, Part, PlacedPart, Shape, shapes_of
 from brickwfc.ldraw.export import write_ldr
@@ -89,7 +92,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=Path("out/check/catalog_check.ldr"))
     args = parser.parse_args(argv)
     placed = layout()
-    write_ldr((p.placement() for p in placed), args.out, "brickwfc part catalog check")
+    trans_clear = 47
+    glass = [placement for _, placement in fit(placed, {(file, trans_clear): len(placed) for file in ACCESSORY_FILES})]
+    write_ldr([p.placement() for p in placed] + glass, args.out, "brickwfc part catalog check")
     print(f"wrote {args.out}: {len(CATALOG)} parts in all their orientations, with markers, + a height tower")
     return 0
 

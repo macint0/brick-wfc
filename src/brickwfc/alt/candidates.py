@@ -24,7 +24,7 @@ from __future__ import annotations
 import functools
 import math
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Sequence
 
@@ -34,7 +34,7 @@ from brickwfc.bricks.balance import clusters
 from brickwfc.bricks.bottomup import PREFERRED_BOOST, BottomUpBuilder
 from brickwfc.bricks.colors import BrickColor, color_for_code
 from brickwfc.bricks.inventory import Inventory, InventoryConstraint, overuse
-from brickwfc.bricks.parts import CATALOG, PartSet, PlacedPart, Shape, extract_parts
+from brickwfc.bricks.parts import CATALOG, PartSet, PlacedPart, Shape, extract_parts, wfc_inventory
 from brickwfc.bricks.physics import table_clutch
 from brickwfc.bricks.proposal import Proposal
 from brickwfc.bricks.shapes import Mask, ShapeConstraint, outside
@@ -184,6 +184,8 @@ def verify(context: Context, parts: PartSet, grid: np.ndarray) -> tuple[list[Pla
 
 
 def generate(context: Context, seeds: Sequence[int]) -> list[Candidate]:
+    if context.generator != "d2":  # M12d: WFC leaves out parts it cannot place soundly (parts.Part.wfc)
+        context = replace(context, inventory=wfc_inventory(context.inventory))
     parts = styled_tileset(context.inventory, context.colors, context.empty_weight_per_part, context.stats)
     bias = StyleBias(context.stats, parts, context.strength)
     candidates = []

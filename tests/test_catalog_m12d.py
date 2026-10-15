@@ -9,7 +9,8 @@ from brickwfc.bricks.balance import ground_corners
 from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.catalog_check import layout
 from brickwfc.bricks.colors import colors_by_name
-from brickwfc.bricks.parts import BY_FILE, CATALOG, M12D_BATCH1, PlacedPart, Shape, canonical, extract_parts, part_tileset, shapes_of
+from brickwfc.bricks.parts import (BY_FILE, CATALOG, M12D_BATCH1, M12D_FRAMES, PlacedPart, Shape, canonical, extract_parts,
+                                   part_tileset, shapes_of)
 from brickwfc.bricks.physics import required_clutch, tipping_clusters
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.support import is_stable
@@ -21,6 +22,7 @@ from brickwfc.wfc import run
 from test_catalog_shapes import LDRAW, check_build, faces_clear
 
 RED, BLUE = colors_by_name(["red", "blue"])
+M12D = M12D_BATCH1 + M12D_FRAMES
 BUILDS = 60
 # A mix of the new mechanisms: an arch, a round corner, studs on some cells, a cutout slope (origin inside its
 # box), curved studless parts (origin on the bottom), a tall brick, a lookalike, plus plain parts to build on.
@@ -34,7 +36,7 @@ NEW = {"arch1x4", "brick2x2_round_corner", "plate1x4_2studs", "slope45_2x1_cutou
 def test_every_new_part_has_ldraw_facts_and_comes_after_the_old_ones() -> None:
     names = list(CATALOG)
     assert names.index(M12D_BATCH1[0].name) == 88  # earlier parts keep their style indices
-    assert {p.ldraw for p in M12D_BATCH1} <= set(LDRAW)
+    assert {p.ldraw for p in M12D} <= set(LDRAW)
     assert BY_FILE["3665b.dat"] is CATALOG["slope45inv_2x1"] and BY_FILE["63325.dat"] is CATALOG["plate2x2_corner"]
     assert BY_FILE["3678a.dat"] is CATALOG["slope65_2x2x2"] and BY_FILE["2453.dat"] is CATALOG["brick1x1x5"]
 
@@ -127,7 +129,7 @@ def test_bottom_up_builds_with_new_parts_are_whole_and_supported() -> None:
 
 def test_every_new_orientation_roundtrips_through_ldraw(tmp_path: Path) -> None:
     placed, x = [], 0
-    for part in M12D_BATCH1:
+    for part in M12D:
         for turn in range(4):
             shape = Shape(part, turn)
             placed.append(PlacedPart(shape, RED, turn, x, turn))
@@ -145,7 +147,7 @@ def test_catalog_check_shows_every_new_orientation() -> None:
     cells = [cell for p in placed for cell in p.cells()]
     assert len(cells) == len(set(cells))
     shown = {(p.shape.part.name, p.shape.turn) for p in placed}
-    for part in M12D_BATCH1:
+    for part in M12D:
         turns = {s.turn for s in shapes_of([part])} if not Shape(part).rectangular else {0, 1}
         assert {(part.name, t) for t in turns} <= shown, part.name
 
@@ -163,3 +165,13 @@ def test_coverage_counts_new_parts() -> None:
     row = set_coverage("fake-1", mpd, on_grid=True)
     assert (row.parts, row.catalog_m8, row.catalog_m12b, row.catalog) == (4, 1, 1, 3)
     assert (row.on_grid_m8, row.on_grid_m12b, row.on_grid) == (1, 1, 3)
+
+
+def test_primitives_are_not_counted_as_parts() -> None:
+    from brickwfc.experiments.coverage import PRIMITIVE
+
+    for name in ("rect3.dat", "box2-5.dat", "t01i3333.dat", "stud.dat", "4-4cyli.dat", "s/3001s01.dat", "48/1-4cyli.dat",
+                 "u9026.dat"):
+        assert PRIMITIVE.search(name), name
+    for name in ("3001.dat", "60592c01.dat", "3794a.dat", "6091.dat"):
+        assert not PRIMITIVE.search(name), name

@@ -3,12 +3,13 @@
     python -m brickwfc.experiments.coverage --out results/m8_coverage
     python -m brickwfc.experiments.coverage --sets-file results/sets_selection.json --on-grid --out out/m12b_cov
 
-For each set's OMR model, counts part instances (LDraw primitives such as ``4-4cyli.dat``, which only
-appear inside custom parts defined in the file, are not parts and are left out) and how many are in
+For each set's OMR model, counts part instances (LDraw primitives such as ``4-4cyli.dat`` or ``rect3.dat``, which only
+appear inside custom parts defined in the file, are not parts and are left out: ``PRIMITIVE``) and how many are in
 the four M4-M11 plates, in the M8 catalog (``parts.M8_FILES``: rectangular plates, bricks, tiles), in the
 M12b catalog (``parts.M12B_FILES``: also corners and slopes) and in the full ``parts.CATALOG`` (M12d: the real
-sets' parts). With ``--on-grid``, also how many voxelize
-onto the stud grid (``bricks.voxelize``) with each catalog: those are what style statistics learn from.
+sets' parts; a glass, pane or door counts when a catalog frame holds it, ``bricks.accessories``). With
+``--on-grid``, also how many voxelize onto the stud grid (``bricks.voxelize``) with each catalog (and the accessories
+in the frames kept): those are what style statistics learn from.
 ``--sets-file`` takes the sets from an ``experiments.sets`` selection (its "selected" list) instead of
 ``--sets``. Writes ``coverage.md`` and ``coverage.json``.
 """
@@ -23,12 +24,15 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Sequence
 
+from brickwfc.bricks.accessories import ACCESSORY_FILES, contained
 from brickwfc.bricks.learn_sets import DEFAULT_SETS
 from brickwfc.bricks.parts import BY_FILE, M8_FILES, M12B_FILES, PLATE_FILES
 from brickwfc.ldraw.fetch import fetch_set
 from brickwfc.ldraw.mpd import flatten
 
-PRIMITIVE = re.compile(r"^(\d+-\d+|stud)|[\\/]")  # 4-4cyli.dat, 1-4edge.dat, stud.dat, s\..., 48\...
+# LDraw primitives and subparts: 4-4cyli.dat, 1-4edge.dat, s\..., 48\..., and (M12d) every name starting with a letter
+# (stud.dat, rect3.dat, box2-5.dat, t01i3333.dat). That also drops the few unofficial parts named so (u9026, u8001b).
+PRIMITIVE = re.compile(r"^(\d+-\d+|[a-z])|[\\/]", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -62,15 +66,21 @@ def set_coverage(set_number: str, text: str, on_grid: bool = False) -> SetCovera
     instances = flatten(text)
     names = [inst.part.lower() for inst in instances]
     parts = [n for n in names if not PRIMITIVE.search(n)]
-    missing = Counter(n for n in parts if n not in BY_FILE)
+    # M12d: an accessory (glass, pane, door) counts when a catalog frame holds it; uncounted ones are listed as missing
+    held = contained(instances)
+    missing = Counter(n for n in parts if n not in BY_FILE and n not in ACCESSORY_FILES)
+    loose = sum(n in ACCESSORY_FILES for n in parts) - held
+    if loose:
+        missing["(accessories outside a frame)"] = loose
     kept = kept_m8 = kept_m12b = -1
     if on_grid:
         from brickwfc.bricks.voxelize import voxelize
 
-        kept, kept_m8, kept_m12b = (voxelize(instances, known)[1].kept for known in (BY_FILE, M8_FILES, M12B_FILES))
+        reports = [voxelize(instances, known)[1] for known in (BY_FILE, M8_FILES, M12B_FILES)]
+        kept, kept_m8, kept_m12b = (r.kept + r.contained for r in reports)
     return SetCoverage(
         set_number, len(parts), len(names) - len(parts), sum(n in PLATE_FILES for n in parts),
-        sum(n in BY_FILE for n in parts), missing.most_common(5), sum(n in M8_FILES for n in parts), kept, kept_m8,
+        sum(n in BY_FILE for n in parts) + held, missing.most_common(5), sum(n in M8_FILES for n in parts), kept, kept_m8,
         sum(n in M12B_FILES for n in parts), kept_m12b,
     )
 

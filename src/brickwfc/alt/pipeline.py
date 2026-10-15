@@ -65,6 +65,7 @@ from brickwfc.alt.features import BARS, Bar, completeness, feature_vector, occup
 from brickwfc.alt.inputs import (CATALOGS, DATA_DIR, SETS_FILE, STYLE_DIR, STYLE_FILES, STYLE_VERSION, Source,
                                  learned_style, load_source)
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
+from brickwfc.bricks.accessories import fit
 from brickwfc.alt.target import Target, load_target, takes_supports
 from brickwfc.bricks.inventory import SIZINGS, inventory_cells, target_volume, unusable, utilization
 from brickwfc.bricks.recolor import recolor
@@ -504,12 +505,13 @@ def write_outputs(source: Source, context: Context, report: FunnelReport, out: P
     for rank, chosen in enumerate(report.selected, 1):
         c = chosen.candidate
         ldr, png = write_build(c.placed, context.grid, out / f"build_{rank:02d}",
-                               f"Alternate build {rank} from {source.name} (seed {c.seed})")
+                               f"Alternate build {rank} from {source.name} (seed {c.seed})", source.accessories)
         previews.append(png)
         row = {"rank": rank, "seed": c.seed, "ldr": ldr.name, "png": png.name, "parts": len(c.placed),
                "clusters": c.clusters,
                "steps": len(layer_steps(c.placed)), "judge": chosen.judge, "clutch": c.clutch,
                "utilization_pct": 100 * utilization(list(c.placed), source.inventory),
+               "accessories": len(fit(c.placed, source.accessories)),
                "seconds": c.seconds, "physics_seconds": c.physics_seconds}
         if context.mask is not None:
             filled = occupancy(c.placed, context.grid)
@@ -710,6 +712,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     ignored_top = sorted(source.ignored.items(), key=lambda kv: (-kv[1], kv[0]))[:10]
     print(f"{source.name}: {source.recognized_parts} parts recognized, {source.ignored_parts} ignored"
           + (f" (most common: {', '.join(f'{p} x{n}' for p, n in ignored_top[:5])})" if ignored_top else ""))
+    if source.accessories:
+        print(f"{sum(source.accessories.values())} glass, panes and doors go into frames (no cells of their own)")
     print(f"style: {style_label}")
 
     target, sizing = sized_target(source, config, args.data)
@@ -758,6 +762,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     clutches = [c.clutch for c in candidates if not math.isnan(c.clutch)]
     stats_json = {
         "input": {"name": source.name, "recognized_parts": source.recognized_parts,
+                  "accessories": sum(source.accessories.values()),
                   "ignored_parts": source.ignored_parts, "ignored_top": ignored_top,
                   "colors": [c.name for c in source.colors], "inventory_cells": inventory_cells(source.inventory)},
         "style": style_label, "config": asdict(config), "grid_YZX": list(context.grid),
