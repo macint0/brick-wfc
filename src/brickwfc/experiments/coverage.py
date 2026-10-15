@@ -11,7 +11,7 @@ sets' parts; a glass, pane or door counts when a catalog frame holds it, ``brick
 ``--on-grid``, also how many voxelize onto the stud grid (``bricks.voxelize``) with each catalog (and the accessories
 in the frames kept): those are what style statistics learn from.
 ``--sets-file`` takes the sets from an ``experiments.sets`` selection (its "selected" list) instead of
-``--sets``. Writes ``coverage.md`` and ``coverage.json``.
+``--sets``; ``--all`` takes every model in ``--data``. Writes ``coverage.md`` and ``coverage.json``.
 """
 
 from __future__ import annotations
@@ -114,11 +114,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m brickwfc.experiments.coverage", description=__doc__.splitlines()[0])
     parser.add_argument("--sets", nargs="+", default=list(DEFAULT_SETS))
     parser.add_argument("--sets-file", type=Path, help="an experiments.sets selection; its selected sets replace --sets")
+    parser.add_argument("--all", action="store_true", help="every model (.mpd) in --data instead of --sets")
     parser.add_argument("--on-grid", action="store_true", help="also count parts that voxelize onto the stud grid")
     parser.add_argument("--data", type=Path, default=Path("data/omr"))
     parser.add_argument("--out", type=Path, default=Path("out/coverage"))
     args = parser.parse_args(argv)
     sets = json.loads(args.sets_file.read_text(encoding="utf-8"))["selected"] if args.sets_file else args.sets
+    if args.all:  # M12d: file names of alternate models hold spaces and quotes, so list them here, not in a shell
+        sets = sorted(path.stem for path in args.data.glob("*.mpd"))
     rows = [set_coverage(s, fetch_set(s, args.data).read_text(encoding="utf-8", errors="replace"), args.on_grid)
             for s in sets]
     rows.sort(key=lambda r: -r.catalog_pct)

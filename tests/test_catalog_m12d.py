@@ -194,3 +194,19 @@ def test_jumpers_take_nothing_on_top() -> None:
         placed = check_build(builder.build((6, 3, 4), np.random.default_rng(seed)), parts)
         used += any(p.shape.part.name == "jumper1x2_3794b" for p in placed)
     assert used
+
+
+def test_coverage_all_reads_every_model_in_the_data_dir(tmp_path: Path) -> None:
+    import json
+
+    from brickwfc.experiments.coverage import main
+
+    data = tmp_path / "omr"
+    data.mkdir()
+    model = "0 FILE main.ldr\n1 4 0 -8 0 1 0 0 0 1 0 0 0 1 3020.dat\n0 NOFILE\n"
+    for name in ("1-1", "10183-1_Pig's-nose-train"):  # alternate models have quotes and spaces in their names
+        (data / f"{name}.mpd").write_text(model, encoding="utf-8")
+    (data / "index.json").write_text("{}", encoding="utf-8")  # the crawler's files are not models
+    assert main(["--all", "--data", str(data), "--out", str(tmp_path / "out")]) == 0
+    rows = json.loads((tmp_path / "out" / "coverage.json").read_text(encoding="utf-8"))
+    assert sorted(r["set_number"] for r in rows) == ["1-1", "10183-1_Pig's-nose-train"]

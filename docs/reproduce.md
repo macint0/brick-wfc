@@ -26,6 +26,16 @@ puts the checkout's own `src/` ahead of `PYTHONPATH`. To test a worktree's tests
 override it: `pytest -o pythonpath=<other checkout>/src`. Drivers run with `python -m` are not affected; set
 `PYTHONPATH=<worktree>/src` for those, because the editable install points at the main checkout.
 
+**Since M12d (2026-10-15): pipeline builds from before it.** M12d changed three things the pipeline builds with:
+- the catalog: 88 -> 183 parts;
+- the default style statistics: v2 -> v3;
+- the tileset: parts that fit nowhere in the build space are left out (`alt.pipeline.buildable`).
+
+To rebuild candidates of the M12b / M12c write-ups exactly, give the pipeline
+`--catalog m12b --style-version v2 --keep-unfittable`. Their drivers pass their own pipeline flags and do not add
+these, so a rerun of a driver on M12d code builds with the new catalog. For the commands below exactly as recorded,
+check out d15e46b, the last commit before M12d. The sections this concerns carry a pointer to this note.
+
 ## Per results file
 
 ### `results/m6_stability.md` (M6), with `m6_stability_summary.json`
@@ -116,6 +126,8 @@ About 11 minutes of build time. Resumable: finished (set, shape, condition) batc
 
 ### `results/m12_pipeline.md` (M12), with `m12_balance_summary.json`, `m12_connect_summary.json`, `m12_demo_summary.json`, `m12_demo_sheet.png`
 
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
+
 Every M12 driver runs the alternate-build pipeline (`python -m brickwfc.alt`). Each pipeline run caches its
 candidates, so all of them are resumable. Workers default to CPU count - 2.
 
@@ -162,6 +174,8 @@ python -m brickwfc.alt 10182-1 --n 200 --k 8 --max-clutch inf
 0.8 CPU-hours.
 
 ### `results/m12b_catalog.md` (M12b step 4: corners and slopes), with `m12b_coverage_omr20.json`, `m12b_coverage_m10.json`, `m10_style_stats/style_fold*_v2.json`, `m12b_catalog_before_after.png`, `m12b_catalog_before_summary.json`, `m12b_catalog_after_summary.json`
+
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
 
 **Coverage** (`m12b_coverage_*.json`). Seconds per set:
 
@@ -285,6 +299,8 @@ python -m brickwfc.experiments.proposal_report --dir out/m12b_proposal --weights
 
 ### `results/m12b_proposal_shape.md` (M12b step 2, phase 2: with a target shape), with `m12b_proposal_shape.json`, `m12b_proposal_shape.png`
 
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
+
 Needs `data/models/proposal_run2.npz` and `vocab.json`. Three pipeline runs per set (one per arm), then the report:
 
 ```
@@ -320,6 +336,8 @@ python -m brickwfc.experiments.rebrickable_check --omr data/omr --out out/m12c/r
 
 ### `results/m12b_brickgpt.md` (M12b steps 1a and 1c), with `m12b_brickgpt_summary.json`, `m12b_hollow_summary.json`, `m12b_hollow_before_after.png`
 
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
+
 The 88-part rerun with the pipeline defaults of fd9015b (box sizing, lattice support columns; 1a and Table 1a; its
 two figures are redrawn under `results/m12b_sizing.md`), at fd9015b:
 
@@ -339,6 +357,8 @@ Step 1c (hollow) is from commit 9c4a108, on the 63-part catalog with open tops o
 hollow runs take 6.3 CPU-hours.
 
 ### `results/m12b_sizing.md` (M12b sizing: slopes, thin parts, support columns), with `m12b_sizing.json`, `m12b_sizing_before_after.png`, `m12b_before_after.png`, `m12b_opentops_before_after.png`, `m12b_chair_figure_summary.json`, `m12b_overhangs_figure_summary.json`
+
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
 
 The two figures, with the current defaults (fillable sizing, covering support columns, thin-aware scale):
 
@@ -370,6 +390,8 @@ python -m brickwfc.alt 10182-1 --shape $K --n 20 --k 1 --workers 5 --out out/m12
 
 ### `results/m12b_overhangs_tables.md` (M12b step 1d), with `m12b_overhangs_summary.json`
 
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
+
 The tables are from commit 9c4a108 (63-part catalog, before the support and clutch defaults); at that commit:
 
 ```
@@ -394,6 +416,8 @@ python -m brickwfc.experiments.skins --steps measure --runs out/m12b_brickgpt_v2
 
 ### `results/m12b_skins.md` (M12b step 3: `--skin` and `--symmetric` before / after), with `m12b_skins.json`, `m12b_skins_sheet.png`
 
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
+
 Chair, car and table on 6378-1, 5891-1 and 10182-1, four arms per cell (base, `--skin`, `--symmetric`, both), 50 candidates each with the pipeline defaults; the base arm reuses the step-1a cache when the key matches:
 
 ```
@@ -407,6 +431,8 @@ python -m brickwfc.experiments.skins --steps compare --sets 6378-1 5891-1 10182-
 
 ### `results/m12b_skins_soft_sweep.md` (M12b step 3: soft skin preference, sweep of a), with `m12b_skins_soft_sweep.json`
 
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
+
 The table on 6378-1, the base, skin and both arms of `m12b_skins.md` (from their caches) next to `--skin --skin-power a` for a = 0.25, 0.5, 1, 2, 4, same seeds:
 
 ```
@@ -418,6 +444,8 @@ python -m brickwfc.experiments.skins --steps compare --objects table --sets 6378
 - About 1 CPU-hour (5 new arms x 50 candidates at 8-15 s each).
 
 ### `results/m12b_skins_soft.md` (M12b step 3: soft skin preference, a = 1 on all cells), with `m12b_skins_soft.json`, `m12b_skins_soft_sheet.png`
+
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
 
 Chair, car and table on 6378-1, 5891-1 and 10182-1: base, skin, both and symmetric (from the `m12b_skins.md` caches) next to `--skin --skin-power 1` alone and with `--symmetric`, same seeds:
 
@@ -431,6 +459,8 @@ python -m brickwfc.experiments.skins --steps compare --sets 6378-1 5891-1 10182-
 - The findings and the decision at the end of the write-up are written by hand; a rerun overwrites the file, so copy them back.
 
 ### `results/m12b_symmetry_threshold.md` (M12b step 3: the symmetrize threshold after M12b sizing), with `m12b_symmetry_threshold.json`, `m12b_symmetry_threshold_chair.json`, `m12b_symmetry_threshold_chair.png`
+
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
 
 The score table (scaled objects under box and fillable sizing; no generation, a few CPU-minutes):
 
@@ -449,6 +479,8 @@ python -m brickwfc.experiments.skins --steps compare --sets 5891-1 --objects cha
 - The chair section and the notes at the end of the write-up are written by hand (from `chair_5891-1.md`); the threshold step rewrites the file, so copy them back.
 
 ### `results/m12b_complete.md` (M12b completeness: fill, holes, surface, missing maps, causes, fixes, sweep), with `m12b_complete_final.json`, `m12b_complete_missing.png`, `m12b_complete_trace.json` and the sweep's files
+
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
 
 The final-state pass reads the sizing runs (`out/m12b_sizing_fig`, `out/m12b_sizing`; see `m12b_sizing.md`). It runs no
 generation and takes about a minute:
@@ -529,6 +561,8 @@ python -m brickwfc.experiments.complete --runs out --out out/m12b_complete --ste
 
 
 ### `results/m12b_connected.md` (M12b connected growth on the completeness sweep), with `m12b_connected_sweep.json`, `m12b_connected_sweep_previews.png`, `m12b_connected_sweep_missing.png`, `m12b_connected_stall_map.png`, `m12b_connected_sweep_connected_small.json`, `m12b_connected_sweep_connected_small_previews.png`, `m12b_connected_sweep_connected_small_missing.png`, `m12b_connected_complete_chair.png`
+
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
 
 The three connected arms run on the 9 sweep pairs, then a report joins them to the default (usable) arms at the same
 slack. The default arms must be in `out/m12b_complete/sweep/`; see `m12b_complete.md`. Commands, at m12b-connected
@@ -652,6 +686,8 @@ scan sizes the 54 bench pairs under creserve and creserve80; `bench-plan` now re
 
 ### `results/m12b_size.md` (M12c size below 0.8), with `m12b_size.json`, `m12b_size_sheet.png`, `m12b_size_sheet_usable.png`
 
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
+
 The size arms (creserve and the default at 0.9 / 0.7 / 0.6; the other slacks are the cached arms above), the size report
 and the completeness-first re-rank, at m12c-size (007e6dd for the runs; the report after the merge of main 044b8f6):
 
@@ -669,6 +705,8 @@ python -m brickwfc.experiments.select --arms creserve90 creserve70 creserve60 us
 
 ### `results/m12c_hollow.md` (M12c hollow targets at the solid's scale, run), with `m12c_hollow_sweep.md` / `.json`
 
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
+
 The first step of the overnight queue (main 06e484c, 2026-10-11 night; 1 h 57 on 5 workers):
 
 ```
@@ -680,6 +718,8 @@ python -m brickwfc.experiments.complete --out out/m12b_complete --steps sweep-re
 - `sweep_hollow.md` / `.json` are copied to `results/m12c_hollow_sweep.md` / `.json`; the write-up reads them.
 
 ### `results/m12c_stall_6378_chair.md`, dated section 2026-10-12, with `m12c_chair_6378_size.md` / `.json`, `m12c_chair_6378_size_sheet.png`
+
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
 
 The reconnected 6378-1 chair under cregrow (creserve's flags + `--regrow`) and the usable controls at 1.0–0.6 (second
 and third steps of the queue; 12 min + the report):
@@ -695,6 +735,8 @@ python -m brickwfc.experiments.complete --out out/m12c_reconnected --steps size-
   `results/m12c_chair_6378_size_sheet.png`; the complete candidate under `complete_candidates/`.
 
 ### `results/m12c_bench.md` (M12c wider bench at 0.6 and 0.8), with `results/m12c_bench_sweep_0.6.md` and `results/m12c_bench_sweep_0.8.md` (+ `.json`), `m12c_bench_sheet_0.6.png` / `_0.8.png`
+
+*Since M12d: see the dated note at the top (`--catalog m12b --style-version v2 --keep-unfittable`, or d15e46b).*
 
 The rest of the queue (`bash scripts/overnight_m12c.sh 0.6 0.8`; the bench steps 23:10–06:18, resumable). Per slack
 (`bench60` shown; `bench80` the same):
@@ -742,7 +784,7 @@ Coverage (seconds per set list; `--data` where the OMR models are):
 ```
 python -m brickwfc.experiments.coverage --on-grid --sets-file results/sets_selection.json --out out/m12d_cov/m10
 python -m brickwfc.experiments.coverage --on-grid --out out/m12d_cov/omr20
-python -m brickwfc.experiments.coverage --on-grid --sets $(ls data/omr | sed 's/\.mpd$//') --out out/m12d_cov/all
+python -m brickwfc.experiments.coverage --on-grid --all --out out/m12d_cov/all
 ```
 
 `results/m12d_coverage_*.json` are the three runs' `coverage.json`. Style statistics v3 (a few minutes, one process) and
