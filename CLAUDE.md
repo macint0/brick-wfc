@@ -459,6 +459,58 @@ with hollow targets; colour and symmetry; widen the bench before paper tables.
   0.8 + 21 at 0.6; 21 pairs at neither, the small inventories' chairs and cars and everything on 4956-1 but the sofa).
   Nothing changes until Mac decides; every overnight arm passed its flags explicitly.
 
+### M12d — Catalog to the real sets' parts; M12e — proposal model v2 on more data (Mac, 2026-10-15)
+Mac's correction (2026-10-15): the builds are complete but still look like boxes in random colours; the two things
+asked for since the M12b framing, **a bigger catalog** and **a trained proposal model**, were done minimally (63 → 88
+parts; a 5M-parameter model trained 1500 steps on 21 sets and closed after one comparison under a judge that sees
+contact statistics only). The five days of completeness sweeps after the 2026-10-10 read were spent on a number nobody
+looked at. **No more slack / reserve / hole / hollow experiments.** The completeness work is done enough for the paper.
+Aim, in order: (1) the catalog knows the parts real sets are made of; (2) a model trained on hundreds of real sets
+places them; (3) the result is judged by eye on rendered sheets and by surface / symmetry / colour metrics, not by the
+contact judge. Open decisions from M12c (defaults for connected+reserve+regrow, recolor, min-fill, the size rule) stay
+open; nothing changes there now.
+- **Ranking of what the catalog cannot place** (`results/m12d_missing_parts.md`, 2026-10-15): the 28 building sets
+  have 25,321 part instances, 69.5% recognized; the 7,714 missing are a long tail of 807 files. By kind: window/door
+  frames and glass 1185, round 740, minifigure 685, hinge/clip/bar 650, curved slopes 476, Technic 435, jumpers 403,
+  modified bricks 233, wheels 221, brackets and side-stud bricks 214, panels 159, plain plates not in the catalog
+  (2×16, 4×12, 6×12, 6×16, baseplate 16×32) 115. Across all 93 local OMR models: 66,043 parts, 61.0% recognized.
+- **M12d plan (session A, branch `m12d-catalog`):** add in four batches, each committed on its own, geometry read from
+  the parts' `.dat` files as in M12b step 4, every new part with a placement test against those facts, M8 builds
+  fingerprint-unchanged, `catalog_check.ldr` regenerated for Mac's Studio check, new parts appended after the existing
+  ones (style indices). (1) Existing mechanisms: missing plain rectangles and baseplates (a baseplate has no seated
+  cells: ground only); lookalike boxes (log 30136 and masonry 98283 bricks, Technic bricks 3700 / 6541 / 32064a, cones
+  59900 / 4589, round and quarter tiles 98138 / 25269, round, flower and leaf plates 85861 / 33291 / 32607, rounded
+  plate 35480, round-corner plate 30357, panels 6231 / 4865a / 4865b / 87552 / 2362b, seat 4079, macaroni tile 27925);
+  per-cell studs (92593); slopes 3678b, 92946, 3300, 3299, alias 3665b; curved bricks as slopes or studless boxes
+  (6091 with its one back stud, 50950, 61678, 11477, 15068); arches 3659 / 3455 / 6182 as bricks seated at their end
+  cells only (the box stays full: conservative). (2) **Window and door frames with contained glass**: a frame is a box
+  with its studs (60592, 3854, 60593, 60608, 60594, 3853, 6556, 30044, 30046, 60596 door frame, fences 30055 / 3633 /
+  3185); its glass, door or shutter (60601, 60602, 60623, 57895, …) is a *contained* accessory with no cells of its own,
+  placed with the frame, consumed from the inventory with it, exported with it, and counted as recognized when a frame
+  covers its position in a real model. (3) **Keep-out cells**: a part may require listed neighbouring cells (relative
+  offset and layer range) to stay empty; the builder blocks them once the part is placed, the hole and connect passes
+  respect them, WFC leaves these parts out (documented). Door-rail plates 32028 / 4510 / 30586 (rail side), bricks with
+  side studs 87087 / 47905 / 30414 and brackets 44728 / 93274 (the hanging face as keep-out; the side studs are
+  recorded on the `Part` for sideways building later, unused now), brick with handle 2921. (4) Jumpers 3794a / 3794b /
+  15573 / 87580 as plates with a studless top (their centre stud is off our grid; a real model's part on it is off-grid
+  and already dropped by the voxelizer). Not added, and why, in the write-up: minifigure parts, Technic pins and
+  axles, hinges, clips and bars, wheels and tyres, plants other than the round plates. Expected: recognized share on
+  the 28 sets 69.5% → about 80–83% (the addable part of the ranking is roughly 3,000 of the 7,714 missing instances);
+  report recognized and on-grid per set (`experiments/coverage.py`, 28 sets, 20 OMR sets, all 93), relearn style
+  statistics (v3), write `results/m12d_catalog.md`.
+- **M12e plan (session B, branch `m12e-data`):** (1) crawl the whole OMR index into `data/omr` (resumable, polite),
+  measure every model with the coverage driver (recognized, on-grid) and define the training pool (building sets by
+  the `experiments/sets.py` criteria, loosened to size, no re-releases); report sets / parts / on-grid parts; redo the
+  measurement once M12d lands. (2) The token export for the pool with the vocabulary built from `parts.CATALOG` at
+  export time (`experiments/export_tokens.py`), BrickGPT's splits kept in the mix, held-out sets chosen by Mac's demo
+  sets. (3) A Colab notebook plus a checklist (clone, `pip install -e`, Drive-mounted `data/` and checkpoints,
+  resumable training with `training/train.py`, periodic checkpoints), a smoke configuration that runs in minutes, and
+  the scaled configurations (about 25M parameters, trained to convergence with early stopping on held-out loss).
+  Evaluation plan in `results/m12e_training_plan.md`: held-out loss, then builds judged by surface cleanliness, mirror
+  share, colour coherence and rendered sheets, with the contact judge reported but not deciding. **Training itself
+  waits for the M12d catalog** (the vocabulary changes); Mac runs the notebook on Colab Pro.
+- Coordinator (this session): merges on main, full pytest per merge, CLAUDE.md; no experiments on the PC.
+
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
   outputs where comparable (shape-only, no inventory). Apply the decision checkpoint above.
