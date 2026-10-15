@@ -6,6 +6,14 @@ parts of one build (5 tokens each), then EOS if the window reaches the build's e
 start at the build's first part has ``CONT`` instead of ``BOS``. With probability ``mask_drop`` the target
 is dropped (``NOMASK``, zero patches), so the model also proposes without a target.
 
+Translation jitter (``Sampler(jitter=...)``): a training window's build is moved by a random whole number of
+coarse mask voxels along Z and X (never Y), its part tokens and its mask patches together. A coarse voxel is
+``s`` studs (``s`` = the header's ``SCALE``), and the shift keeps the build inside the 20^3 mask grid and the
+64-stud token grid, so the scale is unchanged and the max-pooled mask moves by whole voxels: the shifted window
+is exactly what ``bricks.tokens.encode`` gives for the shifted build. Builds at scale 1 also move towards the
+origin when they do not touch it (BrickGPT's structures); larger builds move only away from it, since moving
+them towards the origin could lower the scale ``encode`` picks.
+
 Layout of ``ids`` (length ``PREFIX + 5 * parts (+ 1)``): header ids, then ``PAD`` in the 64 mask slots (the
 model puts the patch embeddings there), then the part tokens. The loss is on every position from ``PREFIX``
 on (the first part's Y is predicted from the last mask slot).
@@ -30,9 +38,17 @@ def max_parts(max_len: int) -> int:
     return (max_len - PREFIX - 1) // PART_TOKENS
 
 
-def patches(packed: np.ndarray) -> np.ndarray:
-    """(64, 125) float32 patch vectors from a packed 20^3 mask (``bricks.tokens.patches`` layout)."""
-    mask = np.unpackbits(packed)[: MASK_GRID**3].reshape(MASK_GRID, MASK_GRID, MASK_GRID)
+def unpack(packed: np.ndarray) -> np.ndarray:
+    """(N, 20, 20, 20) (y, z, x) uint8 masks from (N, 1000) packed ones."""
+    return np.unpackbits(packed, axis=1)[:, : MASK_GRID**3].reshape(-1, MASK_GRID, MASK_GRID, MASK_GRID)
+
+
+def patches(packed: np.ndarray, shift: tuple[int, int] = (0, 0)) -> np.ndarray:
+    """(64, 125) float32 patch vectors from a packed 20^3 mask (``bricks.tokens.patches`` layout), the mask moved
+    by ``shift`` (z, x) coarse voxels (into empty voxels only: ``Split.shift_ranges``)."""
+    mask = unpack(packed[None])[0]
+    if shift != (0, 0):
+        mask = np.roll(mask, shift, axis=(1, 2))
     n = MASK_GRID // PATCH
     blocks = mask.reshape(n, PATCH, n, PATCH, n, PATCH).transpose(0, 2, 4, 1, 3, 5)
     return blocks.reshape(MASK_PATCHES, PATCH_BITS).astype(np.float32)
@@ -63,6 +79,13 @@ class Split:
             self.name = data["name"]
         self.pad, self.bos, self.cont, self.eos = (vocab.id(t) for t in ("PAD", "BOS", "CONT", "EOS"))
         self.mask, self.nomask = vocab.id("MASK"), vocab.id("NOMASK")
+        # Z and X tokens are consecutive ids (Z0..Z{n-1}), so moving a part by d studs adds d to their ids.
+        self.max_xz = sum(t[0] == "Z" and t[1:].isdigit() for t in vocab.tokens)
+        for axis in "ZX":
+            first = vocab.id(f"{axis}0")
+            if vocab.tokens[first : first + self.max_xz] != [f"{axis}{i}" for i in range(self.max_xz)]:
+                raise ValueError(f"{axis} tokens are not consecutive in the vocabulary")
+        self.scale = np.array([int(vocab.tokens[t].removeprefix("SCALE_")) for t in self.header[:, 2]], dtype=np.int64)
 
     def __len__(self) -> int:
         return len(self.header)
@@ -71,18 +94,40 @@ class Split:
         """Parts in build ``i``."""
         return int(self.offsets[i + 1] - self.offsets[i])
 
-    def window(self, i: int, start: int, count: int, drop_mask: bool) -> tuple[np.ndarray, np.ndarray]:
-        """(ids, patches) of build ``i`` from part ``start``, at most ``count`` parts."""
+    def shift_ranges(self, indices: Sequence[int], chunk: int = 4096) -> np.ndarray:
+        """(len(indices), 4) int: the lowest and highest Z shift, then X shift, in coarse voxels, that keep each
+        build inside the mask grid and the token grid at its scale (all 0 for an empty mask)."""
+        indices = np.asarray(indices, dtype=np.int64)
+        out = np.zeros((len(indices), 4), dtype=np.int64)
+        for a in range(0, len(indices), chunk):
+            at = indices[a : a + chunk]
+            columns = unpack(self.masks[at]).any(axis=1)  # (n, z, x): occupied at any height
+            s = self.scale[at]
+            limit = np.minimum(MASK_GRID, self.max_xz // s)  # voxels per axis inside both grids
+            for axis, occupied in enumerate((columns.any(axis=2), columns.any(axis=1))):
+                first = occupied.argmax(axis=1)
+                last = MASK_GRID - 1 - occupied[:, ::-1].argmax(axis=1)
+                empty = ~occupied.any(axis=1)
+                out[a : a + chunk, 2 * axis] = np.where(empty | (s > 1), 0, -first)
+                out[a : a + chunk, 2 * axis + 1] = np.where(empty, 0, limit - 1 - last)
+        return out
+
+    def window(self, i: int, start: int, count: int, drop_mask: bool,
+               shift: tuple[int, int] = (0, 0)) -> tuple[np.ndarray, np.ndarray]:
+        """(ids, patches) of build ``i`` from part ``start``, at most ``count`` parts, the build moved by ``shift``
+        (z, x) coarse voxels (within ``shift_ranges``)."""
         n = self.size(i)
         end = min(n, start + count)
         head = self.header[i].copy()
         head[0] = self.bos if start == 0 else self.cont
         if drop_mask:
             head[3] = self.nomask
-        rows = self.parts[self.offsets[i] + start : self.offsets[i] + end].ravel()
+        rows = self.parts[self.offsets[i] + start : self.offsets[i] + end]
+        if shift != (0, 0):
+            rows = rows + np.array([0, shift[0], shift[1], 0, 0]) * self.scale[i]
         tail = [self.eos] if end == n else []
-        ids = np.concatenate([head, np.full(MASK_PATCHES, self.pad), rows, tail]).astype(np.int64)
-        mask = np.zeros((MASK_PATCHES, PATCH_BITS), np.float32) if drop_mask else patches(self.masks[i])
+        ids = np.concatenate([head, np.full(MASK_PATCHES, self.pad), rows.ravel(), tail]).astype(np.int64)
+        mask = np.zeros((MASK_PATCHES, PATCH_BITS), np.float32) if drop_mask else patches(self.masks[i], shift)
         return ids, mask
 
     def windows_of(self, i: int, count: int) -> int:
@@ -101,11 +146,14 @@ def collate(items: list[tuple[np.ndarray, np.ndarray]], pad: int) -> tuple[np.nd
 
 class Sampler:
     """Random training windows: a source is drawn (real sets with probability ``set_share``), then a build
-    of that source with probability proportional to its number of windows, then a start uniformly."""
+    of that source with probability proportional to its number of windows, then a start uniformly; for the
+    sources in ``jitter``, then a shift along Z and X, each uniform over the build's ``shift_ranges``."""
 
     def __init__(self, split: Split, max_len: int, set_share: float, mask_drop: float,
-                 exclude: Sequence[int] = ()) -> None:
-        """``exclude``: build indices never sampled (held out for validation)."""
+                 exclude: Sequence[int] = (), jitter: Sequence[str] = ()) -> None:
+        """``exclude``: build indices never sampled (held out for validation). ``jitter``: the sources
+        (``brickgpt``, ``set``) whose windows are moved at random; none by default, which draws nothing extra, so
+        the batches are those of a sampler without jitter."""
         self.split, self.count, self.mask_drop = split, max_parts(max_len), mask_drop
         weights = np.array([min(split.size(i), 10 * self.count) / self.count + 1 for i in range(len(split))])
         excluded = np.zeros(len(split), dtype=bool)
@@ -118,12 +166,24 @@ class Sampler:
         shares = {"brickgpt": 1 - set_share, "set": set_share}
         total = sum(shares[s] for s, _, _ in self.pools)
         self.pool_p = np.array([shares[s] / total for s, _, _ in self.pools])
+        unknown = set(jitter) - set(shares)
+        if unknown:
+            raise ValueError(f"unknown jitter sources: {sorted(unknown)}")
+        self.ranges: dict[int, tuple[int, int, int, int]] = {}  # build -> (z lo, z hi, x lo, x hi), jittered sources
+        for source, members, _ in self.pools:
+            if source in jitter:
+                self.ranges.update(zip(members.tolist(), map(tuple, split.shift_ranges(members).tolist())))
 
     def sample(self, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
         _, members, p = self.pools[rng.choice(len(self.pools), p=self.pool_p)]
         i = int(rng.choice(members, p=p))
         start = int(rng.integers(self.split.windows_of(i, self.count)))
-        return self.split.window(i, start, self.count, bool(rng.random() < self.mask_drop))
+        drop = bool(rng.random() < self.mask_drop)
+        shift = (0, 0)
+        if i in self.ranges:
+            z_lo, z_hi, x_lo, x_hi = self.ranges[i]
+            shift = (int(rng.integers(z_lo, z_hi + 1)), int(rng.integers(x_lo, x_hi + 1)))
+        return self.split.window(i, start, self.count, drop, shift)
 
     def batch(self, size: int, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
         return collate([self.sample(rng) for _ in range(size)], self.split.pad)

@@ -99,6 +99,26 @@ on Colab's GPU; use it to replace these guesses in `results/m12e_training.md`.
 - **Token format unchanged** (M12b: 5 tokens per part, 4-token header, 64 mask patches). Only the shape and colour
   tokens grow with the catalog and the pool's colours, so `bricks/proposal.py` decodes v2 weights without code changes.
 
+## Regularization flags (2026-10-16, after the first A100 runs)
+
+The first base and scaled runs early-stopped at steps 10,000 and 8,000. The real-set validation loss had its minimum at
+steps 3,000–6,000, while BrickGPT's validation loss kept falling. The real training data is 551 models × 8 symmetries
+with absolute coordinates, so the model memorises positions. `train.py` gains these flags, all off by default (a
+default run draws the same batches and exports the same format as before):
+
+- `--dropout p`: on the input embeddings, the attention weights and both residual branches, in training mode only. It
+  is not in `Config` or `proposal.npz`, so numpy inference and `parity.py` are unchanged.
+- `--jitter set [brickgpt]`: each training window of those sources is moved by a random whole number of coarse mask
+  voxels along Z and X (Y never). The part tokens and the mask patches move together, so a window is exactly
+  `encode()` of the moved build (tested at scales 1, 2 and 4). The range keeps the build inside the 20³ mask and the
+  64-stud token grid at its scale. Scale-1 builds may also move back to the origin; larger ones only move away from
+  it. On `tokens_v2`, a real-set build has a median of 81 positions (10th–90th percentile 18–187), and only 0.5% have
+  none. A BrickGPT structure has a median of 39. Jitter costs about 1–4 ms per batch of 64 and needs no new export.
+- `--select setval`: select on the real-set validation loss alone (default `mean`, as before).
+- Every log line now records the running minima of the selection loss and of the set validation loss, with their
+  steps (`best`). The weights at the set-validation minimum are also written as `proposal_setval.npz`.
+- A resumed run refuses a checkpoint trained with a different `--select`.
+
 ## Evaluation plan
 
 Each stage is run on the held-out demo sets only. Each stage's rule is written down before its numbers are seen.
