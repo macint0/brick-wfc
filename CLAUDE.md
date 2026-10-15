@@ -521,7 +521,18 @@ open; nothing changes there now.
   `Part.wfc` / `parts.wfc_inventory` keep ground-only parts out of WFC tilesets (`SupportConstraint` raises otherwise).
   A baseplate appears in 4/10 inventory-only D2 builds on 6370-1 and 6372-1 and costs ~45 s per build (fit-map reach
   32). `coverage.PRIMITIVE` drops alphabetic primitives (denominator 25,463 → 25,321; the write-up gives both).
-  Recognized share on the 28 sets: M12b 70% → **79%**, on grid 57 → 63%. Batch 3 (keep-out cells) in progress.
+  Recognized share on the 28 sets: M12b 70% → **79%**, on grid 57 → 63%.
+- **Batch 3 merged (7251b3a, 650 tests):** catalog 170 → 179. `Part.keep_out` = (x, z, first layer, last layer) in the
+  part's frame (layers from the part's bottom, negative below it), turned with the part (`Geometry.keep_out`; rails,
+  brackets and the handle brick get 4 orientations). `bottomup._keep_ok`: keep-out cells must be above the ground, empty
+  and nobody else's keep-out, and the part's own cells not someone's keep-out; `_put` marks `_State.blocked`; `_fit_key`
+  carries keep-outs; `extract_parts` reports violations (verify catches them); `symmetry.mirror_shape` reflects them;
+  `Part.wfc` False. Parts: door rails 32028 / 4510 (front row, own layer), 30586 (rail beyond its studless second row,
+  +4 LDU), side-stud bricks 87087 / 47905 / 30414 (facing cells, layers 1–2; `Part.side_studs` recorded, unused),
+  brackets 44728 / 93274 (hanging face: front row, layers −4..0), handle brick 2921. Recognized 79 → **81%**, on grid
+  63 → 64%. Baseplate cost measured: 43 vs 25 s and 53 vs 28 s per build with vs without (1.8–1.9×; the rest of the
+  earlier 45 s is the 32×32 grid). Batch 4 (jumpers) and the closing runs (coverage 28 / 20 / all models, style v3,
+  write-up) next.
 - **M12e plan (session B, branch `m12e-data`):** (1) crawl the whole OMR index into `data/omr` (resumable, polite),
   measure every model with the coverage driver (recognized, on-grid) and define the training pool (building sets by
   the `experiments/sets.py` criteria, loosened to size, no re-releases); report sets / parts / on-grid parts; redo the
