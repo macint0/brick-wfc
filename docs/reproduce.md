@@ -799,6 +799,22 @@ Part geometry facts (the placement-test rows) come from `python -m brickwfc.ldra
 the library's `complete.zip` unpacked under `data/ldraw` (`parts/` and `p/`, lower-case paths); the catalog check for
 Studio is `python -m brickwfc.bricks.catalog_check`.
 
+### `results/m12d_looks.md` (M12d: the selected builds before and after the catalog, for the eye), with `m12d_looks.json`, `m12d_looks_sheet.png`
+
+```
+python -m brickwfc.experiments.looks --steps run --workers 5     # 9 pairs x 2 arms x 50 candidates
+python -m brickwfc.experiments.looks --steps report --workers 5  # no generation
+```
+
+- **Two arms, one flag set.** Both arms use `--order connected --reserve-small --regrow --skin --symmetric --recolor
+  --fill-slack 0.8` and the same seeds. The old arm adds `--catalog m12b --style-version v2`; the new arm uses the
+  defaults (183 parts, style v3).
+- **Resumable.** Runs go to `out/m12d_looks/<arm>/<set>/<object>`; after a kill, rerun the same command (the pipeline's
+  candidate cache). The run took 65 min of pipeline wall time on 5 workers.
+- **The report** replays each selected build's recolouring exactly as the pipeline did. It writes the per-pair tables
+  to `out/m12d_looks/looks_tables.md` (the write-up quotes them) and the pictures to `out/m12d_looks/sheet/`.
+- `--data` points at the OMR models when they are not in `data/omr`.
+
 ### `results/m12e_omr_pool.md` (M12e: every OMR model measured, the training pool), with `m12e_omr_pool.json`
 
 ```
