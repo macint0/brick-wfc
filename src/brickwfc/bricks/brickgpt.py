@@ -103,8 +103,9 @@ def occupancy(bricks: Sequence[Brick]) -> np.ndarray:
 
 
 def _brick_parts() -> dict[tuple[int, int], Part]:
-    """Catalog bricks by (depth, width) footprint."""
-    return {(p.depth, p.width): p for p in CATALOG.values() if p.kind == "brick" and "_" not in p.name}
+    """Catalog bricks by (depth, width) footprint: plain ones, one brick (3 plates) tall."""
+    return {(p.depth, p.width): p for p in CATALOG.values() if p.kind == "brick" and "_" not in p.name and p.height == 3
+            and p.cells is None}
 
 
 def to_placed(bricks: Sequence[Brick], color: BrickColor) -> list[PlacedPart]:

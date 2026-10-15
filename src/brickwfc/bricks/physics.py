@@ -80,14 +80,15 @@ def required_clutch(placed: list[PlacedPart], shape: tuple[int, int, int], basep
         n_vars += 1
 
     for i, part in enumerate(placed):
-        for y, z, x in part.seated_cells():
+        seated = set(part.seated_cells())  # a ground-only part (a baseplate) lies on the table but clicks onto nothing
+        for y, z, x in part.contact_cells():
             lower = -1 if y == 0 else int(owner[y - 1, z, x])
             if y > 0 and lower < 0:
                 continue  # nothing below this stud
             cx, cz = x + 0.5, z + 0.5
             for dx, dz in CORNERS:
                 add_force(i, lower, cx + dx, cz + dz, sign=1.0)
-            if (lower >= 0 and (y - 1, z, x) in studs) or (lower < 0 and baseplate):
+            if (lower >= 0 and (y - 1, z, x) in studs) or (lower < 0 and baseplate and (y, z, x) in seated):
                 for dx, dz in STUD_POINTS:
                     clutch_vars.append(n_vars)
                     add_force(i, lower, cx + dx, cz + dz, sign=-1.0)

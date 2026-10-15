@@ -5,8 +5,9 @@
 
 For each set's OMR model, counts part instances (LDraw primitives such as ``4-4cyli.dat``, which only
 appear inside custom parts defined in the file, are not parts and are left out) and how many are in
-the four M4-M11 plates, in the M8 catalog (``parts.M8_FILES``: rectangular plates, bricks, tiles) and in
-the full ``parts.CATALOG`` (M12b: also corners and slopes). With ``--on-grid``, also how many voxelize
+the four M4-M11 plates, in the M8 catalog (``parts.M8_FILES``: rectangular plates, bricks, tiles), in the
+M12b catalog (``parts.M12B_FILES``: also corners and slopes) and in the full ``parts.CATALOG`` (M12d: the real
+sets' parts). With ``--on-grid``, also how many voxelize
 onto the stud grid (``bricks.voxelize``) with each catalog: those are what style statistics learn from.
 ``--sets-file`` takes the sets from an ``experiments.sets`` selection (its "selected" list) instead of
 ``--sets``. Writes ``coverage.md`` and ``coverage.json``.
@@ -23,7 +24,7 @@ from pathlib import Path
 from typing import Sequence
 
 from brickwfc.bricks.learn_sets import DEFAULT_SETS
-from brickwfc.bricks.parts import BY_FILE, M8_FILES, PLATE_FILES
+from brickwfc.bricks.parts import BY_FILE, M8_FILES, M12B_FILES, PLATE_FILES
 from brickwfc.ldraw.fetch import fetch_set
 from brickwfc.ldraw.mpd import flatten
 
@@ -41,6 +42,8 @@ class SetCoverage:
     catalog_m8: int = 0  # instances in the M8 catalog
     on_grid: int = -1  # instances that voxelize onto the stud grid with parts.CATALOG (-1: not measured)
     on_grid_m8: int = -1  # the same with the M8 catalog
+    catalog_m12b: int = 0  # instances in the M12b catalog (88 parts)
+    on_grid_m12b: int = -1
 
     @property
     def plates4_pct(self) -> float:
@@ -60,21 +63,22 @@ def set_coverage(set_number: str, text: str, on_grid: bool = False) -> SetCovera
     names = [inst.part.lower() for inst in instances]
     parts = [n for n in names if not PRIMITIVE.search(n)]
     missing = Counter(n for n in parts if n not in BY_FILE)
-    kept = kept_m8 = -1
+    kept = kept_m8 = kept_m12b = -1
     if on_grid:
         from brickwfc.bricks.voxelize import voxelize
 
-        kept, kept_m8 = (voxelize(instances, known)[1].kept for known in (BY_FILE, M8_FILES))
+        kept, kept_m8, kept_m12b = (voxelize(instances, known)[1].kept for known in (BY_FILE, M8_FILES, M12B_FILES))
     return SetCoverage(
         set_number, len(parts), len(names) - len(parts), sum(n in PLATE_FILES for n in parts),
         sum(n in BY_FILE for n in parts), missing.most_common(5), sum(n in M8_FILES for n in parts), kept, kept_m8,
+        sum(n in M12B_FILES for n in parts), kept_m12b,
     )
 
 
 def markdown(rows: list[SetCoverage]) -> str:
     grid = bool(rows) and all(r.on_grid >= 0 for r in rows)
-    columns = ["set", "parts", "four plates %", "M8 catalog %", "catalog %"]
-    columns += ["on grid M8 %", "on grid %"] if grid else []
+    columns = ["set", "parts", "four plates %", "M8 catalog %", "M12b catalog %", "catalog %"]
+    columns += ["on grid M8 %", "on grid M12b %", "on grid %"] if grid else []
     columns += ["most common missing"]
     lines = ["| " + " | ".join(columns) + " |", "|" + "---|" * len(columns)]
 
@@ -83,13 +87,14 @@ def markdown(rows: list[SetCoverage]) -> str:
 
     for r in rows:
         missing = ", ".join(f"{name.removesuffix('.dat')} ({n})" for name, n in r.top_missing[:3])
-        cells = [r.set_number, str(r.parts), pct(r.plates4, r.parts), pct(r.catalog_m8, r.parts), pct(r.catalog, r.parts)]
+        cells = [r.set_number, str(r.parts), pct(r.plates4, r.parts), pct(r.catalog_m8, r.parts),
+                 pct(r.catalog_m12b, r.parts), pct(r.catalog, r.parts)]
         if grid:
-            cells += [pct(r.on_grid_m8, r.parts), pct(r.on_grid, r.parts)]
+            cells += [pct(r.on_grid_m8, r.parts), pct(r.on_grid_m12b, r.parts), pct(r.on_grid, r.parts)]
         lines.append("| " + " | ".join(cells + [missing]) + " |")
     total = sum(r.parts for r in rows)
     if total:
-        fields = ["plates4", "catalog_m8", "catalog"] + (["on_grid_m8", "on_grid"] if grid else [])
+        fields = ["plates4", "catalog_m8", "catalog_m12b", "catalog"] + (["on_grid_m8", "on_grid_m12b", "on_grid"] if grid else [])
         cells = ["**all**", str(total)] + [pct(sum(getattr(r, f) for r in rows), total) for f in fields]
         lines.append("| " + " | ".join(cells + [""]) + " |")
     return "\n".join(lines)

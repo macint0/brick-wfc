@@ -41,6 +41,7 @@ Corner and slope parts (M12b): parts whose footprint is not a full box, or whose
 partly studded or flat, are checked cell by cell (``_fits_cells``): their seated cells need a stud below,
 nothing may be above their studless top cells (a slope's face) or below their open bottom cells (an
 inverted slope's underside). Rectangular parts keep the box checks, so builds from an M8 catalog are unchanged.
+A ground-only part (M12d: a baseplate) goes on layer 0 only, also in the hole pass with ``hang``.
 
 Speed (M12b): above the ground, a cell with no stud below within a part's reach (``_reachable``) cannot
 take any part, so its placement attempts are skipped; the random draws they would have made are still made,
@@ -753,6 +754,8 @@ class BottomUpBuilder:
                 return False
         if y == 0:
             return True
+        if part.shape.part.ground_only:  # a baseplate takes no stud and does not hang either
+            return False
         below_filled, below_studs = filled[y - 1, zz, xx], studs[y - 1, zz, xx]
         if (below_filled & ~masks.seated).any():  # nothing under an open bottom
             return False

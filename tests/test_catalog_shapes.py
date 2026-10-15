@@ -77,6 +77,169 @@ LDRAW.update({
     "54200.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (-16, 0)},  # origin on the bottom
     "35464.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (-16, 0)},
 })
+
+
+def _grid(width: int, depth: int) -> list[tuple[int, int]]:
+    """Stud positions of a full ``width`` x ``depth`` rectangle centred on the origin."""
+    return [(x, z) for x in range(-10 * (width - 1), 10 * width, 20) for z in range(-10 * (depth - 1), 10 * depth, 20)]
+
+
+# M12d batch 1, printed by ``python -m brickwfc.ldraw.library`` (cells seated where the bottom plane covers >= 10%).
+# ``lower_studs``: studs below the body's top, hidden inside the model's box (the part counts as studless there).
+# ``within``: the body lies inside the model's box rather than filling it (the box is the conservative bound).
+# ``ground_only``: the bottom is flat but the part takes no stud (a baseplate): no seated cells, the table only.
+LDRAW.update({
+    # Plate 2 x 16
+    "4282.dat": {"studs": _grid(16, 2), "x": (-160, 160), "z": (-20, 20), "y": (0, 8)},
+    # Plate 4 x 12
+    "3029.dat": {"studs": _grid(12, 4), "x": (-120, 120), "z": (-40, 40), "y": (0, 8)},
+    # Plate 6 x 12
+    "3028.dat": {"studs": _grid(12, 6), "x": (-120, 120), "z": (-60, 60), "y": (0, 8)},
+    # Plate 6 x 16
+    "3027.dat": {"studs": _grid(16, 6), "x": (-160, 160), "z": (-60, 60), "y": (0, 8)},
+    # Brick 1 x 2 x 2 without Understud
+    "3245c.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 48)},
+    # ~Brick 1 x 2 x 5 (Obsolete)
+    "2454.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 120)},
+    # Brick 1 x 1 x 3
+    "14716.dat": {"studs": [(0, 0)], "x": (-10, 10), "z": (-10, 10), "y": (0, 72)},
+    # Brick 1 x 1 x 5 with Hollow Stud
+    "2453a.dat": {"studs": [(0, 0)], "x": (-10, 10), "z": (-10, 10), "y": (0, 120)},
+    # Baseplate 16 x 32 with Square Corners; 4 LDU thick in one plate
+    "3857.dat": {"studs": _grid(32, 16), "x": (-320, 320), "z": (-160, 160), "y": (0, 4), "within": True,
+        "ground_only": True},
+    # Baseplate 32 x 32; 4 LDU thick in one plate
+    "3811.dat": {"studs": _grid(32, 32), "x": (-320, 320), "z": (-320, 320), "y": (0, 4), "within": True,
+        "ground_only": True},
+    # Brick 1 x 14 with Groove
+    "4217.dat": {"studs": _grid(14, 1), "x": (-140, 140), "z": (-10, 10), "y": (0, 24)},
+    # Brick 1 x 2 Log; log profile 9.9 LDU deep
+    "30136.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-9.9, 9.9), "y": (0, 24), "within": True},
+    # Brick 1 x 2 with Embossed Bricks
+    "98283.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 24)},
+    # Brick 1 x 4 with Embossed Bricks
+    "15533.dat": {"studs": [(-30, 0), (-10, 0), (10, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10), "y": (0, 24)},
+    # Technic Brick 1 x 2 with Hole
+    "3700.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 24)},
+    # Technic Brick 1 x 1 with Hole
+    "6541.dat": {"studs": [(0, 0)], "x": (-10, 10), "z": (-10, 10), "y": (0, 24)},
+    # Technic Brick 1 x 2 with Axlehole with Open Sides and Stud Blocker
+    "32064a.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 24)},
+    # Technic Brick 1 x 2 with Reduced Axlehole
+    "32064b.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 24)},
+    # Cone 1 x 1 with Stop
+    "59900.dat": {"studs": [(0, 0)], "x": (-10, 10), "z": (-10, 10), "y": (0, 24)},
+    # Cone 1 x 1
+    "4589.dat": {"studs": [(0, 0)], "x": (-10, 10), "z": (-10, 10), "y": (0, 24)},
+    # Tile 1 x 1 without Groove
+    "3070a.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (0, 8)},
+    # Tile 1 x 1 Round with Groove
+    "98138.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (0, 8)},
+    # Tile 1 x 1 Corner Round
+    "25269.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (0, 8)},
+    # Plate 1 x 1 Round with Open Stud
+    "85861.dat": {"studs": [(0, 0)], "x": (-10, 10), "z": (-10, 10), "y": (0, 8)},
+    # Plate 1 x 1 with 5 Petals; petals inside the cell
+    "24866.dat": {"studs": [(0, 0)], "x": (-9.9, 9.9), "z": (-9.5, 10), "y": (0, 8), "within": True},
+    # Plate 1 x 2 with Round Ends and 2 Open Studs
+    "35480.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 8)},
+    # Panel 1 x 1 x 1 Corner with Rounded Corners
+    "6231.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (0, 24)},
+    # Panel 1 x 2 x 1 with Square Corners
+    "4865a.dat": {"studs": [], "x": (-20, 20), "z": (-10, 10), "y": (0, 24)},
+    # Panel 1 x 2 x 1 with Rounded Corners
+    "4865b.dat": {"studs": [], "x": (-20, 20), "z": (-10, 10), "y": (0, 24)},
+    # Panel 1 x 2 x 2 Reinforced
+    "87552.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 48)},
+    # Panel 1 x 2 x 2 with Hollow Studs
+    "4864b.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 48)},
+    # Panel 1 x 2 x 3 with Hollow Studs
+    "2362b.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 72)},
+    # Tile 2 x 2 Corner
+    "14719.dat": {"studs": [], "x": (-10, 30), "z": (-10, 30), "y": (0, 8), "flat": [(0, 0), (0, 20), (20, 0)]},
+    # Plate 3 x 3 with 2 x 2 Corner Round
+    "30357.dat": {"studs": [(0, 0), (0, 20), (0, 40), (20, 0), (20, 20), (20, 40), (40, 0), (40, 20)],
+        "x": (-10, 50), "z": (-10, 50), "y": (0, 8),
+        "flat": [(0, 0), (0, 20), (0, 40), (20, 0), (20, 20), (20, 40), (40, 0), (40, 20)]},
+    # Tile 2 x 2 Corner Round
+    "27925.dat": {"studs": [], "x": (-10, 30), "z": (-30, 10), "y": (0, 8), "flat": [(0, -20), (0, 0), (20, 0)]},
+    # Brick 2 x 2 Corner Round with Stud Notch
+    "3063b.dat": {"studs": [(0, -20), (20, 0)], "x": (-10, 30), "z": (-30, 10), "y": (0, 24),
+        "flat": [(0, -20), (0, 0), (20, 0)]},
+    # Brick 2 x 2 Corner Round with Stud Notch and Reinforced Underside
+    "85080.dat": {"studs": [(0, -20), (20, 0)], "x": (-10, 30), "z": (-30, 10), "y": (0, 24),
+        "flat": [(0, -20), (0, 0), (20, 0)]},
+    # Plate 1 x 4 with Two Studs
+    "92593.dat": {"studs": [(-30, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10), "y": (0, 8)},
+    # Plate 1 x 4 with Two Studs and Groove
+    "41740.dat": {"studs": [(-30, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10), "y": (0, 8)},
+    # Plate 2 x 2 with 2 Studs on One Edge
+    "33909.dat": {"studs": [(-10, 10), (10, 10)], "x": (-20, 20), "z": (-20, 20), "y": (0, 8)},
+    # Plate 4 x 4 with 4 Studs on One Edge
+    "6179.dat": {"studs": [(-30, 30), (-10, 30), (10, 30), (30, 30)], "x": (-40, 40), "z": (-40, 40), "y": (0, 8)},
+    # Plate 3 x 2 with Hole
+    "3176.dat": {"studs": [(-10, -10), (-10, 10), (10, -10), (10, 10)], "x": (-20, 20), "z": (-40, 20), "y": (0, 8)},
+    # Arch 1 x 4
+    "3659.dat": {"studs": [(-30, 0), (-10, 0), (10, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10), "y": (0, 24),
+        "flat": [(-30, 0), (30, 0)]},
+    # Arch 1 x 6
+    "3455.dat": {"studs": [(-50, 0), (-30, 0), (-10, 0), (10, 0), (30, 0), (50, 0)], "x": (-60, 60), "z": (-10, 10),
+        "y": (0, 24), "flat": [(-50, 0), (50, 0)]},
+    # Arch 1 x 6 Raised
+    "92950.dat": {"studs": [(-50, 0), (-30, 0), (-10, 0), (10, 0), (30, 0), (50, 0)], "x": (-60, 60), "z": (-10, 10),
+        "y": (0, 24), "flat": [(-50, 0), (50, 0)]},
+    # Arch 1 x 4 x 2
+    "6182.dat": {"studs": [(-30, 0), (-10, 0), (10, 0), (30, 0)], "x": (-40, 40), "z": (-10, 10), "y": (0, 48),
+        "flat": [(-30, 0), (30, 0)]},
+    # Arch 1 x 6 x 2 with Thick Top and Reinforced Underside
+    "3307.dat": {"studs": [(-50, 0), (-30, 0), (-10, 0), (10, 0), (30, 0), (50, 0)], "x": (-60, 60), "z": (-10, 10),
+        "y": (0, 48), "flat": [(-50, 0), (50, 0)]},
+    # Arch 1 x 3 x 2 with Curved Top
+    "6005.dat": {"studs": [], "lower_studs": [(0, 0)], "x": (-10, 10), "z": (-50, 10), "y": (0, 48),
+        "flat": [(0, -40)]},
+    # Slope Brick 65 2 x 2 x 2 with Centre Tube
+    "3678b.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-30, 10), "y": (0, 48)},
+    # Slope Brick 75 2 x 2 x 3 with Solid Studs
+    "3684c.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-30, 10), "y": (0, 72)},
+    # Slope Brick 33 3 x 3
+    "4161.dat": {"studs": [(-20, 0), (0, 0), (20, 0)], "x": (-30, 30), "z": (-50, 10), "y": (0, 24)},
+    # Slope Brick 33 3 x 6
+    "3939.dat": {"studs": [(-50, 0), (50, 0)], "x": (-60, 60), "z": (-50, 10), "y": (0, 24),
+        "flat": [(-50, -40), (-50, -20), (-50, 0), (-30, -40), (-10, -40), (10, -40), (30, -40), (50, -40), (50, -20), (50, 0)]},
+    # Slope Brick 33 3 x 3 Double Convex
+    "3675.dat": {"studs": [(0, 0)], "x": (-10, 50), "z": (-50, 10), "y": (0, 24)},
+    # Slope Brick 33 2 x 2 Double; 14 LDU tall in a 3-plate box
+    "3300.dat": {"studs": [], "x": (-20, 20), "z": (-20, 20), "y": (10, 24), "within": True},
+    # Slope Brick 33 2 x 4 Double; 14 LDU tall in a 3-plate box
+    "3299.dat": {"studs": [], "x": (-40, 40), "z": (-20, 20), "y": (10, 24), "within": True},
+    # Slope Brick 45 1 x 2 Triple
+    "3048b.dat": {"studs": [], "x": (-20, 20), "z": (-10, 10), "y": (0, 24)},
+    # Slope Brick 31 1 x 2 x 0.667; 15.6 LDU tall in 2 plates
+    "85984.dat": {"studs": [], "x": (-20, 20), "z": (-10, 10), "y": (-15.6, 0), "within": True},
+    # Slope Plate 45.73 2 x 1
+    "92946.dat": {"studs": [], "lower_studs": [(0, 10)], "x": (-10, 10), "z": (-20, 20), "y": (-16, 8)},
+    # Brick 2 x 1 x 1.333 with Curved Top
+    "6091.dat": {"studs": [], "lower_studs": [(0, 0)], "x": (-10, 10), "z": (-30, 10), "y": (0, 32),
+        "flat": [(0, -20)]},
+    # Brick 1 x 4 x 1.333 with Curved Top
+    "6191.dat": {"studs": [], "x": (-40, 40), "z": (-10, 10), "y": (0, 32)},
+    # Brick 1 x 2 with Curved Top
+    "37352.dat": {"studs": [], "x": (-20, 20), "z": (-10, 10), "y": (0, 24)},
+    # Brick 2 x 3 with Curved Top
+    "6215.dat": {"studs": [(-10, -10), (-10, 10), (10, -10), (10, 10)], "x": (-20, 40), "z": (-20, 20), "y": (0, 24)},
+    # Slope Brick Curved 3 x 1
+    "50950.dat": {"studs": [], "x": (-10, 10), "z": (-30, 30), "y": (0, 24), "flat": [(0, -20), (0, 0)]},
+    # Slope Brick Curved 4 x 1
+    "61678.dat": {"studs": [], "x": (-10, 10), "z": (-40, 40), "y": (0, 24), "flat": [(0, -30), (0, -10)]},
+    # Slope Brick Curved 2 x 1
+    "11477.dat": {"studs": [], "x": (-10, 10), "z": (-20, 20), "y": (-16, 0), "flat": [(0, -10)]},
+    # Slope Brick Curved 2 x 2 x 0.667
+    "15068.dat": {"studs": [], "x": (-20, 20), "z": (-20, 20), "y": (-16, 0), "flat": [(-10, -10), (10, -10)]},
+    # Slope Brick Curved 4 x 1 Double
+    "93273.dat": {"studs": [], "x": (-10, 10), "z": (-40, 40), "y": (-16, 0), "flat": [(0, -30), (0, 30)]},
+    # Brick 1 x 1 x 0.667 with Curved Top
+    "49307.dat": {"studs": [], "x": (-10, 10), "z": (-10, 10), "y": (-16, 0)},
+})
 SLOPES = [p for p in CATALOG.values() if p.kind == "slope"]
 CORNERS = [CATALOG["plate2x2_corner"], CATALOG["brick2x2_corner"]]
 FAMILY = CORNERS + [CATALOG[n] for n in ("plate1x1", "plate1x2", "brick1x2", "brick2x2", "tile1x1")]
@@ -106,7 +269,7 @@ def test_corner_has_four_orientations_of_three_cells() -> None:
 @pytest.mark.parametrize("file", list(LDRAW))
 def test_placement_matches_the_ldraw_part(file: str) -> None:
     """Every orientation's .ldr placement puts the real part's studs on the model's stud cells and its
-    body exactly over the model's cells and layers."""
+    body exactly over the model's cells and layers (or, ``within``, inside them)."""
     part = BY_FILE[file]
     facts = LDRAW[file]
     for shape in shapes_of([part]) + [Shape(part, turn) for turn in range(4)]:
@@ -117,13 +280,24 @@ def test_placement_matches_the_ldraw_part(file: str) -> None:
             return {tuple(np.round((r @ (x, 0, z) + origin)[[0, 2]] / STUD_LDU).astype(int)) for x, z in points}
 
         assert cells(facts["studs"]) == {(x, z) for _, z, x in placed.stud_cells()}, shape.name
-        flat = cells(facts["flat"]) if "flat" in facts else {(x, z) for _, z, x in placed.bottom_cells()}
-        assert flat == {(x, z) for _, z, x in placed.seated_cells()}, shape.name
-        corners = np.array([r @ (x, 0, z) + origin for x in facts["x"] for z in facts["z"]])
-        assert corners[:, 0].min() / STUD_LDU == placed.x - 0.5 and corners[:, 0].max() / STUD_LDU == placed.x + shape.size_x - 0.5
-        assert corners[:, 2].min() / STUD_LDU == placed.z - 0.5 and corners[:, 2].max() / STUD_LDU == placed.z + shape.size_z - 0.5
-        top, bottom = (origin[1] + y for y in facts["y"])
-        assert (-top / PLATE_LDU, -bottom / PLATE_LDU) == (placed.top + 1, placed.layer)
+        bottom = {(x, z) for _, z, x in placed.bottom_cells()}
+        if facts.get("ground_only"):
+            assert part.ground_only and placed.seated_cells() == []
+            assert {(x, z) for _, z, x in PlacedPart(shape, RED, 0, 3, 4).contact_cells()} == bottom
+        else:
+            flat = cells(facts["flat"]) if "flat" in facts else bottom
+            assert flat == {(x, z) for _, z, x in placed.seated_cells()}, shape.name
+        assert cells(facts.get("lower_studs", [])) <= bottom - {(x, z) for _, z, x in placed.stud_cells()}
+        corners = np.array([r @ (x, 0, z) + origin for x in facts["x"] for z in facts["z"]]) / STUD_LDU
+        top, low = (-(origin[1] + y) / PLATE_LDU for y in facts["y"])
+        box = ((placed.x - 0.5, placed.x + shape.size_x - 0.5), (placed.z - 0.5, placed.z + shape.size_z - 0.5),
+               (placed.layer, placed.top + 1))
+        real = ((corners[:, 0].min(), corners[:, 0].max()), (corners[:, 2].min(), corners[:, 2].max()), (low, top))
+        if facts.get("within"):
+            assert all(b[0] <= v[0] + 1e-9 and v[1] <= b[1] + 1e-9 for b, v in zip(box, real)), shape.name
+            assert real != box  # else it is not "within"
+        else:
+            assert real == box, shape.name
 
 
 def test_corner_integrity_rules() -> None:
