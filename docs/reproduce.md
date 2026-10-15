@@ -757,6 +757,21 @@ Part geometry facts (the placement-test rows) come from `python -m brickwfc.ldra
 the library's `complete.zip` unpacked under `data/ldraw` (`parts/` and `p/`, lower-case paths); the catalog check for
 Studio is `python -m brickwfc.bricks.catalog_check`.
 
+### `results/m12e_omr_pool.md` (M12e: every OMR model measured, the training pool), with `m12e_omr_pool.json`
+
+```
+python -m brickwfc.ldraw.omr_crawl --out data/omr            # the whole OMR: index, set pages, every .mpd
+python -m brickwfc.experiments.omr_pool --data data/omr      # measure every model, select the pool
+```
+
+- **The crawl** reads the OMR's sets table (`library.ldraw.org/omr/sets?page=N`), every set page and every model file.
+  It makes one request at a time with a 1 s gap and retries transient errors. The server takes about 5 s per set
+  page, so a first crawl takes a few hours. It is resumable: set pages are kept in `data/omr/index.jsonl`, and files on
+  disk are never fetched again. `--refresh` reads the index again. The models are third-party work and stay in `data/`.
+- **The pool** takes about a minute. Measurements are cached in `out/omr_pool/measure.jsonl` under the catalog's
+  fingerprint, so after a catalog change the same command measures everything again. Rerun it after every catalog
+  change and commit both files.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
