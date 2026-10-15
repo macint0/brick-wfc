@@ -260,6 +260,20 @@ LDRAW.update({
     "3633.dat": {"studs": [], "x": (-40, 40), "z": (-10, 10), "y": (0, 24)},
     "3185.dat": {"studs": [], "x": (-40, 40), "z": (-10, 10), "y": (0, 48)},
 })
+# M12d batch 3: parts with keep-out cells; the box their studs and flat bottom belong to (what sticks out of it, and
+# the side studs, are checked against their keep-out cells in test_keep_out).
+LDRAW.update({
+    "32028.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 8)},
+    "4510.dat": {"studs": [(x, 0) for x in range(-70, 71, 20)], "x": (-80, 80), "z": (-10, 10), "y": (0, 8)},
+    "30586.dat": {"studs": [(x, 0) for x in range(-70, 71, 20)], "x": (-80, 80), "z": (-30, 10), "y": (0, 8),
+                  "flat": [(x, z) for x in range(-70, 71, 20) for z in (-20, 0)]},
+    "87087.dat": {"studs": [(0, 0)], "x": (-10, 10), "z": (-10, 10), "y": (0, 24)},
+    "47905.dat": {"studs": [(0, 0)], "x": (-10, 10), "z": (-10, 10), "y": (0, 24)},
+    "30414.dat": {"studs": [(x, 0) for x in (-30, -10, 10, 30)], "x": (-40, 40), "z": (-10, 10), "y": (0, 24)},
+    "44728.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 8)},
+    "93274.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 8)},
+    "2921.dat": {"studs": [(0, 0)], "x": (-10, 10), "z": (-10, 10), "y": (0, 24)},
+})
 SLOPES = [p for p in CATALOG.values() if p.kind == "slope"]
 CORNERS = [CATALOG["plate2x2_corner"], CATALOG["brick2x2_corner"]]
 FAMILY = CORNERS + [CATALOG[n] for n in ("plate1x1", "plate1x2", "brick1x2", "brick2x2", "tile1x1")]

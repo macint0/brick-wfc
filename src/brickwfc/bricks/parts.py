@@ -58,6 +58,11 @@ class Part:
     the preview draws it (``build.slope_profiles``); the model treats the part as its box.
     ``ground_only`` (M12d, baseplates): the part cannot rest on studs (``seated_cells`` is empty), so it only goes on
     the ground, where its whole bottom touches the table (``PlacedPart.contact_cells``).
+    ``keep_out`` (M12d): cells next to the part that something of it sticks into (a door rail, a side stud, a bracket's
+    hanging face, a handle), as (x, z, first layer, last layer): a cell centre in the frame of ``cells`` and a range
+    of layers from the part's bottom layer (negative: below it). They must stay empty, and none may be below the
+    ground. ``side_studs`` (M12d): studs on the part's sides, as (x, z, height in plates above the bottom, direction x,
+    direction z); recorded for sideways building, unused now (their cells are keep-out).
     """
 
     name: str
@@ -75,6 +80,8 @@ class Part:
     sloped_rows: int = 0
     ground_only: bool = False
     origin_plates: int | None = None
+    keep_out: tuple[tuple[float, float, int, int], ...] = ()
+    side_studs: tuple[tuple[float, float, float, int, int], ...] = ()
 
     def __hash__(self) -> int:
         # Equal parts have the same name and file; hashing every field (a baseplate's 512 cells, three times) on each
@@ -84,8 +91,9 @@ class Part:
     @property
     def wfc(self) -> bool:
         """Whether WFC can place the part soundly: its rules are local adjacency and stud support, so it leaves out
-        ground-only parts (a baseplate must be the whole ground) (M12d; ``wfc_inventory``)."""
-        return not self.ground_only
+        ground-only parts (a baseplate must be the whole ground) and parts with keep-out cells (an empty cell next to
+        a part is not an adjacency rule WFC states) (M12d; ``wfc_inventory``)."""
+        return not self.ground_only and not self.keep_out
 
     @property
     def origin_layer(self) -> int:
@@ -332,8 +340,35 @@ M12D_FRAMES = [
     _box("fence1x4x1_3633", "3633", "brick", 4, 1, 3, studs=False),
     _box("fence1x4x2_3185", "3185", "brick", 4, 1, 6, studs=False),
 ]
+
+
+def _row(xs: Sequence[float], z: float, first: int, last: int) -> tuple[tuple[float, float, int, int], ...]:
+    return tuple((x, z, first, last) for x in xs)
+
+
+# M12d batch 3: parts that stick into a neighbouring cell (keep-out cells; the part's own box as before). Measured from
+# the .dat files (front = LDraw -Z): a door rail 9 LDU deep at plate height (30586's rises 4 LDU above its top, beyond
+# its studless second row), side studs 4 LDU out, centred 10 LDU below a brick's top (layers 1-2), a bracket's face 4 LDU
+# thick hanging 32 LDU below its plate (layers -4..0), a handle 14 LDU out over the brick's height.
+M12D_KEEP_OUT = [
+    Part("doorrail1x2_32028", "32028.dat", 2, 1, 1, True, "plate", keep_out=_row((-0.5, 0.5), -1, 0, 0)),
+    Part("doorrail1x8_4510", "4510.dat", 8, 1, 1, True, "plate", keep_out=_row([x - 3.5 for x in range(8)], -1, 0, 0)),
+    _mapped("doorrail2x8_30586", "30586", "plate", 1, ["########", "SSSSSSSS"], (-3.5, -1)),
+    Part("brick1x1_sidestud_87087", "87087.dat", 1, 1, 3, True, "brick", keep_out=_row((0,), -1, 1, 2),
+         side_studs=((0, -0.5, 1.75, 0, -1),)),
+    Part("brick1x1_sidestuds_47905", "47905.dat", 1, 1, 3, True, "brick", keep_out=_row((0,), -1, 1, 2) + _row((0,), 1, 1, 2),
+         side_studs=((0, -0.5, 1.75, 0, -1), (0, 0.5, 1.75, 0, 1))),
+    Part("brick1x4_sidestuds_30414", "30414.dat", 4, 1, 3, True, "brick", keep_out=_row((-1.5, -0.5, 0.5, 1.5), -1, 1, 2),
+         side_studs=tuple((x, -0.5, 1.75, 0, -1) for x in (-1.5, -0.5, 0.5, 1.5))),
+    Part("bracket1x2_2x2_44728", "44728.dat", 2, 1, 1, True, "plate", keep_out=_row((-0.5, 0.5), -1, -4, 0),
+         side_studs=tuple((x, -0.7, h, 0, -1) for x in (-0.5, 0.5) for h in (-0.25, -2.75))),
+    Part("bracket1x2_2x4_93274", "93274.dat", 2, 1, 1, True, "plate", keep_out=_row((-1.5, -0.5, 0.5, 1.5), -1, -4, 0),
+         side_studs=tuple((x, -0.7, h, 0, -1) for x in (-1.5, -0.5, 0.5, 1.5) for h in (-0.25, -2.75))),
+    Part("brick1x1_handle_2921", "2921.dat", 1, 1, 3, True, "brick", keep_out=_row((0,), -1, 0, 2)),
+]
+M12D_KEEP_OUT[2] = replace(M12D_KEEP_OUT[2], keep_out=_row([x - 3.5 for x in range(8)], -2, 0, 1))
 CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES + _M12B_LOOKALIKES + _CORNERS + _SLOPES + M12D_BATCH1
-                            + M12D_FRAMES}
+                            + M12D_FRAMES + M12D_KEEP_OUT}
 BY_FILE: dict[str, Part] = {file: p for p in CATALOG.values() for file in (p.ldraw, *p.aliases)}
 # The M8 catalog (before corners and slopes) and the M12b one (before M12d), for before/after comparisons.
 M8_FILES: dict[str, Part] = {p.ldraw: p for p in _PLAIN + _LOOKALIKES}
@@ -374,6 +409,7 @@ class Geometry:
     origin: tuple[float, float]  # (x, z) of the LDraw origin from the min-corner cell's centre, in studs
     size_x: int
     size_z: int
+    keep_out: tuple[tuple[int, int, int, int], ...] = ()  # (dz, dx, first layer, last layer); may lie outside the box
 
 
 @lru_cache(maxsize=None)
@@ -392,9 +428,12 @@ def geometry(part: Part, turn: int) -> Geometry:
         return [(int(round(z - min_z)), int(round(x - min_x))) for x, z in turned(cells)]
 
     footprint = tuple(sorted(offsets(part.footprint_cells)))
+    keep_out = tuple(sorted((dz, dx, first, last) for (dz, dx), (_, _, first, last)
+                            in zip(offsets([(x, z) for x, z, _, _ in part.keep_out]), part.keep_out)))
     return Geometry(
         footprint, frozenset(offsets(part.studded_cells)), frozenset(offsets(part.flat_bottom_cells)),
         (float(-min_x) + 0.0, float(-min_z) + 0.0), 1 + max(dx for _, dx in footprint), 1 + max(dz for dz, _ in footprint),
+        keep_out,
     )
 
 
@@ -467,7 +506,7 @@ class Shape:
 
 def _same_cells(a: Shape, b: Shape) -> bool:
     ga, gb = a.geometry, b.geometry
-    return (ga.footprint, ga.studded, ga.seated) == (gb.footprint, gb.studded, gb.seated)
+    return (ga.footprint, ga.studded, ga.seated, ga.keep_out) == (gb.footprint, gb.studded, gb.seated, gb.keep_out)
 
 
 def shapes_of(parts: Sequence[Part]) -> list[Shape]:
@@ -689,6 +728,11 @@ class PlacedPart:
         """(y, z, x) of the bottom cells with a flat underside: the ones that rest on studs below."""
         return [(self.layer, self.z + dz, self.x + dx) for dz, dx in self.shape.footprint if self.shape.seated(dz, dx)]
 
+    def keep_out_cells(self) -> list[tuple[int, int, int]]:
+        """(y, z, x) of the cells that must stay empty next to the part (``Part.keep_out``); y may be negative."""
+        return [(self.layer + y, self.z + dz, self.x + dx) for dz, dx, first, last in self.shape.geometry.keep_out
+                for y in range(first, last + 1)]
+
     def contact_cells(self) -> list[tuple[int, int, int]]:
         """(y, z, x) of the bottom cells that bear on what is below: the seated cells, and on the ground a
         ground-only part's whole bottom (a baseplate lies flat on the table)."""
@@ -737,12 +781,17 @@ def lowered(placement: Placement, drop: float) -> Placement:
     return replace(placement, position=(x, y + drop, z)) if drop else placement
 
 
+def _in_grid(cell: tuple[int, int, int], shape: tuple[int, ...]) -> bool:
+    return all(0 <= c < n for c, n in zip(cell, shape))
+
+
 def extract_parts(grid: np.ndarray, parts: PartSet) -> tuple[list[PlacedPart], list[str]]:
     """Decode a solved (Y, Z, X) grid into placed parts.
 
     Returns ``(placed, errors)``; ``errors`` lists every incomplete part, cell not covered by
-    exactly one complete part, part resting on a studless top and part right under an unseated
-    bottom, so an empty list means every part is whole and those faces are clear.
+    exactly one complete part, part resting on a studless top, part right under an unseated
+    bottom and part in another's keep-out cells (or keep-out below the ground), so an empty list means every part is
+    whole and those faces and cells are clear.
     """
     placed: list[PlacedPart] = []
     errors: list[str] = []
@@ -776,4 +825,7 @@ def extract_parts(grid: np.ndarray, parts: PartSet) -> tuple[list[PlacedPart], l
         seated = set(part.seated_cells())
         if part.layer > 0 and any(solid[y - 1, z, x] for y, z, x in part.bottom_cells() if (y, z, x) not in seated):
             errors.append(f"something is under the open bottom of the {part.shape.name} at {(part.layer, part.z, part.x)}")
+        keep_out = part.keep_out_cells()
+        if any(y < 0 for y, _, _ in keep_out) or any(solid[cell] for cell in keep_out if _in_grid(cell, solid.shape)):
+            errors.append(f"the keep-out of the {part.shape.name} at {(part.layer, part.z, part.x)} is not clear")
     return placed, errors

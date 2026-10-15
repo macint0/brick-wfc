@@ -18,7 +18,10 @@ M12d parts follow the same rules: arches stand one plate up on markers under the
 into the arch), parts with studs on some cells carry markers on those only, and a baseplate lies on the ground with
 a marker on each stud. Window and door frames carry their glass, panes and doors in every slot
 (``accessories.FRAMES``): each must sit inside its frame, nothing sticking out of the frame's box. The baseplate is not
-lowered onto the table here (``parts.build_placements``): the check is about the parts relative to each other.
+lowered onto the table here (``parts.build_placements``): the check is about the parts relative to each other. Parts
+with keep-out cells (door rails, side studs, brackets, the handle brick) are shown in all four turns; the rail, stud,
+face or handle must stick out on the side the model keeps empty (the one-stud gaps around each part are empty), and
+brackets float four plates up so their face does not reach into the ground.
 """
 
 from __future__ import annotations
@@ -36,8 +39,9 @@ ROW_WIDTH = 40  # studs before starting a new row
 
 
 def orientations(part: Part) -> list[Shape]:
-    """Rectangular parts unrotated and turned (as in M8); other parts in each distinct orientation."""
-    if Shape(part).rectangular:
+    """Rectangular parts unrotated and turned (as in M8); other parts (and parts with keep-out cells) in each distinct
+    orientation."""
+    if Shape(part).rectangular and not part.keep_out:
         return [Shape(part, 0), Shape(part, 1)]
     return shapes_of([part])
 
@@ -72,7 +76,9 @@ def layout() -> list[PlacedPart]:
             x, z, row_depth = 0, z + row_depth + 1, 0
         for i, shape in enumerate(shapes):
             if shape.rectangular:
-                placed.append(PlacedPart(shape, red if i % 2 == 0 else blue, 0, x, z))
+                # a bracket's face hangs below its plate: raised so that it clears the ground (it floats in the file)
+                layer = max([0] + [-first for _, _, first, _ in shape.geometry.keep_out])
+                placed.append(PlacedPart(shape, red if i % 2 == 0 else blue, layer, x, z))
             else:
                 placed += with_markers(shape, x, z)
             x += shape.size_x + 1

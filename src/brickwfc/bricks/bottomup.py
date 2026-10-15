@@ -44,6 +44,9 @@ inverted slope's underside). Rectangular parts keep the box checks, so builds fr
 A ground-only part (M12d: a baseplate) goes on layer 0 only, also in the hole pass with ``hang``, and only on an
 empty ground layer; once one is placed, nothing else goes on layer 0 (``_ground_ok``). So a baseplate is the whole
 ground under the build: no part can rest both on it (4 LDU thick, modelled as a plate) and on a part beside it.
+A part with keep-out cells (M12d: a door rail, side studs, a bracket's face, a handle; ``Part.keep_out``) fits only if
+they are empty, not another part's keep-out, and none is below the ground; once it is placed they are blocked
+(``_State.blocked``) for every later placement, the hole and connect passes and mirror images included (``_keep_ok``).
 
 Speed (M12b): above the ground, a cell with no stud below within a part's reach (``_reachable``) cannot
 take any part, so its placement attempts are skipped; the random draws they would have made are still made,
@@ -323,7 +326,7 @@ class BottomUpBuilder:
                         continue
                     part = self._place(part_shape, color, y, z, x, state.filled, state.studs, allowed, rng,
                                        state.owner, state.balance, fit_map, state.open_bottom,
-                                       ground_closed=state.ground_closed)
+                                       ground_closed=state.ground_closed, blocked=state.blocked_or_none)
                     if part is None:
                         failed.add(box)
                     else:
@@ -513,7 +516,8 @@ class BottomUpBuilder:
                 continue
             part = self._place(part_shape, color, y, z, x, state.filled, state.studs, allowed, rng,
                                state.owner, state.balance, fit_map, state.open_bottom,
-                               state.open_bottom if self.hang else None, joined, state.ground_closed)
+                               state.open_bottom if self.hang else None, joined, state.ground_closed,
+                               state.blocked_or_none)
             if part is None:
                 failed.add(box)
                 continue
@@ -552,6 +556,10 @@ class BottomUpBuilder:
         for cell in part.stud_cells():
             state.studs[cell] = True
         state.ground_closed |= part.shape.part.ground_only
+        for cell in part.keep_out_cells():
+            if all(0 <= c < n for c, n in zip(cell, state.blocked.shape)):
+                state.blocked[cell] = True
+                state.any_blocked = True
         for cell in set(part.bottom_cells()) - set(part.seated_cells()):
             state.open_bottom[cell] = True
         if state.balance is not None:
@@ -590,6 +598,8 @@ class BottomUpBuilder:
             fits = self._fits(part, state.filled, state.studs, allowed, studless, open_bottom, hang_bottom)
         if not fits or not _ground_ok(part, state.filled, state.ground_closed):
             return False
+        if not _keep_ok(part, state.filled, state.blocked_or_none):
+            return False
         links = self._links(part, state.owner) if hang else self._below(part, state.owner)
         if joined and part.layer == 0 and not links:
             return False
@@ -623,14 +633,14 @@ class BottomUpBuilder:
         filled: np.ndarray, studs: np.ndarray, allowed: np.ndarray, rng: np.random.Generator,
         owner: np.ndarray | None = None, balance: Balance | None = None, fit_map: "_FitMap | None" = None,
         open_bottom: np.ndarray | None = None, hang_bottom: np.ndarray | None = None, joined: bool = False,
-        ground_closed: bool = False,
+        ground_closed: bool = False, blocked: np.ndarray | None = None,
     ) -> PlacedPart | None:
         """A fitting placement of the part with its bottom layer covering cell (y, z, x), or None.
         ``fit_map`` (the current layer's, up to date) answers ``_fits`` by lookup for rectangular parts;
         other parts are checked cell by cell (``_fits_cells``). ``hang_bottom`` (the build's open bottoms): the
         part may also hang from a part above (see the module docstring); ``joined``: a part on the ground must
         hang from the structure (the connected order); ``ground_closed``: a ground-only part is on layer 0, so nothing
-        else goes there (``_ground_ok``)."""
+        else goes there (``_ground_ok``); ``blocked``: other parts' keep-out cells (None: there are none; ``_keep_ok``)."""
         open_bottom = open_bottom if self.open_bottoms else None
         cells = self.cell_masks.get(part_shape)
         valid = None if fit_map is None or cells is not None else fit_map.corners(part_shape)
@@ -646,7 +656,7 @@ class BottomUpBuilder:
                 fits = self._fits(part, filled, studs, allowed, studless, open_bottom, hang_bottom)
             else:
                 fits = 0 <= part.z < valid.shape[0] and 0 <= part.x < valid.shape[1] and bool(valid[part.z, part.x])
-            if not fits or not _ground_ok(part, filled, ground_closed):
+            if not fits or not _ground_ok(part, filled, ground_closed) or not _keep_ok(part, filled, blocked):
                 return False
             if joined and part.layer == 0 and not links(part):
                 return False
@@ -854,6 +864,12 @@ class _State:
         self.skin: np.ndarray | None = None  # skin=True: the target's outer surface cells
         self.plane: Plane | None = None  # symmetric decoding: the mirror plane
         self.ground_closed = False  # a ground-only part (a baseplate) is on layer 0: nothing else goes there
+        self.blocked = np.zeros(shape, dtype=bool)  # placed parts' keep-out cells: they stay empty
+        self.any_blocked = False
+
+    @property
+    def blocked_or_none(self) -> np.ndarray | None:
+        return self.blocked if self.any_blocked else None
 
 
 def _ground_ok(part: PlacedPart, filled: np.ndarray, ground_closed: bool) -> bool:
@@ -866,16 +882,35 @@ def _ground_ok(part: PlacedPart, filled: np.ndarray, ground_closed: bool) -> boo
     return not (part.shape.part.ground_only and filled[0].any())
 
 
+def _keep_ok(part: PlacedPart, filled: np.ndarray, blocked: np.ndarray | None) -> bool:
+    """The keep-out rule (M12d): the part's keep-out cells are above the ground, empty and nobody else's keep-out, and
+    (``blocked``: other parts' keep-out cells, None if there are none) its own cells are not someone's keep-out."""
+    keep = part.keep_out_cells()
+    if keep:
+        ny, nz, nx = filled.shape
+        for y, z, x in keep:
+            if y < 0:
+                return False
+            if y < ny and 0 <= z < nz and 0 <= x < nx and (filled[y, z, x] or (blocked is not None and blocked[y, z, x])):
+                return False
+    if blocked is not None:
+        ys, zs, xs = np.array(part.cells()).T
+        if blocked[ys, zs, xs].any():
+            return False
+    return True
+
+
 def _fit_key(shape: Shape) -> tuple:
     """What decides whether a part fits at a cell: its box and whether it has studs for a rectangular part (so
     once one part fails there, others of the same key are skipped), its cells and their faces otherwise. The studs
     count since open tops (M12b 1d): a tile may not sit under a target cell where a plate of its box may (before M12b
-    completeness the key was the box alone, so a failed tile made the builder skip the plate)."""
+    completeness the key was the box alone, so a failed tile made the builder skip the plate). Keep-out cells (M12d)
+    count too, so a door-rail plate that fails on its rail does not make the builder skip the plain plate."""
     box = (shape.size_y, shape.size_z, shape.size_x)
-    if shape.rectangular:
-        return (*box, shape.part.studs)
     g = shape.geometry
-    return box, g.footprint, g.studded, g.seated
+    if shape.rectangular:  # keep-out cells (M12d) make a part fit in fewer places than its box
+        return (*box, shape.part.studs) + ((g.keep_out,) if g.keep_out else ())
+    return box, g.footprint, g.studded, g.seated, g.keep_out
 
 
 class _CellMasks:
