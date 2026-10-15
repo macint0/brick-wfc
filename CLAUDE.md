@@ -510,6 +510,18 @@ open; nothing changes there now.
   ground-only parts out; `coverage.PRIMITIVE` drops alphabetic primitives from the denominator. Ranking driver:
   `experiments/missing_parts.py`. Rule learned the hard way: full pytest runs one at a time across sessions (two at once
   plus the crawl ran the PC out of memory and killed the crawl).
+- **Batch 2 merged (8a270f3; 619 tests on session A's identical tree, the coordinator's run was reaped by the low-memory
+  guard):** catalog 156 → 170: 14 window and door frames and fences (60592, 60593, 2377, 4863, 2493b, 4035, 30044, 60594,
+  6556, 60596, 30179, 30055, 3633, 3185; 3853 skipped: its body overhangs its box). `bricks/accessories.py`: 12 glass,
+  pane and door files ride in frame slots at the closed poses real models use (inside the frame's box, tested per turn),
+  `Source.accessories` by file and colour code, composites add their glass, `write_build` fits accessories after
+  selection and writes them in the frame's step, coverage and the voxelizer count an accessory when a recognized frame's
+  box holds its origin (Rebrickable inventories do not read accessories yet). Baseplate fix as planned: `_ground_ok`
+  (empty layer 0 required, then closed), `parts.build_placements` lowers a baseplate build by 4 LDU on export,
+  `Part.wfc` / `parts.wfc_inventory` keep ground-only parts out of WFC tilesets (`SupportConstraint` raises otherwise).
+  A baseplate appears in 4/10 inventory-only D2 builds on 6370-1 and 6372-1 and costs ~45 s per build (fit-map reach
+  32). `coverage.PRIMITIVE` drops alphabetic primitives (denominator 25,463 → 25,321; the write-up gives both).
+  Recognized share on the 28 sets: M12b 70% → **79%**, on grid 57 → 63%. Batch 3 (keep-out cells) in progress.
 - **M12e plan (session B, branch `m12e-data`):** (1) crawl the whole OMR index into `data/omr` (resumable, polite),
   measure every model with the coverage driver (recognized, on-grid) and define the training pool (building sets by
   the `experiments/sets.py` criteria, loosened to size, no re-releases); report sets / parts / on-grid parts; redo the
