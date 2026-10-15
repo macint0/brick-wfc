@@ -498,6 +498,18 @@ open; nothing changes there now.
   the 28 sets 69.5% → about 80–83% (the addable part of the ranking is roughly 3,000 of the 7,714 missing instances);
   report recognized and on-grid per set (`experiments/coverage.py`, 28 sets, 20 OMR sets, all 93), relearn style
   statistics (v3), write `results/m12d_catalog.md`.
+- **Batch 1 merged (bb0f3b3, 580 tests):** catalog 88 → 156 parts. `ldraw.library` resolves a part's `.dat` (from the
+  library's `complete.zip`, unpacked under `data/ldraw`, gitignored) into studs, extents and a per-cell map; the
+  placement-test rows are generated from those facts and mutation-checked. New: `Part.ground_only` (baseplates 3857 /
+  3811: no seated cells, the whole bottom bears on the table via `PlacedPart.contact_cells`), `Part.origin_plates`,
+  `Part.__hash__` on (name, file) (hashing a baseplate's cells made one build take 81 s; 4.7 s now), `parts.M12B_FILES`
+  for before/after. 6091 / 6005 / 92946 are studless (their stud sits a plate below the box top); 4079, 33291, 32607 and
+  2339 skipped (they overhang their cells or stud at several heights). Recognized share on the 28 sets 69 → 75%, on grid
+  57 → 60%. Coming in batch 2: a baseplate is placed only on an empty ground layer and nothing else goes on layer 0 with
+  it, a build with a baseplate is exported 4 LDU lower (so the `.ldr` is exact and the stud joints sound), WFC leaves
+  ground-only parts out; `coverage.PRIMITIVE` drops alphabetic primitives from the denominator. Ranking driver:
+  `experiments/missing_parts.py`. Rule learned the hard way: full pytest runs one at a time across sessions (two at once
+  plus the crawl ran the PC out of memory and killed the crawl).
 - **M12e plan (session B, branch `m12e-data`):** (1) crawl the whole OMR index into `data/omr` (resumable, polite),
   measure every model with the coverage driver (recognized, on-grid) and define the training pool (building sets by
   the `experiments/sets.py` criteria, loosened to size, no re-releases); report sets / parts / on-grid parts; redo the
