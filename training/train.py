@@ -13,6 +13,14 @@ pool exports): the mean of the BrickGPT validation loss and the real-set validat
 sets) are exported as ``proposal.npz`` (float32 arrays in
 (in, out) layout plus the config as JSON; read by ``brickwfc.bricks.proposal``), with ``vocab.json`` and
 ``log.jsonl`` next to them. ``--patience N`` stops after N evaluations in a row without a new best selection loss.
+``--select setval`` selects on the real-set validation loss alone. Every log line records the running minima of the
+selection loss and of the set validation loss with their steps (``best``), and the weights at the set validation
+minimum are also exported as ``proposal_setval.npz`` (same format).
+
+Regularization (M12e; all off by default, so a default run is unchanged): ``--dropout p`` on the embeddings, the
+attention weights and both residual branches (training mode only; nothing changes in the exported weights or at
+inference), ``--jitter set [brickgpt]`` moves training windows by a random Z / X shift (``data.py``), and
+``--weight-decay``.
 
 PyTorch is used only here (and in the notebook); it is not a dependency of the brickwfc package.
 """
@@ -55,31 +63,36 @@ class Config:
 
 
 class Block(nn.Module):
-    def __init__(self, c: Config) -> None:
+    def __init__(self, c: Config, dropout: float = 0.0) -> None:
         super().__init__()
         d = c.d_model
-        self.heads = c.heads
+        self.heads, self.dropout = c.heads, dropout
         self.ln1, self.ln2 = nn.LayerNorm(d, eps=LN_EPS), nn.LayerNorm(d, eps=LN_EPS)
         self.qkv, self.proj = nn.Linear(d, 3 * d), nn.Linear(d, d)
         self.fc1, self.fc2 = nn.Linear(d, c.mlp * d), nn.Linear(c.mlp * d, d)
+        self.drop = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         b, t, d = x.shape
         q, k, v = self.qkv(self.ln1(x)).split(d, dim=-1)
         q, k, v = (z.view(b, t, self.heads, d // self.heads).transpose(1, 2) for z in (q, k, v))
-        a = F.scaled_dot_product_attention(q, k, v, is_causal=True)
-        x = x + self.proj(a.transpose(1, 2).reshape(b, t, d))
-        return x + self.fc2(F.gelu(self.fc1(self.ln2(x)), approximate="tanh"))
+        a = F.scaled_dot_product_attention(q, k, v, is_causal=True, dropout_p=self.dropout if self.training else 0.0)
+        x = x + self.drop(self.proj(a.transpose(1, 2).reshape(b, t, d)))
+        return x + self.drop(self.fc2(F.gelu(self.fc1(self.ln2(x)), approximate="tanh")))
 
 
 class ProposalModel(nn.Module):
-    def __init__(self, c: Config) -> None:
+    def __init__(self, c: Config, dropout: float = 0.0) -> None:
+        """``dropout``: on the input embeddings, the attention weights and both residual branches, in training
+        mode only. It is not part of ``Config`` (nor of ``proposal.npz``): it has no parameters, and inference
+        (eval mode, numpy) is the same model without it."""
         super().__init__()
         self.config = c
         self.tok = nn.Embedding(c.vocab, c.d_model)
         self.patch = nn.Linear(c.patch_bits, c.d_model)
         self.pos = nn.Embedding(c.max_len, c.d_model)
-        self.blocks = nn.ModuleList(Block(c) for _ in range(c.layers))
+        self.drop = nn.Dropout(dropout)
+        self.blocks = nn.ModuleList(Block(c, dropout) for _ in range(c.layers))
         self.ln_f = nn.LayerNorm(c.d_model, eps=LN_EPS)
         self.apply(self._init)
         for block in self.blocks:  # scaled init of the residual projections (GPT-2)
@@ -97,7 +110,7 @@ class ProposalModel(nn.Module):
         """Logits (B, L, V) for ids (B, L) and patches (B, 64, 125); ids in the mask slots are ignored."""
         x = self.tok(ids)
         x = torch.cat([x[:, :4], self.patch(patches), x[:, PREFIX:]], dim=1)
-        x = x + self.pos(torch.arange(ids.shape[1], device=ids.device))
+        x = self.drop(x + self.pos(torch.arange(ids.shape[1], device=ids.device)))
         for block in self.blocks:
             x = block(x)
         return self.ln_f(x) @ self.tok.weight.T
@@ -182,6 +195,13 @@ def main(argv: list[str] | None = None) -> int:
                              "the weights are selected on the mean of the BrickGPT and set validation losses")
     parser.add_argument("--patience", type=int, default=0,
                         help="stop after this many evaluations without a new best selection loss; 0 = never")
+    parser.add_argument("--select", choices=("mean", "setval"), default="mean",
+                        help="selection loss: the mean of the BrickGPT and set validation losses (default), or the set "
+                             "validation loss alone")
+    parser.add_argument("--dropout", type=float, default=0.0,
+                        help="dropout on embeddings, attention and residual branches (training only; 0 = none)")
+    parser.add_argument("--jitter", nargs="*", choices=("brickgpt", "set"), default=[],
+                        help="sources whose training windows are moved by a random Z / X shift (data.py)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args(argv)
@@ -197,11 +217,13 @@ def main(argv: list[str] | None = None) -> int:
     set_val = eval_windows(train, args.max_len, indices=excluded)
     if not args.val_sets and (args.data / "setval.npz").exists():  # a pool export's real-set validation split
         set_val = eval_windows(Split(args.data / "setval.npz", vocab), args.max_len)
-    sampler = Sampler(train, args.max_len, args.set_share, args.mask_drop, exclude=excluded)
+    if args.select == "setval" and not set_val:
+        parser.error("--select setval needs --val-sets or a setval.npz in --data")
+    sampler = Sampler(train, args.max_len, args.set_share, args.mask_drop, exclude=excluded, jitter=args.jitter)
 
     torch.manual_seed(args.seed)
     config = Config(len(vocab.tokens), args.d_model, args.layers, args.heads, args.max_len)
-    model = ProposalModel(config).to(args.device)
+    model = ProposalModel(config, args.dropout).to(args.device)
     decay = [p for n, p in model.named_parameters() if p.dim() == 2 and not n.startswith(("tok", "pos"))]
     other = [p for n, p in model.named_parameters() if not (p.dim() == 2 and not n.startswith(("tok", "pos")))]
     opt = torch.optim.AdamW([{"params": decay, "weight_decay": args.weight_decay}, {"params": other, "weight_decay": 0.0}],
@@ -211,17 +233,24 @@ def main(argv: list[str] | None = None) -> int:
     params = sum(p.numel() for p in model.parameters())
     print(f"{params / 1e6:.2f}M parameters, {len(train) - len(excluded)} training builds, {len(val)} val / "
           f"{len(set_val)} set-val ({' '.join(args.val_sets) or ('setval.npz' if set_val else 'none')}) / {len(heldout)} held-out windows")
+    print(f"selection {args.select}, dropout {args.dropout}, jitter {' '.join(args.jitter) or 'none'}, "
+          f"weight decay {args.weight_decay}, set share {args.set_share}")
 
     args.out.mkdir(parents=True, exist_ok=True)
     ckpt_path, log_path = args.out / "checkpoint.pt", args.out / "log.jsonl"
     step, best, stale = 0, float("inf"), 0
+    # Running minima, recorded in every log line: the selection loss and the set validation loss (with their steps).
+    best_step, set_best, set_best_step = None, float("inf"), None
     if ckpt_path.exists():
         ckpt = torch.load(ckpt_path, map_location=args.device)
+        if ckpt.get("select", "mean") != args.select:
+            raise SystemExit(f"{ckpt_path} was trained with --select {ckpt.get('select', 'mean')}; use a new --out")
         model.load_state_dict(ckpt["model"])
         opt.load_state_dict(ckpt["opt"])
         scaler.load_state_dict(ckpt["scaler"])
         step, best, stale = ckpt["step"], ckpt["best"], ckpt.get("stale", 0)
-        print(f"resumed at step {step} (best val loss {best:.4f}, {stale} evaluations without improvement)")
+        best_step, set_best, set_best_step = ckpt.get("best_step"), ckpt.get("set_best", float("inf")), ckpt.get("set_best_step")
+        print(f"resumed at step {step} (best selection loss {best:.4f}, {stale} evaluations without improvement)")
         if args.patience and stale >= args.patience:
             print("already stopped early; nothing to do")
             return 0
@@ -263,18 +292,33 @@ def main(argv: list[str] | None = None) -> int:
                 scores["set_val"] = evaluate(model, set_val, pad, args.device, args.batch)
                 scores["val_sets"] = args.val_sets or "setval.npz"
             # Selection never looks at the held-out sets (the test sets of the proposal comparison).
-            scores["select"] = (scores["val"]["loss"] + scores["set_val"]["loss"]) / 2 if set_val else scores["val"]["loss"]
+            if args.select == "setval":
+                scores["select"] = scores["set_val"]["loss"]
+            else:
+                scores["select"] = (scores["val"]["loss"] + scores["set_val"]["loss"]) / 2 if set_val else scores["val"]["loss"]
+            scores["select_by"] = args.select
+            improved = scores["select"] < best
+            if improved:
+                best, best_step, stale = scores["select"], step, 0
+            else:
+                stale += 1
+            set_improved = bool(set_val) and scores["set_val"]["loss"] < set_best
+            if set_improved:
+                set_best, set_best_step = scores["set_val"]["loss"], step
+            scores["best"] = {"select": {"step": best_step, "loss": best}}
+            if set_val:
+                scores["best"]["set_val"] = {"step": set_best_step, "loss": set_best}
             with log_path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(scores) + "\n")
             print(json.dumps(scores), flush=True)
-            if scores["select"] < best:
-                best, stale = scores["select"], 0
+            if improved:
                 export_npz(model, args.out / "proposal.npz")
-            else:
-                stale += 1
+            if set_improved and args.select != "setval":  # the weights a --select setval run would have chosen
+                export_npz(model, args.out / "proposal_setval.npz")
             # Written next to the old checkpoint, then swapped in: a disconnect mid-write keeps the last good one.
             torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "scaler": scaler.state_dict(), "step": step,
-                        "best": best, "stale": stale}, ckpt_path.with_suffix(".tmp"))
+                        "best": best, "stale": stale, "best_step": best_step, "set_best": set_best,
+                        "set_best_step": set_best_step, "select": args.select}, ckpt_path.with_suffix(".tmp"))
             ckpt_path.with_suffix(".tmp").replace(ckpt_path)
             if args.patience and stale >= args.patience:
                 print(f"early stop at step {step}: {stale} evaluations without a new best (best {best:.4f})")
@@ -283,7 +327,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"time limit reached at step {step}")
             break
     prefetch.shutdown(cancel_futures=True)
-    print(f"done: best selection loss {best:.4f}; weights in {args.out / 'proposal.npz'}")
+    print(f"done: best selection loss {best:.4f} at step {best_step}; weights in {args.out / 'proposal.npz'}")
+    if set_val and args.select != "setval":
+        print(f"set validation minimum {set_best:.4f} at step {set_best_step}; weights in {args.out / 'proposal_setval.npz'}")
     return 0
 
 
