@@ -91,11 +91,22 @@ def mirror_shape(shape: Shape, axis: int) -> Shape | None:
     g = shape.geometry
     want = tuple(_reflect_cells(frozenset(cells), axis, g.size_z, g.size_x)
                  for cells in (g.footprint, g.studded, g.seated))
+    # keep-out cells (M12d: a door rail's side) reflect with the part; they may lie outside its box
+    keep = {(dz, dx): (first, last) for dz, dx, first, last in g.keep_out}
+    want_keep = frozenset((*cell, *keep[old]) for old, cell in
+                          zip(keep, _reflect_list(list(keep), axis, g.size_z, g.size_x)))
     for other in shapes_of([shape.part]):
         h = other.geometry
-        if (h.size_z, h.size_x) == (g.size_z, g.size_x) and (frozenset(h.footprint), h.studded, h.seated) == want:
+        if ((h.size_z, h.size_x) == (g.size_z, g.size_x) and (frozenset(h.footprint), h.studded, h.seated) == want
+                and frozenset(h.keep_out) == want_keep):
             return other
     return None
+
+
+def _reflect_list(cells: list[tuple[int, int]], axis: int, size_z: int, size_x: int) -> list[tuple[int, int]]:
+    if axis == 2:
+        return [(dz, size_x - 1 - dx) for dz, dx in cells]
+    return [(size_z - 1 - dz, dx) for dz, dx in cells]
 
 
 def mirror_part(part: PlacedPart, plane: Plane) -> PlacedPart | None:
