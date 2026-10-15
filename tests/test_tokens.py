@@ -113,6 +113,7 @@ def test_export_splits_and_report(tmp_path: Path) -> None:
             {"structure_id": "c3", "bricks": "1x1 (3,3,0)"}]
     (cache / "train.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
     gpt, skipped = export_tokens.brickgpt_split("train", cache, [], workers=1, chunk=2)
+    gpt_first = to_placed(parse(rows[0]["bricks"]), export_tokens.GRAY)
     assert skipped == 1 and gpt.name == ["a1", "c3"]
     splits = {"train": export_tokens.merge(gpt, train), "val": gpt, "heldout": held}
     for name, seqs in splits.items():
@@ -120,7 +121,7 @@ def test_export_splits_and_report(tmp_path: Path) -> None:
     data = export_tokens.load_npz(tmp_path / "train.npz")
     assert data["header"].shape == (18, 4) and data["masks"].shape == (18, 20, 20, 20)
     assert data["offsets"][-1] == len(data["parts"]) == 2 + 1 + 16 * len(tiny_model())
-    assert np.array_equal(data["masks"][0], splits["train"].encoded[0].mask)
+    assert np.array_equal(data["masks"][0], encode(gpt_first, vocab, "brickgpt", colorless=True).mask)
     assert list(data["source"][:2]) == ["brickgpt", "brickgpt"] and data["fold"][0] == -1
     text = export_tokens.report(splits, vocab, ["s0", "s2"], 8, {"train": 1, "test": 0}, 0, 4, 0)
     assert "Held out (fold 0):** s0, s2" in text and "8 horizontal symmetries" in text and "brick2x4" in text
@@ -130,3 +131,19 @@ def test_windows_count() -> None:
     per = (export_tokens.MAX_LEN - PREFIX - 1) // PART_TOKENS
     assert export_tokens.windows(10) == 1 and export_tokens.windows(per) == 1
     assert export_tokens.windows(per + 1) == 2 and export_tokens.windows(per + per // 2 + 1) == 3
+
+
+def test_add_keeps_the_mask_packed_and_saves_the_same_bytes(tmp_path: Path) -> None:
+    """Sequences hold each mask packed from the moment it is added (memory); the saved masks are the bytes packing
+    the full mask at save time gave before."""
+    vocab = build_vocab()
+    seqs = export_tokens.empty()
+    full = [encode(v, vocab, "set") for v in symmetries(tiny_model(), 4)]
+    for k, (variant, e) in enumerate(zip(symmetries(tiny_model(), 4), full)):
+        export_tokens.add(seqs, variant, e, "set", 0, f"t/sym{k}")
+    assert all(e.mask is None for e in seqs.encoded) and all(m.dtype == np.uint8 and m.shape == (1000,) for m in seqs.masks)
+    seqs.save(tmp_path / "t.npz", vocab)
+    with np.load(tmp_path / "t.npz") as saved:
+        assert np.array_equal(saved["masks"], np.stack([np.packbits(e.mask.ravel()) for e in full]))
+    merged = export_tokens.merge(seqs, seqs)
+    assert len(merged.masks) == len(merged.encoded) == 8

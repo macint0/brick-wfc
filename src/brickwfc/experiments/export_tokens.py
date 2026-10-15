@@ -12,6 +12,14 @@ Sources (``bricks.tokens`` for the format):
   exported as ``heldout``. Training sets are exported in ``--set-symmetries`` horizontal symmetries
   (4 turns x mirror).
 
+With ``--pool`` (M12e; ``python -m brickwfc.experiments.export_tokens --pool results/m12e_omr_pool.json --out
+data/tokens_v2 --results results/m12e_tokens.md``) the real sets are instead the selected models of an
+``experiments.omr_pool`` pool, voxelized with ``parts.CATALOG`` at export time and cropped to the token grid
+(``experiments.pool_tokens``), split by set number: the demo sets (``--heldout-sets``) are ``heldout``, a seeded
+``--val-share`` of the other sets is ``setval`` (the real-set validation ``training/train.py`` selects on), the
+rest trains in ``--set-symmetries`` symmetries. Also writes ``setval.npz`` and the per-model out-of-vocabulary
+table (``--oov-results``).
+
 Each build's own occupancy is its target mask. Writes ``vocab.json`` and ``train.npz``, ``val.npz``,
 ``heldout.npz`` under ``--out`` (arrays: ``header`` (N, 4), ``parts`` (P, 5) token ids, ``offsets`` (N + 1),
 ``masks`` (N, 1000) packed bits of the 20^3 mask, ``source``, ``fold`` (-1 for BrickGPT), ``name``), and the
@@ -25,7 +33,7 @@ import json
 import os
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Sequence
 
@@ -34,9 +42,11 @@ import numpy as np
 from brickwfc.bricks import brickgpt
 from brickwfc.bricks.colors import color_for_code
 from brickwfc.bricks.parts import PlacedPart
-from brickwfc.bricks.tokens import (MASK_GRID, PART_TOKENS, PREFIX, Encoded, Vocab, build_vocab, encode,
+from brickwfc.bricks.tokens import (HEADER, MASK_GRID, PART_TOKENS, PREFIX, Encoded, Vocab, build_vocab, encode,
                                     symmetries)
 from brickwfc.bricks.voxelize import voxelize
+from brickwfc.experiments.omr_pool import catalog_fingerprint
+from brickwfc.experiments.pool_tokens import PoolModel, load_pool, oov_markdown, oov_rows, oov_summary, split_sets
 from brickwfc.experiments.style import folds
 from brickwfc.ldraw.fetch import fetch_set
 from brickwfc.ldraw.mpd import flatten
@@ -48,23 +58,27 @@ SET_SHARE = 0.25  # share of training windows drawn from real sets (training/tra
 
 @dataclass
 class Sequences:
-    """Encoded builds of one split."""
+    """Encoded builds of one split. Each target mask is kept packed (``MASK_GRID``^3 bits in 1000 bytes, the saved
+    layout) from the moment it is added, and the ``Encoded`` keeps only its header and part tokens: BrickGPT's
+    ~47k unpacked 20^3 masks alone would be ~0.4 GB."""
 
     encoded: list[Encoded]
     source: list[str]
     fold: list[int]
     name: list[str]
     shapes: Counter  # part name -> count
+    masks: list[np.ndarray] = field(default_factory=list)  # packed, one per build
 
     def save(self, path: Path, vocab: Vocab) -> None:
         offsets = np.zeros(len(self.encoded) + 1, dtype=np.int64)
         offsets[1:] = np.cumsum([len(e.parts) for e in self.encoded])
         parts = (np.concatenate([e.parts for e in self.encoded]) if self.encoded
                  else np.zeros((0, PART_TOKENS), dtype=np.int64))
-        masks = np.stack([np.packbits(e.mask.ravel()) for e in self.encoded]) if self.encoded else np.zeros((0, 1000), np.uint8)
+        masks = np.stack(self.masks) if self.masks else np.zeros((0, 1000), np.uint8)
         assert len(vocab) < 2**15
         np.savez_compressed(
-            path, header=np.stack([e.header for e in self.encoded]).astype(np.int16), parts=parts.astype(np.int16),
+            path, header=(np.stack([e.header for e in self.encoded]) if self.encoded else np.zeros((0, HEADER))).astype(np.int16),
+            parts=parts.astype(np.int16),
             offsets=offsets, masks=masks, source=np.array(self.source), fold=np.array(self.fold, dtype=np.int8),
             name=np.array(self.name))
 
@@ -74,7 +88,8 @@ def empty() -> Sequences:
 
 
 def add(seqs: Sequences, placed: list[PlacedPart], encoded: Encoded, source: str, fold: int, name: str) -> None:
-    seqs.encoded.append(encoded)
+    seqs.masks.append(np.packbits(encoded.mask.ravel()))
+    seqs.encoded.append(Encoded(encoded.header, None, encoded.parts))
     seqs.source.append(source)
     seqs.fold.append(fold)
     seqs.name.append(name)
@@ -147,7 +162,8 @@ def set_splits(models: dict[str, list[PlacedPart]], fold_of: dict[str, int], hol
 
 
 def merge(a: Sequences, b: Sequences) -> Sequences:
-    return Sequences(a.encoded + b.encoded, a.source + b.source, a.fold + b.fold, a.name + b.name, a.shapes + b.shapes)
+    return Sequences(a.encoded + b.encoded, a.source + b.source, a.fold + b.fold, a.name + b.name, a.shapes + b.shapes,
+                     a.masks + b.masks)
 
 
 # Report ---------------------------------------------------------------------------------------------------
@@ -161,8 +177,25 @@ def windows(parts: int, max_len: int = MAX_LEN) -> int:
 
 def report(splits: dict[str, Sequences], vocab: Vocab, holdout_sets: list[str], symmetries_n: int, skipped: dict[str, int],
            fold_seed: int, n_folds: int, holdout: int) -> str:
-    lines = ["# M12b step 2: token dataset", "",
-             "`python -m brickwfc.experiments.export_tokens` (format: `bricks/tokens.py`). One part = 5 tokens "
+    lines = ["# M12b step 2: token dataset", "", *sequence_table(splits, vocab)]
+    train = splits["train"]
+    natural = set_share_of(train)
+    lines += ["", f"Skipped as malformed (overlapping bricks or empty): "
+              + ", ".join(f"{k} {v}" for k, v in skipped.items()) + ".", "",
+              "## Real sets: folds, symmetries, oversampling", "",
+              f"- Folds: M10's (`experiments.style.folds`, {n_folds} folds, seed {fold_seed}). **Held out (fold {holdout}):** "
+              + ", ".join(holdout_sets) + ". Not in training; exported once as `heldout.npz`.",
+              f"- Training sets: each in **{symmetries_n} horizontal symmetries** (4 quarter turns x mirror along x).",
+              f"- Oversampling: real sets are {100 * natural:.2f}% of training parts (after symmetries); `training/train.py` "
+              f"draws {100 * SET_SHARE:.0f}% of training windows from them (`--set-share`), "
+              f"**{SET_SHARE / natural if natural else 0:.1f}x** their natural share.", "",
+              *part_types(train, vocab)]
+    return "\n".join(lines) + "\n"
+
+
+def sequence_table(splits: dict[str, Sequences], vocab: Vocab) -> list[str]:
+    """The format line, the vocabulary size and per split / source sequence statistics."""
+    lines = ["`python -m brickwfc.experiments.export_tokens` (format: `bricks/tokens.py`). One part = 5 tokens "
              "(Y Z X SHAPE COLOR), raster order (layer, z, x); prefix = 4 header tokens + 64 mask patches "
              f"(20^3 coarse mask, 5^3 patches); context {MAX_LEN} tokens = {(MAX_LEN - PREFIX - 1) // PART_TOKENS} parts.", "",
              f"Vocabulary: **{len(vocab)} tokens** ({len(vocab.shape_ids())} shapes, {len(vocab.color_ids())} colors).", "",
@@ -174,31 +207,110 @@ def report(splits: dict[str, Sequences], vocab: Vocab, holdout_sets: list[str], 
             lines.append(f"| {split} | {source} | {len(sizes)} | {sizes.sum()} | {sizes.sum() * PART_TOKENS} | "
                          f"{sizes.mean():.1f} | {np.percentile(sizes, 50):.0f} | {np.percentile(sizes, 90):.0f} | "
                          f"{sizes.max()} | {sum(windows(int(n)) for n in sizes)} |")
-    train = splits["train"]
-    set_parts = sum(len(e.parts) for e, s in zip(train.encoded, train.source) if s == "set")
-    total_parts = sum(len(e.parts) for e in train.encoded)
-    natural = set_parts / total_parts if total_parts else 0.0
-    lines += ["", f"Skipped as malformed (overlapping bricks or empty): "
-              + ", ".join(f"{k} {v}" for k, v in skipped.items()) + ".", "",
-              "## Real sets: folds, symmetries, oversampling", "",
-              f"- Folds: M10's (`experiments.style.folds`, {n_folds} folds, seed {fold_seed}). **Held out (fold {holdout}):** "
-              + ", ".join(holdout_sets) + ". Not in training; exported once as `heldout.npz`.",
-              f"- Training sets: each in **{symmetries_n} horizontal symmetries** (4 quarter turns x mirror along x).",
-              f"- Oversampling: real sets are {100 * natural:.2f}% of training parts (after symmetries); `training/train.py` "
-              f"draws {100 * SET_SHARE:.0f}% of training windows from them (`--set-share`), "
-              f"**{SET_SHARE / natural if natural else 0:.1f}x** their natural share.", "",
-              "## Part types (training split)", "", "| part | brickgpt | set |", "|---|---|---|"]
+    return lines
+
+
+def set_share_of(seqs: Sequences) -> float:
+    """Real sets' share of a split's parts."""
+    total = sum(len(e.parts) for e in seqs.encoded)
+    return sum(len(e.parts) for e, s in zip(seqs.encoded, seqs.source) if s == "set") / total if total else 0.0
+
+
+def part_types(train: Sequences, vocab: Vocab) -> list[str]:
+    """Part counts per source and the real sets' colors in the training split."""
+    lines = ["## Part types (training split)", "", "| part | brickgpt | set |", "|---|---|---|"]
     by_source = {src: Counter() for src in ("brickgpt", "set")}
-    for seqs_name in ("train",):
-        seqs = splits[seqs_name]
-        for e, src in zip(seqs.encoded, seqs.source):
-            by_source[src].update(vocab.tokens[int(t)][2:].removesuffix("_r90") for t in e.parts[:, 3])
+    for e, src in zip(train.encoded, train.source):
+        by_source[src].update(vocab.tokens[int(t)][2:].removesuffix("_r90") for t in e.parts[:, 3])
     names = sorted(set(by_source["brickgpt"]) | set(by_source["set"]),
                    key=lambda n: -(by_source["brickgpt"][n] + by_source["set"][n]))
     lines += [f"| {n} | {by_source['brickgpt'][n]} | {by_source['set'][n]} |" for n in names]
     colors = Counter(vocab.tokens[int(t)][2:] for e, s in zip(train.encoded, train.source) if s == "set" for t in e.parts[:, 4])
-    lines += ["", "## Colors (training sets)", "", ", ".join(f"{c} {n}" for c, n in colors.most_common())]
+    return lines + ["", "## Colors (training sets)", "", ", ".join(f"{c} {n}" for c, n in colors.most_common())]
+
+
+# Pool (M12e) ----------------------------------------------------------------------------------------------
+
+ROLES = {"train": 0, "setval": 1, "heldout": 2}  # the ``fold`` column of pool exports
+
+
+def pool_splits(models: Sequence[PoolModel], role: dict[str, str], count: int, vocab: Vocab) -> dict[str, Sequences]:
+    """Training (every symmetry), setval and heldout (as they are) sequences of the pool, by each set's role.
+    Sequences are named ``<model>/sym<k>``, or ``<model>/c<j>/sym<k>`` for the crops of a large model."""
+    out = {name: empty() for name in ROLES}
+    for m in models:
+        split = role.get(m.set, "train")
+        for j, crop in enumerate(m.crops):
+            stem = m.name if len(m.crops) == 1 else f"{m.name}/c{j}"
+            variants = symmetries(crop, count) if split == "train" else [crop]
+            for k, variant in enumerate(variants):
+                add(out[split], variant, encode(variant, vocab, "set"), "set", ROLES[split], f"{stem}/sym{k}")
+    return out
+
+
+def pool_report(splits: dict[str, Sequences], vocab: Vocab, pool: dict, sets: tuple[list[str], list[str], list[str]],
+                models: Sequence[PoolModel], oov: list[dict], args: argparse.Namespace, skipped: dict[str, int]) -> str:
+    train_sets, val_sets, held_sets = sets
+    natural = set_share_of(splits["train"])
+    missing_demo = [s for s in args.heldout_sets if s not in held_sets]
+    crops = [m for m in models if not m.fits]
+    lines = ["# M12e: token dataset for proposal model v2", "", *sequence_table(splits, vocab), "",
+             "Skipped as malformed (BrickGPT): " + ", ".join(f"{k} {v}" for k, v in skipped.items()) + ".", "",
+             "## Sources and splits", "",
+             f"- Pool: `{args.pool.as_posix()}` (catalog `{pool['catalog']}`, {pool['catalog_parts']} parts; thresholds "
+             f"{pool['thresholds']}): **{len(models)} models from {len(set(m.set for m in models))} sets**. The "
+             f"vocabulary is built from `parts.CATALOG` at export time: {len(vocab.shape_ids())} shape tokens.",
+             "- BrickGPT's splits as before: train in training, test as `val`.",
+             f"- **Held out** (`heldout.npz`, never trained on, never used for selection; the demo sets): "
+             + (", ".join(held_sets) or "none")
+             + (f". Not in the pool, so not exported: {', '.join(missing_demo)}" if missing_demo else "") + ".",
+             f"- **Set validation** (`setval.npz`, the real-set half of the selection loss in `training/train.py`): "
+             f"{len(val_sets)} sets, a seeded {100 * args.val_share:.0f}% of the rest (seed {args.val_seed}): "
+             + ", ".join(val_sets) + ".",
+             f"- Training: {len(train_sets)} sets, each crop in **{args.set_symmetries} horizontal symmetries**. A set's "
+             "main model and alternates are always in the same split.",
+             f"- Cropping: {len(crops)} models do not fit the token grid (64 x 64 studs x 192 plates) and are cut into "
+             f"blocks of that size, each keeping the parts wholly inside it (parts across a block edge and blocks under "
+             f"{args.min_crop_parts} parts dropped); blocks kept per model: "
+             + (", ".join(f"{m.name} ({len(m.crops)})" for m in crops) or "none") + ".",
+             f"- Real sets are {100 * natural:.1f}% of training parts (after symmetries); `training/train.py` draws "
+             f"`--set-share` of training windows from them.", "",
+             "## Out of vocabulary", "", *oov_summary(oov), "",
+             f"Per model: `{args.oov_results.as_posix()}`.", "", *part_types(splits["train"], vocab)]
     return "\n".join(lines) + "\n"
+
+
+def export_pool(args: argparse.Namespace) -> str:
+    pool = json.loads(args.pool.read_text(encoding="utf-8"))
+    if pool["catalog"] != catalog_fingerprint():
+        raise SystemExit(f"{args.pool} was measured on catalog {pool['catalog']}, the catalog is now "
+                         f"{catalog_fingerprint()}: rerun python -m brickwfc.experiments.omr_pool first")
+    rows = [r for r in pool["models"] if r["selected"] == "yes"]
+    models = load_pool(rows, args.omr, args.min_crop_parts, args.workers)
+    sets = split_sets([m.set for m in models], args.heldout_sets, args.val_share, args.val_seed)
+    role = {s: "train" for s in sets[0]} | {s: "setval" for s in sets[1]} | {s: "heldout" for s in sets[2]}
+    colors = sorted({p.color.name for m in models for crop in m.crops for p in crop})
+    vocab = build_vocab(colors)
+    set_part = pool_splits(models, role, args.set_symmetries, vocab)
+    gpt_train, skipped_train = brickgpt_split("train", args.brickgpt, colors, args.workers)
+    gpt_val, skipped_val = brickgpt_split("test", args.brickgpt, colors, args.workers)
+    splits = {"train": merge(gpt_train, set_part["train"]), "val": gpt_val, "setval": set_part["setval"],
+              "heldout": set_part["heldout"]}
+    args.out.mkdir(parents=True, exist_ok=True)
+    vocab.save(args.out / "vocab.json")
+    for name, seqs in splits.items():
+        seqs.save(args.out / f"{name}.npz", vocab)
+    # What the tokens were built from, so a training run can check it against the code it runs with.
+    (args.out / "export.json").write_text(json.dumps(
+        {"catalog": pool["catalog"], "catalog_parts": pool["catalog_parts"], "pool": args.pool.as_posix(),
+         "sets": {"train": len(sets[0]), "setval": sets[1], "heldout": sets[2]},
+         "set_share_of_train_parts": round(set_share_of(splits["train"]), 4),
+         "sequences": {k: len(v.encoded) for k, v in splits.items()}}, indent=1), encoding="utf-8")
+    oov = oov_rows(models, role)
+    args.oov_results.parent.mkdir(parents=True, exist_ok=True)
+    args.oov_results.write_text("# M12e: out-of-vocabulary share per pool model\n\n" + "\n".join(oov_summary(oov))
+                                + "\n\n" + oov_markdown(oov), encoding="utf-8")
+    return pool_report(splits, vocab, pool, sets, models, oov, args, {"train": skipped_train, "test": skipped_val})
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -213,7 +325,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=Path("data/tokens"))
     parser.add_argument("--results", type=Path, default=Path("results/m12b_tokens.md"))
     parser.add_argument("--workers", type=int, default=max(1, min(3, (os.cpu_count() or 3) - 2)))
+    pool = parser.add_argument_group("pool (M12e): replaces --sets-file and the folds")
+    pool.add_argument("--pool", type=Path, help="an experiments.omr_pool pool, e.g. results/m12e_omr_pool.json")
+    pool.add_argument("--heldout-sets", nargs="*", default=["6378-1", "31048-1"], help="demo sets held out")
+    pool.add_argument("--val-share", type=float, default=0.05, help="share of the other pool sets in setval")
+    pool.add_argument("--val-seed", type=int, default=0)
+    pool.add_argument("--min-crop-parts", type=int, default=20, help="smallest crop of a large model kept")
+    pool.add_argument("--oov-results", type=Path, default=Path("results/m12e_tokens_oov.md"))
     args = parser.parse_args(argv)
+
+    if args.pool:
+        text = export_pool(args)
+        args.results.parent.mkdir(parents=True, exist_ok=True)
+        args.results.write_text(text, encoding="utf-8")
+        print(text)
+        return 0
 
     sets = json.loads(args.sets_file.read_text(encoding="utf-8"))["selected"]
     fold_of = {s: k for k, members in enumerate(folds(sets, args.folds, args.fold_seed)) for s in members}

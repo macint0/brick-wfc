@@ -16,13 +16,14 @@ import data  # noqa: E402
 def exported(tmp_path: Path) -> tuple[data.Split, list]:
     vocab = build_vocab()
     vocab.save(tmp_path / "vocab.json")
-    seqs = export_tokens.empty()
+    seqs, encoded = export_tokens.empty(), []
     for k, variant in enumerate(symmetries(tiny_model(), 3)):
-        export_tokens.add(seqs, variant, encode(variant, vocab, "set"), "set", 1, f"t/sym{k}")
-    gpt = encode(tiny_model()[:5], vocab, "brickgpt", colorless=True)
-    export_tokens.add(seqs, tiny_model()[:5], gpt, "brickgpt", -1, "g")
+        encoded.append(encode(variant, vocab, "set"))
+        export_tokens.add(seqs, variant, encoded[-1], "set", 1, f"t/sym{k}")
+    encoded.append(encode(tiny_model()[:5], vocab, "brickgpt", colorless=True))
+    export_tokens.add(seqs, tiny_model()[:5], encoded[-1], "brickgpt", -1, "g")
     seqs.save(tmp_path / "train.npz", vocab)
-    return data.Split(tmp_path / "train.npz", data.Vocab.load(tmp_path / "vocab.json")), seqs.encoded
+    return data.Split(tmp_path / "train.npz", data.Vocab.load(tmp_path / "vocab.json")), encoded
 
 
 def test_constants_match_the_token_format() -> None:
