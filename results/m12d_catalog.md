@@ -7,6 +7,7 @@
 - A window or door frame can now also carry its glass, panes and door (12 accessory files, no cells of their own).
 - **Recognized share of the 28 building sets: 69.5% → 82.8%; on grid: 56.9% → 65.3%.** The plan's target was 80–83%.
 - On the 20 OMR sets: 57.1 → 68.1% recognized, 24.7 → 27.5% on grid.
+- On all 1,821 local OMR models: 39.3 → 49.8% recognized, 23.2 → 29.2% on grid.
 - Style statistics v3 are relearned with the new parts (v1 and v2 kept).
 - Builds from the M8 catalog are unchanged (`test_m8_builds_are_unchanged`).
 
@@ -309,8 +310,84 @@ Recognized parts gain 13 points on the 28 sets and 11 on the 20 OMR sets; on-gri
 
 ### All local OMR models
 
-Pending: session B's crawl is still filling `data/omr` (about 1,836 models). The table over every local model follows
-in a small commit once it is done (third command in `docs/reproduce.md`).
+All 1,821 models session B crawled into `data/omr` (1,833 in the OMR index, 12 answer 404;
+`results/m12e_omr_pool.md`). Command: `coverage --on-grid --all`; raw data `m12d_coverage_all.json` (one row per
+model). The "catalog" columns match session B's pool driver at the 183-part catalog (49.8% / 29.2%), which uses the
+same counts.
+
+| set list | models | parts | four plates % | M8 % | M12b % | catalog % | on grid M8 % | on grid M12b % | on grid % |
+|---|---|---|---|---|---|---|---|---|---|
+| all local OMR models | 1,821 | 692,047 | 7.7 | 35.0 | 39.3 | **49.8** | 20.7 | 23.2 | **29.2** |
+
+Per model, the median recognized share rises from 44.3% to 53.6%. More models now clear each threshold:
+- ≥ 50% recognized: 704 → 1,025;
+- ≥ 80% recognized: 87 → 197.
+
+The whole OMR is far less brick-built than the 28 building sets: Technic, vehicles, minifigure-heavy scenes. Half its
+part instances are still parts the catalog has no model for.
+
+## Does the builder use the new parts?
+
+**Setup:**
+- Inventory-only D2 with the pipeline's defaults: room 1.5, style v3 from the fold that holds the set out, balance,
+  bridge, and connect with 10 rounds.
+- 10 seeds per set, one process.
+- Placed parts per catalog group, as the mean per build, against the group's share of the inventory.
+- Raw data: `out/m12d_family_use.json` (scratch script, not a driver).
+
+| set | grid | s/build | group: inventory → placed per build (used) | accessories fitted |
+|---|---|---|---|---|
+| 4956-1 | 39×18×18 | 75.3 | old 573 → 573 (100%); plain 3 → 2 (67%); per-cell 5 → 5; slope/curved 4 → 4; frames 10 → 10; keep-out 8 → 8 | 8 of 8 |
+| 5891-1 | 36×16×16 | 52.0 | old 460 → 460 (100%); plain 2 → 0 (0%); lookalikes 19 → 19; per-cell 1 → 1; slope/curved 2 → 2; frames 7 → 6.6 (94%) | 10.6 of 11 |
+| 6378-1 | 21×11×11 | 1.8 | old 204 → 200 (98%); jumpers 2 → 2 | none in the set |
+
+**Finding: yes.** Every new group is placed at about its inventory share (lookalikes, per-cell parts, slopes and
+curved parts, frames, keep-out parts, jumpers), and the frames carry their glass.
+
+**The exceptions are the baseplates** ("plain" here): 4956-1's 32×32 and 5891-1's two 16×32 are larger than the
+inventory's grid (18×18 and 16×16), so they never fit.
+
+**Caveats:**
+- Inventory-only builds place nearly the whole inventory, so this shows that nothing in the rules shuts the new parts
+  out. It does not show that the builder prefers them.
+- These three sets hold few new parts (1–6% of their inventory). The modular buildings, where M12d recognizes 15–22
+  points more, are the sets where the new parts matter.
+- Where the new parts go and how they look under a target shape needs a generation run, which this milestone does
+  not include.
+- 4956-1 and 5891-1 built slowly because of the baseplate in their tileset: a 32-stud reach, as measured in batch 2.
+  The fix is below.
+
+**Parts that fit nowhere are left out of the build** (`alt.pipeline.buildable`). The context's inventory drops the
+parts that fit nowhere in the build space, using `inventory.unusable`. That space is the target, or the whole grid
+without one.
+- Such a part can never be placed, but it still set the builder's reach.
+- Utilization is still measured against the whole inventory.
+- The candidate cache key records the left-out parts, and only when there are any. Builds of every other inventory
+  are unchanged and their caches stay valid.
+- The pipeline prints the left-out parts.
+
+Effect, same setup, 3 seeds:
+
+| set | left out | s/build before | s/build after | builds |
+|---|---|---|---|---|
+| 4956-1 | baseplate32x32 (grid 18×18) | 77.2 | 13.9 | different (the tileset has one part fewer, so the draws differ) |
+| 5891-1 | baseplate16x32 ×2 (16×16) | 50.7 | 11.9 | different |
+| 6378-1 | plate6x14 ×4 (11×11) | 2.1 | 2.1 | different |
+
+Fingerprints of seeds 0–2, as the first 16 hex characters of the sha256 of (shape, color, layer, x, z) per placed part:
+
+| set | before | after |
+|---|---|---|
+| 4956-1 | 16e03ad0c4f64ee4, b79a4dce418af4b2, af4a899cb4835dad | 26cf933862b866c5, 8c8ae75885416ed4, 034f8389c705f0b0 |
+| 5891-1 | 5bc375e577c1c2d3, 9359308dd9d4ed98, d0ad7b6816ede952 | ea0afd6dbe639798, c639fd5131761866, 8fbe11c210cc8074 |
+| 6378-1 | 4fe02161efbb8d1d, a5db72febc8b9c93, 7638dcc1a2d5316e | 16325a2d0d620595, 82ed0914654239a8, 8001a864d8b53d8f |
+
+The rule also applies with a target shape: a part that fits nowhere in the target (6378-1's 6×14 plates under a chair)
+is left out. So M12c runs where that happened build differently now. Their cache keys change, so the old candidates
+are not reused for them.
+
+`--keep-unfittable` (`AltConfig.keep_unfittable`, off by default) restores the old tileset and cache key. To rebuild
+M12b/M12c candidates, combine it with `--catalog m12b --style-version v2`; `docs/reproduce.md` has a dated note on this.
 
 ## Style statistics v3
 

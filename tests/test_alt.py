@@ -256,3 +256,18 @@ def test_small_part_options_reach_the_builder_and_the_cache_key(tiny_ldr: Path, 
     for context in (reserve, soft):
         candidates = generate(context, range(2))
         assert all(not set(c.failed) & {"generate", "integrity", "inventory", "support"} for c in candidates)
+
+
+def test_parts_that_fit_nowhere_are_left_out_of_the_build(tiny_ldr: Path, style_dir: tuple[Path, Path]) -> None:
+    # M12d: a 32 x 32 baseplate cannot fit the tiny model's grid; it would only slow every build (its reach).
+    source, label, context = tiny_context(tiny_ldr, style_dir)
+    assert context.inventory == source.inventory and "fit_nowhere" not in cache_key(source, label, context)
+    with tiny_ldr.open("a", encoding="utf-8") as f:
+        f.write("1 2 0 0 0 1 0 0 0 1 0 0 0 1 3811.dat\n")
+    source, label, context = tiny_context(tiny_ldr, style_dir)
+    assert ("baseplate32x32", "green") in source.inventory and max(context.grid[1:]) < 32
+    assert context.inventory == {k: n for k, n in source.inventory.items() if k[0] != "baseplate32x32"}
+    assert cache_key(source, label, context)["fit_nowhere"] == ["baseplate32x32"]
+    # --keep-unfittable restores the old tileset (and the old cache key)
+    _, _, kept = tiny_context(tiny_ldr, style_dir, keep_unfittable=True)
+    assert kept.inventory == source.inventory and "fit_nowhere" not in cache_key(source, label, kept)

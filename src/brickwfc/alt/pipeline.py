@@ -67,7 +67,7 @@ from brickwfc.alt.inputs import (CATALOGS, DATA_DIR, SETS_FILE, STYLE_DIR, STYLE
 from brickwfc.alt.output import layer_steps, write_build, write_sheet
 from brickwfc.bricks.accessories import fit
 from brickwfc.alt.target import Target, load_target, takes_supports
-from brickwfc.bricks.inventory import SIZINGS, inventory_cells, target_volume, unusable, utilization
+from brickwfc.bricks.inventory import SIZINGS, Inventory, inventory_cells, target_volume, unusable, utilization
 from brickwfc.bricks.recolor import recolor
 from brickwfc.bricks.shapes import SHAPES, fill, hollow, iou
 from brickwfc.bricks.style import StyleStats, events, matched_divergence
@@ -131,6 +131,7 @@ class AltConfig:
     small_last: float | None = None  # d2: the main pass weighs parts of <= 3 cells down, by (cells / 4) ** this
     regrow: bool = False  # d2, connected order: on a stall (under half the target), grow again from the next ground
     # region (``bricks/bottomup.py``, M12c)
+    keep_unfittable: bool = False  # keep the parts that fit nowhere in the build in its tileset (before M12d's buildable)
     strength: float = 1.0  # exponent on the learned style weights
     max_clutch: float = 1111.0  # physics: keep builds needing at most this clutch per stud, in plate-cell weights;
     # 1111 is a real stud (calibrated in results/m12b_overhangs_tables.md); inf: no limit
@@ -293,6 +294,14 @@ def solid_scale_shell(source: Source, config: AltConfig, data_dir: Path,
     return Target(mask, solid.preferred, description, solid.plane, solid.reconnected), details
 
 
+def buildable(inventory: Inventory, space: np.ndarray) -> Inventory:
+    """The inventory without the parts that fit nowhere in ``space`` (the target, or the whole grid): they could never
+    be placed, but a large one (a 32 x 32 baseplate) would still set the builder's reach and slow every build (M12d).
+    Utilization is still measured against the whole inventory."""
+    nowhere = unusable(inventory, space)
+    return {k: n for k, n in inventory.items() if k[0] not in nowhere}
+
+
 def make_context(source: Source, stats: StyleStats, config: AltConfig, target: Target | None = None) -> Context:
     config = resolve(config)
     if target is None:
@@ -303,7 +312,9 @@ def make_context(source: Source, stats: StyleStats, config: AltConfig, target: T
     else:
         mask, preferred = target.mask, target.preferred
         grid, empty = mask.shape, SHAPE_EMPTY_WEIGHT
-    return Context(source.inventory, source.colors, stats, grid, mask, preferred, empty, config.strength,
+    inventory = source.inventory if config.keep_unfittable else buildable(
+        source.inventory, mask if mask is not None else np.ones(grid, dtype=bool))
+    return Context(inventory, source.colors, stats, grid, mask, preferred, empty, config.strength,
                    config.generator, config.max_clutch, config.wfc_time_limit_s, config.balanced,
                    config.bridge, config.connect, config.connect_rounds, config.open_tops and target is not None,
                    config.order, config.proposal or "", config.skin and target is not None,
@@ -328,6 +339,8 @@ def cache_key(source: Source, style_label: str, context: Context) -> dict:
     }
     if context.generator == "d2":  # candidates built before version 2 (no field) are not reused
         key["builder_version"] = BUILDER_VERSION
+    if context.inventory != source.inventory:  # M12d: parts that fit nowhere left out (only then, so other caches stay)
+        key["fit_nowhere"] = sorted({k[0] for k in source.inventory} - {k[0] for k in context.inventory})
     if context.open_tops:  # only when on, so caches from before the rule stay valid
         key["open_tops"] = True
     if context.order != "random":  # likewise
@@ -619,6 +632,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--small-last", type=float, metavar="A",
                         help="d2: the main pass weighs parts of at most 3 cells down by (cells / 4) ** A (a soft "
                         "--reserve-small)")
+    parser.add_argument("--keep-unfittable", action="store_true",
+                        help="keep parts that fit nowhere in the build in its tileset (as before M12d; they are never "
+                        "placed but slow every build). Reproduces the M12b/M12c builds, with --catalog m12b "
+                        "--style-version v2")
     parser.add_argument("--regrow", action="store_true",
                         help="d2 with --order connected: when the growth stalls (covers under half the target), grow "
                         "again from the next ground region; keep the best attempt")
@@ -698,7 +715,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         symmetric=args.symmetric, symmetrize_min_score=args.symmetrize_min_score, sizing=args.sizing,
         fill_slack=args.fill_slack,
         holes=args.holes, hang=args.hang, reserve_small=args.reserve_small, small_last=args.small_last,
-        regrow=args.regrow,
+        regrow=args.regrow, keep_unfittable=args.keep_unfittable,
         strength=args.strength, max_clutch=args.max_clutch, wfc_time_limit_s=args.wfc_time_limit,
         min_size_quantile=args.min_size_quantile, fill_floor=args.fill_floor, min_fill=args.min_fill, fill_weight=args.fill_weight,
         complete_first=not args.no_complete_first, bar=args.bar, complete_fill=args.complete_fill,
@@ -732,6 +749,12 @@ def main(argv: Sequence[str] | None = None) -> int:
               f"{shell['budget_cells'] - shell['cells']} more than the shell; fit nowhere in the shell: "
               f"{shell['fit_nowhere_cells']} cells ({nowhere})")
     context = make_context(source, stats, config, target)
+    if context.inventory != source.inventory:
+        dropped: Counter[str] = Counter()
+        for (name, _), n in source.inventory.items():
+            if (name, _) not in context.inventory:
+                dropped[name] += n
+        print(f"left out of the build (fit nowhere in it): {', '.join(f'{name} x{n}' for name, n in sorted(dropped.items()))}")
     cache = out / "candidates.jsonl"
     if args.fresh and cache.exists():
         cache.unlink()
