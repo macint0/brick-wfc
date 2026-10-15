@@ -75,7 +75,7 @@ def voxelize(instances: list[PartInstance], known: Mapping[str, Part] = BY_FILE)
         px, py, pz = inst.position
         corner_x = px / STUD_LDU - origin_x
         corner_z = pz / STUD_LDU - origin_z
-        layer = -py / PLATE_LDU - (part.height if part.origin_top else 0)  # -Y is up
+        layer = -py / PLATE_LDU - part.origin_layer  # -Y is up
         # A turn with the same cells as an earlier one (a rectangle turned twice) is that shape.
         candidates.append((canonical(part, turn), inst.color, corner_x, corner_z, layer))
     report.unrecognized_top = unrecognized.most_common(10)

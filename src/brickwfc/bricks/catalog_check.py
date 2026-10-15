@@ -13,6 +13,10 @@ where the model puts its cells: one in each empty cell of its bounding box (a co
 flush beside the part; one on each cell the model thinks has a stud must sit on a real stud (not float
 over or cut into a sloped face); and a part with an open (sloped) bottom stands one plate up, on 1x1
 plates under its flat cells only, none of which may cut into the sloped underside.
+
+M12d parts follow the same rules: arches stand one plate up on markers under their two end cells (none may cut
+into the arch), parts with studs on some cells carry markers on those only, and a baseplate lies on the ground with
+a marker on each stud.
 """
 
 from __future__ import annotations
@@ -40,7 +44,7 @@ def with_markers(shape: Shape, x: int, z: int) -> list[PlacedPart]:
     its cells (see the module docstring)."""
     red, yellow = colors_by_name(["red", "yellow"])
     marker = Shape(CATALOG["plate1x1"])
-    layer = 1 if len(shape.geometry.seated) < len(shape.footprint) else 0
+    layer = 1 if len(shape.geometry.seated) < len(shape.footprint) and not shape.part.ground_only else 0
     placed = [PlacedPart(shape, red, layer, x, z)]
     for dz in range(shape.size_z):
         for dx in range(shape.size_x):

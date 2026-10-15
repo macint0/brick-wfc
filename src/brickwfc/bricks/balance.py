@@ -72,7 +72,7 @@ def ground_corners(part: PlacedPart) -> list[Point]:
     if part.shape.rectangular:
         x0, z0, x1, z1 = part.x, part.z, part.x + part.shape.size_x, part.z + part.shape.size_z
         return [(x0, z0), (x1, z0), (x1, z1), (x0, z1)]
-    return [(x + cx, z + cz) for _, z, x in part.seated_cells() for cx in (0, 1) for cz in (0, 1)]
+    return [(x + cx, z + cz) for _, z, x in part.contact_cells() for cx in (0, 1) for cz in (0, 1)]
 
 
 @dataclass

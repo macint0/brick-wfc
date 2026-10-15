@@ -19,7 +19,7 @@ Grids are indexed (y, z, x), as in ``tileset.GRID3D``.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from typing import Literal, Mapping, Sequence
 
@@ -49,11 +49,15 @@ class Part:
     rectangle centred on the LDraw origin, every top cell has a stud (if ``studs``) and every bottom cell
     is flat. Other parts list their ``cells`` (stud-cell centres from the origin, as in the part's .dat
     file), the cells with a stud on top (``stud_cells``) and the cells with a flat bottom
-    (``seated_cells``). ``origin_top``: the origin is on the top face (most parts), else on the bottom.
+    (``seated_cells``). ``origin_top``: the origin is on the top face (most parts), else on the bottom;
+    ``origin_plates`` (M12d), when set, puts it that many plates above the bottom instead (a part whose box is
+    taller than the face its origin is on).
     ``aliases``: older LDraw file names of the same part ("~Moved to" files) that models still use.
     ``sloped_rows``: for a slope falling toward its local -Z, how many rows (from the low end) its sloped face
     covers: its top for a plain slope, its bottom for an inverted one (the parts with ``seated_cells``). Only
     the preview draws it (``build.slope_profiles``); the model treats the part as its box.
+    ``ground_only`` (M12d, baseplates): the part cannot rest on studs (``seated_cells`` is empty), so it only goes on
+    the ground, where its whole bottom touches the table (``PlacedPart.contact_cells``).
     """
 
     name: str
@@ -69,6 +73,20 @@ class Part:
     origin_top: bool = True
     aliases: tuple[str, ...] = ()
     sloped_rows: int = 0
+    ground_only: bool = False
+    origin_plates: int | None = None
+
+    def __hash__(self) -> int:
+        # Equal parts have the same name and file; hashing every field (a baseplate's 512 cells, three times) on each
+        # cached ``geometry`` lookup dominated build time (M12d).
+        return hash((self.name, self.ldraw))
+
+    @property
+    def origin_layer(self) -> int:
+        """Plates from the bottom of the part's box up to its LDraw origin."""
+        if self.origin_plates is not None:
+            return self.origin_plates
+        return self.height if self.origin_top else 0
 
     @property
     def footprint_cells(self) -> Cells:
@@ -151,6 +169,7 @@ def _roof(name: str, file: str, width: int, depth: int, height: int = 3, origin_
 # Geometry (cells, studs, flat bottoms, origin, height) read from the LDraw library's .dat files.
 _M12B_LOOKALIKES = _family("brick", "4216:1x2", suffix=True)  # brick with groove
 _CORNERS = [_corner("plate", "2420"), _corner("brick", "2357")]
+_CORNERS[0] = replace(_CORNERS[0], aliases=("63325.dat",))  # M12d: 63325 is an alias file of 2420
 _SLOPES = [
     _slope("slope45_2x1", "3040b", 1, 2),
     _slope("slope45_2x2", "3039", 2, 2),
@@ -163,7 +182,7 @@ _SLOPES = [
     _slope("slope18_4x2", "30363", 2, 4),
     _slope("slope65_2x1x2", "60481a", 1, 2, height=6, aliases=("60481",)),
     _slope("slope75_2x1x3", "4460a", 1, 2, height=9, aliases=("4460",)),
-    _slope("slope45inv_2x1", "3665a", 1, 2, inverted=True, aliases=("3665",)),
+    _slope("slope45inv_2x1", "3665a", 1, 2, inverted=True, aliases=("3665", "3665b")),  # 3665b: M12d
     _slope("slope45inv_2x2", "3660", 2, 2, inverted=True, aliases=("3660a",)),
     _slope("slope33inv_3x2", "3747a", 2, 3, inverted=True),
     # Corner slopes: 2x2 with one stud (convex) or three (concave); the sloped cells are studless.
@@ -178,10 +197,120 @@ _SLOPES = [
     _roof("slope31_1x1x2", "54200", 1, 1, height=2, origin_top=False),  # "cheese slope"; origin on its bottom
     _roof("slope45double_1x1x2", "35464", 1, 1, height=2, origin_top=False),
 ]
-CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES + _M12B_LOOKALIKES + _CORNERS + _SLOPES}
+
+
+def _mapped(name: str, file: str, kind: Kind, height: int, rows: Sequence[str], first: tuple[float, float],
+            origin_top: bool = True, origin_plates: int | None = None, aliases: tuple[str, ...] = ()) -> Part:
+    """A part from its cell map, as ``ldraw.library`` prints it: one string per row of cells along LDraw +Z, one
+    character per cell along +X, starting at the cell centred on ``first`` (x, z) studs from the origin.
+    ``S``: a stud on top and a flat bottom; ``s``: a stud, bottom not flat; ``#``: flat bottom, no stud; ``.``: in
+    the footprint, neither; a space: not in the footprint. Width and depth are the map's."""
+    cells, studs, seats = [], [], []
+    for j, row in enumerate(rows):
+        for i, char in enumerate(row):
+            if char == " ":
+                continue
+            cell = (first[0] + i, first[1] + j)
+            cells.append(cell)
+            if char in "Ss":
+                studs.append(cell)
+            if char in "S#":
+                seats.append(cell)
+    return Part(name, f"{file}.dat", max(len(r) for r in rows), len(rows), height, bool(studs), kind, tuple(cells),
+                stud_cells=tuple(studs), seated_cells=tuple(seats), origin_top=origin_top, origin_plates=origin_plates,
+                aliases=tuple(f"{a}.dat" for a in aliases))
+
+
+def _box(name: str, file: str, kind: Kind, width: int, depth: int, height: int, studs: bool = True,
+         aliases: tuple[str, ...] = ()) -> Part:
+    """A rectangular part of any height (studs on every top cell, or none; flat bottom), centred on its origin."""
+    return Part(name, f"{file}.dat", width, depth, height, studs, kind, aliases=tuple(f"{a}.dat" for a in aliases))
+
+
+def _baseplate(name: str, file: str, width: int, depth: int) -> Part:
+    """A baseplate: 4 LDU thick, modelled as one plate (the box holds the part); it lies on the table and takes no
+    stud (``ground_only``: no seated cells)."""
+    cells = tuple((x - (width - 1) / 2, z - (depth - 1) / 2) for z in range(depth) for x in range(width))
+    return Part(name, f"{file}.dat", width, depth, 1, True, "plate", cells, stud_cells=cells, seated_cells=(),
+                ground_only=True)
+
+
+# M12d batch 1: parts the existing mechanisms describe, appended so that earlier parts keep their style indices.
+# Geometry from the parts' .dat files (``ldraw.library``; facts in tests/test_catalog_shapes.py). A cell is seated
+# where the bottom plane covers at least 10% of it (rounded corners leave slivers below that). A stud a plate or
+# more below the box's top (6091, 6005, 92946) is hidden inside the box: the part counts as studless there.
+_M12D_PLAIN = (
+    _family("plate", "4282:2x16 3029:4x12 3028:6x12 3027:6x16")
+    + [_box("brick1x2x2", "3245c", "brick", 2, 1, 6, aliases=("3245a",)),
+       _box("brick1x2x5", "2454", "brick", 2, 1, 15),
+       _box("brick1x1x3", "14716", "brick", 1, 1, 9),
+       _box("brick1x1x5", "2453a", "brick", 1, 1, 15, aliases=("2453",)),
+       _baseplate("baseplate16x32", "3857", 32, 16),
+       _baseplate("baseplate32x32", "3811", 32, 32)]
+)
+_M12D_LOOKALIKES = (
+    _family("brick", "4217:1x14 30136:1x2 98283:1x2 15533:1x4 3700:1x2 6541:1x1 32064a:1x2 32064b:1x2 "
+                     "59900:1x1 4589:1x1", suffix=True)
+    + _family("tile", "3070a:1x1 98138:1x1 25269:1x1", suffix=True)
+    + _family("plate", "85861:1x1 24866:1x1 35480:1x2", suffix=True)
+    + [_box("panel1x1x1_6231", "6231", "brick", 1, 1, 3, studs=False),
+       _box("panel1x2x1_4865a", "4865a", "brick", 2, 1, 3, studs=False),
+       _box("panel1x2x1_4865b", "4865b", "brick", 2, 1, 3, studs=False),
+       _box("panel1x2x2_87552", "87552", "brick", 2, 1, 6),
+       _box("panel1x2x2_4864b", "4864b", "brick", 2, 1, 6),
+       _box("panel1x2x3_2362b", "2362b", "brick", 2, 1, 9)]
+)
+_M12D_CELLS = [
+    # corners and round corners (the box is kept where the real part is rounded off)
+    Part("tile2x2_corner", "14719.dat", 2, 2, 1, False, "tile", cells=((0, 0), (1, 0), (0, 1))),
+    _mapped("plate3x3_round_corner", "30357", "plate", 1, ["SSS", "SSS", "SS."], (0, 0)),
+    _mapped("tile2x2_round_corner", "27925", "tile", 1, ["#.", "##"], (0, -1)),
+    _mapped("brick2x2_round_corner", "3063b", "brick", 3, ["S.", "#S"], (0, -1)),
+    _mapped("brick2x2_round_corner_85080", "85080", "brick", 3, ["S.", "#S"], (0, -1)),
+    # plates with studs on some cells only
+    _mapped("plate1x4_2studs", "92593", "plate", 1, ["S##S"], (-1.5, 0)),
+    _mapped("plate1x4_2studs_41740", "41740", "plate", 1, ["S##S"], (-1.5, 0)),
+    _mapped("plate2x2_2studs", "33909", "plate", 1, ["##", "SS"], (-0.5, -0.5)),
+    _mapped("plate4x4_4studs", "6179", "plate", 1, ["####", "####", "####", "SSSS"], (-1.5, -1.5)),
+    _mapped("plate2x3_hole", "3176", "plate", 1, ["##", "SS", "SS"], (-0.5, -1.5)),
+    # arches: seated at their ends only (the box stays full)
+    _mapped("arch1x4", "3659", "brick", 3, ["SssS"], (-1.5, 0)),
+    _mapped("arch1x6", "3455", "brick", 3, ["SssssS"], (-2.5, 0)),
+    _mapped("arch1x6_raised", "92950", "brick", 3, ["SssssS"], (-2.5, 0)),
+    _mapped("arch1x4x2", "6182", "brick", 6, ["SssS"], (-1.5, 0)),
+    _mapped("arch1x6x2", "3307", "brick", 6, ["SssssS"], (-2.5, 0)),
+    _mapped("arch1x3x2_curved", "6005", "slope", 6, ["#", ".", "."], (0, -2)),
+]
+_M12D_SLOPES = [
+    _slope("slope65_2x2x2", "3678b", 2, 2, height=6, aliases=("3678a",)),
+    _slope("slope75_2x2x3", "3684c", 2, 2, height=9),
+    _slope("slope33_3x3", "4161", 3, 3),
+    _mapped("slope33_3x6", "3939", "slope", 3, ["######", "#....#", "S....S"], (-2.5, -2)),
+    _mapped("slope33convex_3x3", "3675", "slope", 3, ["###", "###", "S##"], (0, -2)),
+    _roof("slope33double_2x2", "3300", 2, 2),
+    _roof("slope33double_2x4", "3299", 4, 2),
+    _roof("slope45triple_1x2", "3048b", 2, 1),
+    _roof("slope31_1x2x2", "85984", 2, 1, height=2, origin_top=False),
+    _mapped("slope45_2x1_cutout", "92946", "slope", 3, ["#", "#"], (0, -0.5), origin_plates=1),
+    # curved bricks and slopes: studless boxes
+    _mapped("curved1x2x4_6091", "6091", "slope", 4, ["#", "."], (0, -1)),
+    _roof("curved1x4x4_6191", "6191", 4, 1, height=4),
+    _roof("curved1x2_37352", "37352", 2, 1),
+    _mapped("curved2x3_6215", "6215", "brick", 3, ["SS#", "SS#"], (-0.5, -0.5)),
+    _mapped("curved3x1", "50950", "slope", 3, ["#", "#", "."], (0, -1)),
+    _mapped("curved4x1", "61678", "slope", 3, ["#", "#", ".", "."], (0, -1.5)),
+    _mapped("curved2x1", "11477", "slope", 2, ["#", "."], (0, -0.5), origin_top=False),
+    _mapped("curved2x2x2", "15068", "slope", 2, ["##", ".."], (-0.5, -0.5), origin_top=False),
+    _mapped("curved4x1_double", "93273", "slope", 2, ["#", ".", ".", "#"], (0, -1.5), origin_top=False),
+    _roof("curved1x1x2_49307", "49307", 1, 1, height=2, origin_top=False),
+]
+M12D_BATCH1 = _M12D_PLAIN + _M12D_LOOKALIKES + _M12D_CELLS + _M12D_SLOPES
+CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES + _M12B_LOOKALIKES + _CORNERS + _SLOPES + M12D_BATCH1}
 BY_FILE: dict[str, Part] = {file: p for p in CATALOG.values() for file in (p.ldraw, *p.aliases)}
-# The M8 catalog (before corners and slopes), for before/after comparisons.
+# The M8 catalog (before corners and slopes) and the M12b one (before M12d), for before/after comparisons.
 M8_FILES: dict[str, Part] = {p.ldraw: p for p in _PLAIN + _LOOKALIKES}
+M12B_FILES: dict[str, Part] = {file: p for p in _PLAIN + _LOOKALIKES + _M12B_LOOKALIKES + _CORNERS + _SLOPES
+                               for file in (p.ldraw, *p.aliases) if file not in ("3665b.dat", "63325.dat")}
 
 # M4-M11 used these four plates only; experiments that reproduce those tables still do.
 PLATES: dict[str, Part] = {name: CATALOG[name] for name in ("plate1x1", "plate1x2", "plate2x2", "plate2x4")}
@@ -527,6 +656,13 @@ class PlacedPart:
         """(y, z, x) of the bottom cells with a flat underside: the ones that rest on studs below."""
         return [(self.layer, self.z + dz, self.x + dx) for dz, dx in self.shape.footprint if self.shape.seated(dz, dx)]
 
+    def contact_cells(self) -> list[tuple[int, int, int]]:
+        """(y, z, x) of the bottom cells that bear on what is below: the seated cells, and on the ground a
+        ground-only part's whole bottom (a baseplate lies flat on the table)."""
+        if self.shape.part.ground_only and self.layer == 0:
+            return self.bottom_cells()
+        return self.seated_cells()
+
     def stud_cells(self) -> list[tuple[int, int, int]]:
         """(y, z, x) of the top cells that carry a stud."""
         return [(self.top, self.z + dz, self.x + dx) for dz, dx in self.shape.footprint if self.shape.studded(dz, dx)]
@@ -541,7 +677,7 @@ class PlacedPart:
         """LDraw placement: the part's origin (on its top face for most parts) turned with the part."""
         origin_x, origin_z = self.shape.geometry.origin
         rotation = turn_rotation(self.shape.turn) if self.shape.turn else IDENTITY
-        height = self.layer + self.shape.size_y if self.shape.part.origin_top else self.layer
+        height = self.layer + self.shape.part.origin_layer
         position = stud_position(self.x + origin_x, self.z + origin_z, height)
         return Placement(self.color.ldraw, position, rotation, self.shape.part.ldraw)
 

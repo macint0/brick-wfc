@@ -13,6 +13,7 @@ from brickwfc.bricks.parts import (
     BY_FILE,
     CATALOG,
     DOWN,
+    M12D_BATCH1,
     UP,
     Part,
     PartSet,
@@ -58,6 +59,8 @@ def test_catalog() -> None:
     assert len({p.ldraw for p in CATALOG.values()}) == len(CATALOG)
     for part in CATALOG.values():
         if part.kind == "slope":  # M12b: long along their fall (LDraw Z); see test_catalog_shapes
+            continue
+        if part in M12D_BATCH1:  # M12d: tall bricks, studless panels, arches; checked against their .dat facts
             continue
         assert part.width >= part.depth  # LDraw parts are long along X
         assert part.height == {"plate": 1, "brick": 3, "tile": 1}[part.kind]
