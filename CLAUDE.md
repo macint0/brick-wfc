@@ -553,6 +553,15 @@ open; nothing changes there now.
   Evaluation plan in `results/m12e_training_plan.md`: held-out loss, then builds judged by surface cleanliness, mirror
   share, colour coherence and rendered sheets, with the contact judge reported but not deciding. **Training itself
   waits for the M12d catalog** (the vocabulary changes); Mac runs the notebook on Colab Pro.
+- **M12d follow-up merged (84f6d89, 681 tests); M12d complete.** All 1,821 crawled models: recognized 35.0% (M8) /
+  39.3% (M12b) / **49.8%** now, on grid 20.7 / 23.2 / **29.2%**; median per model 44.3 → 53.6%; models ≥ 50% recognized
+  704 → 1,025, ≥ 80% 87 → 197 (`m12d_coverage_all.json`, `coverage --all`). New parts are placed at their inventory
+  share in inventory-only builds (10 seeds × 3 sets); only baseplates larger than the grid go unused. **Parts that fit
+  nowhere in the build space are left out of the tileset before building** (`alt.pipeline.buildable`, via
+  `inventory.unusable`; utilization still against the full inventory; the cache key records the dropped names):
+  4956-1 77 → 14 s and 5891-1 51 → 12 s per build; builds change where a part is dropped (fingerprints in the write-up),
+  so M12b/M12c candidates rebuild exactly only with `--catalog m12b --style-version v2 --keep-unfittable` or at d15e46b
+  (dated note in `docs/reproduce.md`, pointers on 16 sections).
 - **M12e (1) merged (9e5f70b): the OMR crawl and the training pool** (`results/m12e_omr_pool.md`). `ldraw/omr_crawl.py`
   (index at library.ldraw.org/omr/sets?page=N; 1470 sets, 1833 distinct models = 1470 main + 363 official alternates;
   1821 on disk in `data/omr`, 12 answer 404, `crawl_failures.txt`; one request at a time, atomic writes, resumable; the
