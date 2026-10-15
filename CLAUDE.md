@@ -553,6 +553,19 @@ open; nothing changes there now.
   Evaluation plan in `results/m12e_training_plan.md`: held-out loss, then builds judged by surface cleanliness, mirror
   share, colour coherence and rendered sheets, with the contact judge reported but not deciding. **Training itself
   waits for the M12d catalog** (the vocabulary changes); Mac runs the notebook on Colab Pro.
+- **M12e (1) merged (9e5f70b): the OMR crawl and the training pool** (`results/m12e_omr_pool.md`). `ldraw/omr_crawl.py`
+  (index at library.ldraw.org/omr/sets?page=N; 1470 sets, 1833 distinct models = 1470 main + 363 official alternates;
+  1821 on disk in `data/omr`, 12 answer 404, `crawl_failures.txt`; one request at a time, atomic writes, resumable; the
+  full pass took 174 min). `experiments/omr_pool.py` measures every model at the current catalog (cached per catalog
+  fingerprint, 31 s): all 1821 models 692,047 part instances, 49.8% recognized, 29.2% on grid; most-missed are Technic
+  pins and hoses. **Pool: 582 models from 457 sets** (435 main + 147 alternates, alternates kept as their own sequences
+  and marked `alternate_of` so a held-out set holds out its alternates): ≥ 50% recognized, ≥ 50% of recognized on grid,
+  ≥ 20 on-grid parts, no re-releases, flat mosaics dropped (≤ 9 plates tall over ≥ 1024 square studs: the 9 Art sets,
+  which would have been 22% of the on-grid parts); 228,479 instances, 72.9% recognized, 121,521 on grid (53.2%),
+  27 / 94 / 448 on-grid parts per model at the 10th / 50th / 90th percentile. Off-grid split in the pool: tilted 13.7%
+  of instances, off the stud grid 5.3%, overlapping 0.6%: **tilted is 2.6× the jumper kind, so sideways building is the
+  next catalog step**, not half-stud offsets. Both demo sets are in the pool. Commits 2 (token export) and 3 (Colab
+  notebook, training plan) follow.
 - Coordinator (this session): merges on main, full pytest per merge, CLAUDE.md; no experiments on the PC.
 
 ### M13 — Experiments for the paper
