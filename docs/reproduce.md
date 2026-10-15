@@ -789,6 +789,19 @@ python -m brickwfc.experiments.export_tokens --pool results/m12e_omr_pool.json -
 - Deterministic: the validation sets are a seeded share (`--val-share 0.05 --val-seed 0`); the demo sets are
   `--heldout-sets` (default 6378-1 31048-1).
 
+### `results/m12e_training_plan.md` (M12e: training plan and evaluation plan; nothing trained yet)
+
+A plan, not a run. Training runs on Colab with `training/colab_v2.ipynb` (`CONFIG = 'smoke'`, then `'base'`, then
+`'scaled'`). It needs the tokens from the entry above on Google Drive and a `GITHUB_TOKEN` secret; the checklist is in
+the write-up. To check the training script locally without a GPU, use a throwaway CPU-only torch venv (torch is not a
+project dependency) and a tiny configuration:
+
+```
+python training/train.py --data data/tokens_v2 --out out/proposal_smoke --d-model 32 --layers 2 --heads 2 \
+    --steps 40 --batch 4 --eval-every 10 --val-builds 5 --patience 2
+PYTHONPATH=src python training/parity.py check --weights out/proposal_smoke/proposal.npz --data data/tokens_v2
+```
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
