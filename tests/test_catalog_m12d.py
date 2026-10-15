@@ -9,7 +9,7 @@ from brickwfc.bricks.balance import ground_corners
 from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.catalog_check import layout
 from brickwfc.bricks.colors import colors_by_name
-from brickwfc.bricks.parts import (BY_FILE, CATALOG, M12D_BATCH1, M12D_FRAMES, PlacedPart, Shape, canonical, extract_parts,
+from brickwfc.bricks.parts import (BY_FILE, CATALOG, M12D_BATCH1, M12D_FRAMES, M12D_JUMPERS, PlacedPart, Shape, canonical, extract_parts,
                                    part_tileset, shapes_of)
 from brickwfc.bricks.physics import required_clutch, tipping_clusters
 from brickwfc.bricks.stability import SupportConstraint
@@ -22,7 +22,7 @@ from brickwfc.wfc import run
 from test_catalog_shapes import LDRAW, check_build, faces_clear
 
 RED, BLUE = colors_by_name(["red", "blue"])
-M12D = M12D_BATCH1 + M12D_FRAMES
+M12D = M12D_BATCH1 + M12D_FRAMES + M12D_JUMPERS
 BUILDS = 60
 # A mix of the new mechanisms: an arch, a round corner, studs on some cells, a cutout slope (origin inside its
 # box), curved studless parts (origin on the bottom), a tall brick, a lookalike, plus plain parts to build on.
@@ -159,7 +159,7 @@ def test_coverage_counts_new_parts() -> None:
 1 4 0 -8 0 1 0 0 0 1 0 0 0 1 3020.dat
 1 4 0 -32 10 1 0 0 0 1 0 0 0 1 3659.dat
 1 4 70 -32 10 1 0 0 0 1 0 0 0 1 6091.dat
-1 4 0 -40 0 1 0 0 0 1 0 0 0 1 3794b.dat
+1 4 0 -40 0 1 0 0 0 1 0 0 0 1 3820.dat
 0 NOFILE
 """
     row = set_coverage("fake-1", mpd, on_grid=True)
@@ -175,3 +175,22 @@ def test_primitives_are_not_counted_as_parts() -> None:
         assert PRIMITIVE.search(name), name
     for name in ("3001.dat", "60592c01.dat", "3794a.dat", "6091.dat"):
         assert not PRIMITIVE.search(name), name
+
+
+def test_jumpers_take_nothing_on_top() -> None:
+    parts = part_tileset([CATALOG["jumper1x2_3794b"], CATALOG["plate1x2"], CATALOG["brick1x2"]], [RED])
+    base = PlacedPart(Shape(CATALOG["brick1x2"]), RED, 0, 0, 0)
+    jumper = PlacedPart(Shape(CATALOG["jumper1x2_3794b"]), RED, 3, 0, 0)
+    on_top = PlacedPart(Shape(CATALOG["plate1x2"]), RED, 4, 0, 0)
+    assert extract_parts(tile_grid([base, jumper], parts), parts)[1] == []
+    assert any("sits on" in e for e in extract_parts(tile_grid([base, jumper, on_top], parts), parts)[1])
+    filled = np.zeros((4, 1, 2), dtype=bool)
+    for cell in base.cells() + jumper.cells():
+        filled[cell] = True
+    assert is_stable([base, jumper], filled) and jumper.stud_cells() == []
+    builder = BottomUpBuilder(parts, any_offset=True, balanced=True)
+    used = 0
+    for seed in range(20):
+        placed = check_build(builder.build((6, 3, 4), np.random.default_rng(seed)), parts)
+        used += any(p.shape.part.name == "jumper1x2_3794b" for p in placed)
+    assert used
