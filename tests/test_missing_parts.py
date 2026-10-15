@@ -7,8 +7,8 @@ from brickwfc.experiments.missing_parts import PRIMITIVE, kind_of, main, markdow
 MODEL = "\n".join([
     "0 FILE test.mpd",
     "1 4 0 0 0 1 0 0 0 1 0 0 0 1 3024.dat",  # plate 1x1: in the catalog
-    "1 4 20 0 0 1 0 0 0 1 0 0 0 1 3794a.dat",  # jumper: missing
-    "1 4 40 0 0 1 0 0 0 1 0 0 0 1 3794a.dat",
+    "1 4 20 0 0 1 0 0 0 1 0 0 0 1 4599a.dat",  # tap: missing (jumpers are catalog parts since M12d batch 4)
+    "1 4 40 0 0 1 0 0 0 1 0 0 0 1 4599a.dat",
     "1 4 60 0 0 1 0 0 0 1 0 0 0 1 3820.dat",  # minifig hand: missing
     "1 4 80 0 0 1 0 0 0 1 0 0 0 1 rect3.dat",  # primitives: not parts
     "1 4 80 0 0 1 0 0 0 1 0 0 0 1 4-4cyli.dat",
@@ -21,14 +21,14 @@ def test_primitives_are_not_parts() -> None:
     assert all(PRIMITIVE.search(n) for n in ("rect3.dat", "box2-5.dat", "tri3a1.dat", "t01i3333.dat", "4-4cyli.dat",
                                               "stud.dat", "stud4.dat", "s\\3001s01.dat", "48/4-4cyli.dat"))
     assert not any(PRIMITIVE.search(n) for n in ("3024.dat", "3794a.dat", "60593c01.dat", "3626bp01.dat"))
-    assert model_parts(MODEL) == ["3024.dat", "3794a.dat", "3794a.dat", "3820.dat"]
+    assert model_parts(MODEL) == ["3024.dat", "4599a.dat", "4599a.dat", "3820.dat"]
 
 
 def test_rank_counts_missing_instances_and_models() -> None:
     ranking = rank([MODEL, MODEL.replace("3820", "3024")])
     assert (ranking.total, ranking.recognized) == (8, 3)
-    assert ranking.missing == Counter({"3794a.dat": 4, "3820.dat": 1})
-    assert ranking.sets_with == Counter({"3794a.dat": 2, "3820.dat": 1})
+    assert ranking.missing == Counter({"4599a.dat": 4, "3820.dat": 1})
+    assert ranking.sets_with == Counter({"4599a.dat": 2, "3820.dat": 1})
     assert ranking.recognized_pct == 37.5
 
 

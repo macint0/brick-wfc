@@ -274,6 +274,13 @@ LDRAW.update({
     "93274.dat": {"studs": [(-10, 0), (10, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 8)},
     "2921.dat": {"studs": [(0, 0)], "x": (-10, 10), "z": (-10, 10), "y": (0, 24)},
 })
+# M12d batch 4: jumpers; the one stud sits between the cells (off the grid), so the top counts as studless.
+LDRAW.update({
+    "3794a.dat": {"studs": [], "offgrid_studs": [(0, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 8)},
+    "3794b.dat": {"studs": [], "offgrid_studs": [(0, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 8)},
+    "15573.dat": {"studs": [], "offgrid_studs": [(0, 0)], "x": (-20, 20), "z": (-10, 10), "y": (0, 8)},
+    "87580.dat": {"studs": [], "offgrid_studs": [(0, 0)], "x": (-20, 20), "z": (-20, 20), "y": (0, 8)},
+})
 SLOPES = [p for p in CATALOG.values() if p.kind == "slope"]
 CORNERS = [CATALOG["plate2x2_corner"], CATALOG["brick2x2_corner"]]
 FAMILY = CORNERS + [CATALOG[n] for n in ("plate1x1", "plate1x2", "brick1x2", "brick2x2", "tile1x1")]
@@ -579,7 +586,7 @@ def test_coverage_counts_m8_and_new_parts() -> None:
 1 4 0 -8 0 1 0 0 0 1 0 0 0 1 3020.dat
 1 4 0 -32 10 1 0 0 0 1 0 0 0 1 3039.dat
 1 4 80 -24 10 1 0 0 0 1 0 0 0 1 3660a.dat
-1 4 0 -40 0 1 0 0 0 1 0 0 0 1 3794b.dat
+1 4 0 -40 0 1 0 0 0 1 0 0 0 1 3820.dat
 0 NOFILE
 """
     row = set_coverage("fake-1", mpd, on_grid=True)

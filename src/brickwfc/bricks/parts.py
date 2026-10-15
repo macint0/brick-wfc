@@ -367,8 +367,17 @@ M12D_KEEP_OUT = [
     Part("brick1x1_handle_2921", "2921.dat", 1, 1, 3, True, "brick", keep_out=_row((0,), -1, 0, 2)),
 ]
 M12D_KEEP_OUT[2] = replace(M12D_KEEP_OUT[2], keep_out=_row([x - 3.5 for x in range(8)], -2, 0, 1))
+# M12d batch 4: jumpers, plates with one stud between their cells (off the stud grid). Modelled as plates with a studless
+# top: nothing goes on them. A real model's part on a jumper's stud is half a stud off the grid, so the voxelizer
+# already drops it.
+M12D_JUMPERS = [
+    _box("jumper1x2_3794a", "3794a", "plate", 2, 1, 1, studs=False),
+    _box("jumper1x2_3794b", "3794b", "plate", 2, 1, 1, studs=False),
+    _box("jumper1x2_15573", "15573", "plate", 2, 1, 1, studs=False),
+    _box("jumper2x2_87580", "87580", "plate", 2, 2, 1, studs=False),
+]
 CATALOG: dict[str, Part] = {p.name: p for p in _PLAIN + _LOOKALIKES + _M12B_LOOKALIKES + _CORNERS + _SLOPES + M12D_BATCH1
-                            + M12D_FRAMES + M12D_KEEP_OUT}
+                            + M12D_FRAMES + M12D_KEEP_OUT + M12D_JUMPERS}
 BY_FILE: dict[str, Part] = {file: p for p in CATALOG.values() for file in (p.ldraw, *p.aliases)}
 # The M8 catalog (before corners and slopes) and the M12b one (before M12d), for before/after comparisons.
 M8_FILES: dict[str, Part] = {p.ldraw: p for p in _PLAIN + _LOOKALIKES}

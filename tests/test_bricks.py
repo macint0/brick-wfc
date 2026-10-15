@@ -15,6 +15,7 @@ from brickwfc.bricks.parts import (
     DOWN,
     M12D_BATCH1,
     M12D_FRAMES,
+    M12D_JUMPERS,
     UP,
     Part,
     PartSet,
@@ -61,7 +62,7 @@ def test_catalog() -> None:
     for part in CATALOG.values():
         if part.kind == "slope":  # M12b: long along their fall (LDraw Z); see test_catalog_shapes
             continue
-        if part in M12D_BATCH1 or part in M12D_FRAMES:  # M12d: tall bricks, panels, arches, frames: .dat facts
+        if part in M12D_BATCH1 + M12D_FRAMES + M12D_JUMPERS:  # M12d: tall bricks, panels, frames, jumpers: .dat facts
             continue
         assert part.width >= part.depth  # LDraw parts are long along X
         assert part.height == {"plate": 1, "brick": 3, "tile": 1}[part.kind]
@@ -204,7 +205,7 @@ def test_coverage_counts_parts_not_primitives(tmp_path: Path) -> None:
     mpd = """0 FILE main.ldr
 1 4 0 -8 0 1 0 0 0 1 0 0 0 1 3020.dat
 1 4 0 -32 0 1 0 0 0 1 0 0 0 1 3001.dat
-1 4 0 -40 0 1 0 0 0 1 0 0 0 1 3794b.dat
+1 4 0 -40 0 1 0 0 0 1 0 0 0 1 3820.dat
 1 4 0 0 0 1 0 0 0 1 0 0 0 1 custom.dat
 0 NOFILE
 0 FILE custom.dat
@@ -214,7 +215,7 @@ def test_coverage_counts_parts_not_primitives(tmp_path: Path) -> None:
 """
     row = set_coverage("fake-1", mpd)
     assert (row.parts, row.primitives, row.plates4, row.catalog) == (3, 2, 1, 2)
-    assert row.top_missing == [("3794b.dat", 1)]
+    assert row.top_missing == [("3820.dat", 1)]
     data = tmp_path / "omr"
     data.mkdir()
     (data / "fake-1.mpd").write_text(mpd)
