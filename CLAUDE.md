@@ -531,8 +531,9 @@ open; nothing changes there now.
   +4 LDU), side-stud bricks 87087 / 47905 / 30414 (facing cells, layers 1–2; `Part.side_studs` recorded, unused),
   brackets 44728 / 93274 (hanging face: front row, layers −4..0), handle brick 2921. Recognized 79 → **81%**, on grid
   63 → 64%. Baseplate cost measured: 43 vs 25 s and 53 vs 28 s per build with vs without (1.8–1.9×; the rest of the
-  earlier 45 s is the 32×32 grid). Batch 4 (jumpers) and the closing runs (coverage 28 / 20 / all models, style v3,
-  write-up) next.
+  earlier 45 s is the 32×32 grid). - **Batch 4 merged (b0238e3, 653 tests):** jumpers 3794a / 3794b / 15573 / 87580 as studless plates (their centre stud
+  is off our grid). **Catalog 183 parts; recognized share on the 28 sets 69.5% → 83%, on grid 57 → 65%.** Closing runs
+  (coverage 28 / 20 / all crawled models, style v3, `catalog_check.ldr`, `results/m12d_catalog.md`) in progress.
 - **M12e plan (session B, branch `m12e-data`):** (1) crawl the whole OMR index into `data/omr` (resumable, polite),
   measure every model with the coverage driver (recognized, on-grid) and define the training pool (building sets by
   the `experiments/sets.py` criteria, loosened to size, no re-releases); report sets / parts / on-grid parts; redo the
