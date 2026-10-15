@@ -626,7 +626,7 @@ open; nothing changes there now.
 **For Mac (morning):** (1) say go for stage 2 (the two models above vs statistics and M12b run 2 on the demo pairs; about
 2 h on the PC); (2) the renderer gap: decide between a part-geometry preview (LDraw `.dat` meshes, a day's work) and
 judging in Studio from the `.ldr` files; (3) the catalog's looks result stands as measured: more parts alone did not help
-the builds; what they need is a model that places them, which is what stage 2 tests; (4) push main (now 221 commits
+the builds; what they need is a model that places them, which is what stage 2 tests; (4) push main (now 220 commits
 ahead) when you want GitHub current; nothing on Colab needs it any more.
 
 ### M13 — Experiments for the paper
