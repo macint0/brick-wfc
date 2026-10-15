@@ -735,6 +735,28 @@ python -m brickwfc.experiments.missing_parts --all --out out/m12d_missing_all.md
 The counts are at the catalog the command runs with (the file header names how many files it knows), so the ranking
 changes with every M12d batch; the one on main at d15e46b is the 88-part one that chose the batches.
 
+### `results/m12d_catalog.md` (M12d: the catalog extended to the real sets' parts)
+
+Coverage (seconds per set list; `--data` where the OMR models are):
+
+```
+python -m brickwfc.experiments.coverage --on-grid --sets-file results/sets_selection.json --out out/m12d_cov/m10
+python -m brickwfc.experiments.coverage --on-grid --out out/m12d_cov/omr20
+python -m brickwfc.experiments.coverage --on-grid --sets $(ls data/omr | sed 's/\.mpd$//') --out out/m12d_cov/all
+```
+
+`results/m12d_coverage_*.json` are the three runs' `coverage.json`. Style statistics v3 (a few minutes, one process) and
+the check that the M12b catalog reproduces v2:
+
+```
+python -m brickwfc.experiments.style --learn-only v3
+python -m brickwfc.experiments.style --learn-only v2 --catalog m12b --stats-dir out/v2check
+```
+
+Part geometry facts (the placement-test rows) come from `python -m brickwfc.ldraw.library PART --cache data/ldraw`, with
+the library's `complete.zip` unpacked under `data/ldraw` (`parts/` and `p/`, lower-case paths); the catalog check for
+Studio is `python -m brickwfc.bricks.catalog_check`.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):

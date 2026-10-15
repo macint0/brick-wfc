@@ -28,7 +28,7 @@ def model() -> list[PlacedPart]:
 def test_style_version_defaults_to_v2_and_the_pipelines_file(tmp_path: Path) -> None:
     from brickwfc.alt.inputs import STYLE_FILES, STYLE_VERSION
 
-    assert STYLE_VERSION == "v2"
+    assert STYLE_VERSION == "v3"  # the pipeline's (M12d); this M12b driver keeps v2 for its tables
     assert proposal.style_file(tmp_path, 0, "v2") == tmp_path / STYLE_FILES["v2"].format(i=0)
     sets_file = tmp_path / "sets.json"
     sets_file.write_text(json.dumps({"selected": [f"s{i}" for i in range(8)]}), encoding="utf-8")

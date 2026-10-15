@@ -38,7 +38,7 @@ from typing import Sequence
 
 import numpy as np
 
-from brickwfc.alt.inputs import STYLE_FILES, STYLE_VERSION
+from brickwfc.alt.inputs import STYLE_FILES
 from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.colors import color_for_code
 from brickwfc.bricks.parts import CATALOG, PlacedPart, Shape, extract_parts
@@ -143,8 +143,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     group.add_argument("--random-weights", action="store_true", help="untrained model: a smoke test")
     parser.add_argument("--sets-file", type=Path, default=Path("results/sets_selection.json"))
     parser.add_argument("--style-dir", type=Path, default=Path("results/m10_style_stats"))
-    parser.add_argument("--style-version", choices=sorted(STYLE_FILES), default=STYLE_VERSION,
-                        help="M10 style statistics: v1 (M8 catalog) or v2 (relearned with corners and slopes)")
+    parser.add_argument("--style-version", choices=sorted(STYLE_FILES), default="v2",  # its M12b tables (v3: M12d)
+                        help="M10 style statistics: v1 (M8 catalog), v2 (relearned with corners and slopes), v3 (M12d)")
     parser.add_argument("--data", type=Path, default=Path("data/omr"))
     parser.add_argument("--fold", type=int, default=0)
     parser.add_argument("--sets", nargs="*", help="only these sets of the fold")
