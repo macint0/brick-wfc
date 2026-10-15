@@ -532,8 +532,16 @@ open; nothing changes there now.
   brackets 44728 / 93274 (hanging face: front row, layers −4..0), handle brick 2921. Recognized 79 → **81%**, on grid
   63 → 64%. Baseplate cost measured: 43 vs 25 s and 53 vs 28 s per build with vs without (1.8–1.9×; the rest of the
   earlier 45 s is the 32×32 grid). - **Batch 4 merged (b0238e3, 653 tests):** jumpers 3794a / 3794b / 15573 / 87580 as studless plates (their centre stud
-  is off our grid). **Catalog 183 parts; recognized share on the 28 sets 69.5% → 83%, on grid 57 → 65%.** Closing runs
-  (coverage 28 / 20 / all crawled models, style v3, `catalog_check.ldr`, `results/m12d_catalog.md`) in progress.
+  is off our grid). **Catalog 183 parts; recognized share on the 28 sets 69.5% → 83%, on grid 57 → 65%.** - **Closing work merged (1e2b01d, 655 tests): `results/m12d_catalog.md`.** 28 sets: recognized 69.5 → 82.8%, on grid
+  56.9 → 65.3% (`m12d_coverage_m10.json`); 20 OMR sets: 57.1 → 68.1%, on grid 24.7 → 27.5% (`m12d_coverage_omr20.json`);
+  the all-crawled-models table follows the crawl. Style statistics **v3** (`m10_style_stats/style_fold*_v3.json`, tagged
+  m12d, 16,299 parts; new parts carry 11.6% of the mass) are the pipeline default (`alt.inputs.STYLE_VERSION`);
+  `--style-version v2 --catalog m12b` reproduces M12b/M12c (checked: `--learn-only v2 --catalog m12b` gives the v2
+  files exactly); `experiments/proposal.py` pinned to v2. Open points there: more round parts and 3853 need geometry
+  beyond boxes; accessories are not read from Rebrickable inventories; side studs recorded, unused. **For Mac: open
+  `out/check/catalog_check_m12d.ldr` in Studio** (copied from the worktree; or regenerate with
+  `python -m brickwfc.bricks.catalog_check`): 183 parts in all orientations, frames with glass in every slot, keep-out
+  parts in four turns with their rail / stud / face / handle pointing into the kept-empty gap, markers flush on studs.
 - **M12e plan (session B, branch `m12e-data`):** (1) crawl the whole OMR index into `data/omr` (resumable, polite),
   measure every model with the coverage driver (recognized, on-grid) and define the training pool (building sets by
   the `experiments/sets.py` criteria, loosened to size, no re-releases); report sets / parts / on-grid parts; redo the
