@@ -110,3 +110,55 @@ def test_run_skips_finished_runs_and_passes_the_flags(tmp_path: Path, monkeypatc
 def test_nanmean_skips_builds_without_a_window() -> None:
     assert looks.nanmean([2.0, float("nan"), 4.0]) == 3.0
     assert np.isnan(looks.nanmean([float("nan")]))
+
+
+def test_a_slack_replaces_the_looks_slack() -> None:
+    flags = looks.arm_flags("matched", 0.7218534752661239)
+    assert flags[flags.index("--fill-slack") + 1] == "0.7218534752661239"
+    assert float(flags[flags.index("--fill-slack") + 1]) == 0.7218534752661239
+    assert looks.arm_flags("matched") == looks.LOOKS and looks.LOOKS.count("--fill-slack") == 1
+
+
+def test_matched_slack_iterates_until_the_volumes_match(monkeypatch) -> None:
+    """A part is left out of the volume once the target is small enough, so the first guess misses; the next round
+    matches."""
+    monkeypatch.setattr(looks, "load_source", lambda spec, data, catalog: catalog)
+
+    def sized(source, config, data):
+        base = 1000.0 if source == "m12b" else 1200.0 - (100.0 if config.fill_slack < 0.75 else 0.0)
+        return None, {"volume": config.fill_slack * base, "left_out": {}}
+
+    monkeypatch.setattr(looks, "sized_target", sized)
+    found = looks.matched_slack("5891-1", "chair")
+    assert found["old_volume"] == 800.0 and abs(found["volume"] - 800.0) <= 1e-6 * 800
+    assert len(found["tried"]) == 3 and abs(found["slack"] - 800 / 1100) < 1e-12
+
+
+def test_accounting_counts_placed_unfittable_and_unused() -> None:
+    window = "window1x2x2_60592"
+    door = "doorframe1x4x6_60596"
+    key = {"inventory": [[window, "white", 3], [door, "white", 1], ["plate1x1", "red", 5], ["jumper1x2_3794a", "red", 2]],
+           "fit_nowhere": [door]}
+    part = lambda name: PlacedPart(Shape(CATALOG[name]), RED, 0, 0, 0)
+    selected = [part(window), part(window), part("plate1x1"), part("jumper1x2_3794a")]
+    a = looks.accounting(key, selected, [selected, [part(window)]])
+    assert a["frames"][window] == {"inventory": 3, "unfittable": 0, "placed": 2, "placed_mean": 1.5, "unused": 1}
+    assert a["frames"][door] == {"inventory": 1, "unfittable": 1, "placed": 0, "placed_mean": 0.0, "unused": 0}
+    assert a["kinds"]["jumper"]["placed"] == 1 and a["kinds"]["jumper"]["unused"] == 1
+    assert a["all_new"]["inventory"] == 6 and a["all_new"]["unused"] == 2
+    row = looks.accounting_table([{"object": "chair", "set": "5891-1", "arm": "matched", "accounting": a}])
+    assert f"| 4 / 1 / 2 (1.5) / 1 | {door} x1 |" in row
+
+
+def test_the_matched_arm_runs_on_its_sets_with_its_slack(tmp_path: Path, monkeypatch) -> None:
+    calls = []
+    monkeypatch.setattr(looks, "pipeline_main", lambda argv: calls.append(argv))
+    for set_number in ("6378-1", "5891-1"):
+        path = looks.run_dir(tmp_path, "matched", set_number, "car") / "slack.json"
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"slack": 0.75}), encoding="utf-8")
+    args = looks.parser().parse_args(["--out", str(tmp_path), "--arms", "matched"])
+    args.pairs = (("6378-1", "car"), ("5891-1", "car"))
+    looks.step_run(args)
+    assert len(calls) == 1 and calls[0][0] == "5891-1"
+    assert calls[0][calls[0].index("--fill-slack") + 1] == "0.75"

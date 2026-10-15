@@ -4,6 +4,7 @@
   "set": "6378-1",
   "object": "chair",
   "run": "out/m12d_looks/old/6378-1/chair",
+  "slack": 0.8,
   "target_cells": 1149,
   "volume": 1079.2,
   "grid": [
@@ -34,6 +35,17 @@
    "new_parts": 0.0,
    "new_on_skin": 0.0,
    "new_skin_face_pct": 0.0
+  },
+  "accounting": {
+   "kinds": {},
+   "frames": {},
+   "all_new": {
+    "inventory": 0,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 0,
+    "unused": 0
+   }
   },
   "selected": {
    "fill_pct": 99.30374238468234,
@@ -79,6 +91,7 @@
   "set": "6378-1",
   "object": "chair",
   "run": "out/m12d_looks/new/6378-1/chair",
+  "slack": 0.8,
   "target_cells": 1149,
   "volume": 1082.4,
   "grid": [
@@ -109,6 +122,25 @@
    "new_parts": 1.163265306122449,
    "new_on_skin": 1.163265306122449,
    "new_skin_face_pct": 0.40623607075105406
+  },
+  "accounting": {
+   "kinds": {
+    "jumper": {
+     "inventory": 2,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 1.163265306122449,
+     "unused": 2
+    }
+   },
+   "frames": {},
+   "all_new": {
+    "inventory": 2,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 1.163265306122449,
+    "unused": 2
+   }
   },
   "selected": {
    "fill_pct": 98.69451697127938,
@@ -154,6 +186,7 @@
   "set": "5891-1",
   "object": "chair",
   "run": "out/m12d_looks/old/5891-1/chair",
+  "slack": 0.8,
   "target_cells": 2335,
   "volume": 2305.6,
   "grid": [
@@ -182,6 +215,17 @@
    "new_parts": 0.0,
    "new_on_skin": 0.0,
    "new_skin_face_pct": 0.0
+  },
+  "accounting": {
+   "kinds": {},
+   "frames": {},
+   "all_new": {
+    "inventory": 0,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 0,
+    "unused": 0
+   }
   },
   "selected": {
    "fill_pct": 99.82869379014988,
@@ -227,6 +271,7 @@
   "set": "5891-1",
   "object": "chair",
   "run": "out/m12d_looks/new/5891-1/chair",
+  "slack": 0.8,
   "target_cells": 2625,
   "volume": 2555.2000000000003,
   "grid": [
@@ -257,6 +302,75 @@
    "new_parts": 19.270833333333332,
    "new_on_skin": 17.0625,
    "new_skin_face_pct": 10.008850675155648
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 1,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.041666666666666664,
+     "unused": 1
+    },
+    "plain": {
+     "inventory": 2,
+     "unfittable": 2,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    },
+    "lookalike": {
+     "inventory": 19,
+     "unfittable": 0,
+     "placed": 13,
+     "placed_mean": 12.625,
+     "unused": 6
+    },
+    "slope/curved": {
+     "inventory": 2,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 1.25,
+     "unused": 2
+    },
+    "frame": {
+     "inventory": 7,
+     "unfittable": 0,
+     "placed": 5,
+     "placed_mean": 5.354166666666667,
+     "unused": 2
+    }
+   },
+   "frames": {
+    "doorframe1x4x6_60596": {
+     "inventory": 1,
+     "unfittable": 0,
+     "placed": 1,
+     "placed_mean": 0.5208333333333334,
+     "unused": 0
+    },
+    "window1x2x2_60592": {
+     "inventory": 3,
+     "unfittable": 0,
+     "placed": 3,
+     "placed_mean": 3.0,
+     "unused": 0
+    },
+    "window1x4x3_60594": {
+     "inventory": 3,
+     "unfittable": 0,
+     "placed": 1,
+     "placed_mean": 1.8333333333333333,
+     "unused": 2
+    }
+   },
+   "all_new": {
+    "inventory": 31,
+    "unfittable": 2,
+    "placed": 18,
+    "placed_mean": 19.270833333333332,
+    "unused": 11
+   }
   },
   "selected": {
    "fill_pct": 97.14285714285714,
@@ -314,10 +428,171 @@
   ]
  },
  {
+  "arm": "matched",
+  "set": "5891-1",
+  "object": "chair",
+  "run": "out/m12d_looks/matched/5891-1/chair",
+  "slack": 0.7218534752661239,
+  "target_cells": 2335,
+  "volume": 2305.5999999999995,
+  "grid": [
+   56,
+   13,
+   14
+  ],
+  "plane": "x = 6.5",
+  "plane_score": 0.7927304197317179,
+  "plane_from": "run",
+  "style": "M10 fold 0 (learned without 5891-1), style v3",
+  "valid": 50,
+  "candidates": 50,
+  "s_per_candidate": 24.289035424001632,
+  "left_out": {
+   "baseplate16x32": 2
+  },
+  "complete_valid": 3,
+  "mean": {
+   "fill_pct": 96.61927194860814,
+   "largest_hole": 53.22,
+   "surface_pct": 95.45263157894739,
+   "top_window_parts": 5.8688,
+   "side_window_parts": 3.5433099560129984,
+   "mirrored_pct": 30.032094647352196,
+   "mirrorable_mirrored_pct": 44.872134624360754,
+   "names": 42.42,
+   "new_parts": 19.42,
+   "new_on_skin": 18.02,
+   "new_skin_face_pct": 13.714181655244472
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 1,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.04,
+     "unused": 1
+    },
+    "plain": {
+     "inventory": 2,
+     "unfittable": 2,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    },
+    "lookalike": {
+     "inventory": 19,
+     "unfittable": 0,
+     "placed": 6,
+     "placed_mean": 12.32,
+     "unused": 13
+    },
+    "slope/curved": {
+     "inventory": 2,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.42,
+     "unused": 2
+    },
+    "frame": {
+     "inventory": 7,
+     "unfittable": 0,
+     "placed": 7,
+     "placed_mean": 6.64,
+     "unused": 0
+    }
+   },
+   "frames": {
+    "doorframe1x4x6_60596": {
+     "inventory": 1,
+     "unfittable": 0,
+     "placed": 1,
+     "placed_mean": 0.88,
+     "unused": 0
+    },
+    "window1x2x2_60592": {
+     "inventory": 3,
+     "unfittable": 0,
+     "placed": 3,
+     "placed_mean": 3.0,
+     "unused": 0
+    },
+    "window1x4x3_60594": {
+     "inventory": 3,
+     "unfittable": 0,
+     "placed": 3,
+     "placed_mean": 2.76,
+     "unused": 0
+    }
+   },
+   "all_new": {
+    "inventory": 31,
+    "unfittable": 2,
+    "placed": 13,
+    "placed_mean": 19.419999999999998,
+    "unused": 16
+   }
+  },
+  "selected": {
+   "fill_pct": 99.95717344753747,
+   "holes": 1,
+   "largest_hole": 1,
+   "unfilled": 1,
+   "surface_pct": 99.94152046783626,
+   "largest_surface_hole": 1,
+   "unfilled_on_surface_pct": 100.0,
+   "complete": true,
+   "top_window_parts": 6.0,
+   "top_windows": 25,
+   "side_window_parts": 3.1903914590747333,
+   "side_windows": 562,
+   "mirrored_pct": 26.72811059907834,
+   "mirrorable_mirrored_pct": 48.333333333333336,
+   "parts": 217,
+   "names": 42,
+   "new_names": 5,
+   "new_parts": 13,
+   "new_on_skin": 13,
+   "skin_parts": 197,
+   "new_skin_face_pct": 12.743506493506494,
+   "new_by_kind": {
+    "frame": {
+     "placed": 7,
+     "skin": 7
+    },
+    "lookalike": {
+     "placed": 6,
+     "skin": 6
+    }
+   },
+   "new_names_list": [
+    "brick1x1_4589",
+    "brick1x1_6541",
+    "doorframe1x4x6_60596",
+    "window1x2x2_60592",
+    "window1x4x3_60594"
+   ],
+   "seed": 5,
+   "judge": -0.33126600979313925,
+   "utilization_pct": 44.19551934826884,
+   "accessories": 11,
+   "seams_raw_pct": 37.12871287128713,
+   "seams_pct": 52.722772277227726,
+   "colors_per_window": 1.7921635434412266,
+   "recolor_matches_run": true
+  },
+  "pictures": [
+   "out/m12d_looks/matched/5891-1/chair/build_01.png",
+   "out/m12d_looks/sheet/chair_5891-1_matched_raw.png",
+   "out/m12d_looks/sheet/chair_5891-1_matched_missing.png"
+  ]
+ },
+ {
   "arm": "old",
   "set": "4956-1",
   "object": "chair",
   "run": "out/m12d_looks/old/4956-1/chair",
+  "slack": 0.8,
   "target_cells": 3492,
   "volume": 3428.8,
   "grid": [
@@ -348,6 +623,17 @@
    "new_parts": 0.0,
    "new_on_skin": 0.0,
    "new_skin_face_pct": 0.0
+  },
+  "accounting": {
+   "kinds": {},
+   "frames": {},
+   "all_new": {
+    "inventory": 0,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 0,
+    "unused": 0
+   }
   },
   "selected": {
    "fill_pct": 97.0504009163803,
@@ -393,6 +679,7 @@
   "set": "4956-1",
   "object": "chair",
   "run": "out/m12d_looks/new/4956-1/chair",
+  "slack": 0.8,
   "target_cells": 3868,
   "volume": 3763.2000000000003,
   "grid": [
@@ -425,6 +712,68 @@
    "new_parts": 18.463414634146343,
    "new_on_skin": 18.390243902439025,
    "new_skin_face_pct": 9.964040632446304
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 5,
+     "unfittable": 0,
+     "placed": 1,
+     "placed_mean": 0.2926829268292683,
+     "unused": 4
+    },
+    "plain": {
+     "inventory": 3,
+     "unfittable": 3,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    },
+    "keep-out": {
+     "inventory": 8,
+     "unfittable": 0,
+     "placed": 6,
+     "placed_mean": 6.634146341463415,
+     "unused": 2
+    },
+    "frame": {
+     "inventory": 10,
+     "unfittable": 0,
+     "placed": 10,
+     "placed_mean": 8.536585365853659,
+     "unused": 0
+    },
+    "slope/curved": {
+     "inventory": 4,
+     "unfittable": 0,
+     "placed": 2,
+     "placed_mean": 3.0,
+     "unused": 2
+    }
+   },
+   "frames": {
+    "fence1x4x2_3185": {
+     "inventory": 6,
+     "unfittable": 0,
+     "placed": 6,
+     "placed_mean": 4.853658536585366,
+     "unused": 0
+    },
+    "window1x4x3_6556": {
+     "inventory": 4,
+     "unfittable": 0,
+     "placed": 4,
+     "placed_mean": 3.682926829268293,
+     "unused": 0
+    }
+   },
+   "all_new": {
+    "inventory": 30,
+    "unfittable": 3,
+    "placed": 19,
+    "placed_mean": 18.463414634146343,
+    "unused": 8
+   }
   },
   "selected": {
    "fill_pct": 97.28541882109617,
@@ -491,10 +840,165 @@
   ]
  },
  {
+  "arm": "matched",
+  "set": "4956-1",
+  "object": "chair",
+  "run": "out/m12d_looks/matched/4956-1/chair",
+  "slack": 0.7289115646258504,
+  "target_cells": 3492,
+  "volume": 3428.8,
+  "grid": [
+   66,
+   15,
+   16
+  ],
+  "plane": "x = 7.5",
+  "plane_score": 0.8021914648212226,
+  "plane_from": "run",
+  "style": "M10 fold 1 (learned without 4956-1), style v3",
+  "valid": 47,
+  "candidates": 50,
+  "s_per_candidate": 28.83812929999549,
+  "left_out": {
+   "baseplate32x32": 1,
+   "brick1x16": 2,
+   "plate2x16": 2
+  },
+  "complete_valid": 0,
+  "mean": {
+   "fill_pct": 94.38656138041969,
+   "largest_hole": 86.02127659574468,
+   "surface_pct": 92.45400603890177,
+   "top_window_parts": 5.388372049321181,
+   "side_window_parts": 3.3820959710807337,
+   "mirrored_pct": 20.279505525513102,
+   "mirrorable_mirrored_pct": 29.516911407279647,
+   "names": 46.170212765957444,
+   "new_parts": 16.617021276595743,
+   "new_on_skin": 16.595744680851062,
+   "new_skin_face_pct": 10.646942830100047
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 5,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.2553191489361702,
+     "unused": 5
+    },
+    "plain": {
+     "inventory": 3,
+     "unfittable": 3,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    },
+    "keep-out": {
+     "inventory": 8,
+     "unfittable": 0,
+     "placed": 8,
+     "placed_mean": 7.723404255319149,
+     "unused": 0
+    },
+    "frame": {
+     "inventory": 10,
+     "unfittable": 0,
+     "placed": 6,
+     "placed_mean": 6.617021276595745,
+     "unused": 4
+    },
+    "slope/curved": {
+     "inventory": 4,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 2.021276595744681,
+     "unused": 4
+    }
+   },
+   "frames": {
+    "fence1x4x2_3185": {
+     "inventory": 6,
+     "unfittable": 0,
+     "placed": 6,
+     "placed_mean": 3.4468085106382977,
+     "unused": 0
+    },
+    "window1x4x3_6556": {
+     "inventory": 4,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 3.1702127659574466,
+     "unused": 4
+    }
+   },
+   "all_new": {
+    "inventory": 30,
+    "unfittable": 3,
+    "placed": 14,
+    "placed_mean": 16.617021276595743,
+    "unused": 13
+   }
+  },
+  "selected": {
+   "fill_pct": 96.62084765177549,
+   "holes": 13,
+   "largest_hole": 24,
+   "unfilled": 118,
+   "surface_pct": 95.58580858085809,
+   "largest_surface_hole": 24,
+   "unfilled_on_surface_pct": 90.67796610169492,
+   "complete": false,
+   "top_window_parts": 4.653061224489796,
+   "top_windows": 49,
+   "side_window_parts": 3.3728606356968216,
+   "side_windows": 818,
+   "mirrored_pct": 14.242424242424242,
+   "mirrorable_mirrored_pct": 20.704845814977972,
+   "parts": 330,
+   "names": 45,
+   "new_names": 4,
+   "new_parts": 14,
+   "new_on_skin": 14,
+   "skin_parts": 291,
+   "new_skin_face_pct": 7.959607959607959,
+   "new_by_kind": {
+    "keep-out": {
+     "placed": 8,
+     "skin": 8
+    },
+    "frame": {
+     "placed": 6,
+     "skin": 6
+    }
+   },
+   "new_names_list": [
+    "bracket1x2_2x2_44728",
+    "doorrail1x2_32028",
+    "doorrail1x8_4510",
+    "fence1x4x2_3185"
+   ],
+   "seed": 18,
+   "judge": -0.2785293209222727,
+   "utilization_pct": 54.72636815920397,
+   "accessories": 0,
+   "seams_raw_pct": 47.78481012658228,
+   "seams_pct": 54.27215189873418,
+   "colors_per_window": 1.433679354094579,
+   "recolor_matches_run": true
+  },
+  "pictures": [
+   "out/m12d_looks/matched/4956-1/chair/build_01.png",
+   "out/m12d_looks/sheet/chair_4956-1_matched_raw.png",
+   "out/m12d_looks/sheet/chair_4956-1_matched_missing.png"
+  ]
+ },
+ {
   "arm": "old",
   "set": "6378-1",
   "object": "table",
   "run": "out/m12d_looks/old/6378-1/table",
+  "slack": 0.8,
   "target_cells": 1384,
   "volume": 1348.0,
   "grid": [
@@ -523,6 +1027,17 @@
    "new_parts": 0.0,
    "new_on_skin": 0.0,
    "new_skin_face_pct": 0.0
+  },
+  "accounting": {
+   "kinds": {},
+   "frames": {},
+   "all_new": {
+    "inventory": 0,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 0,
+    "unused": 0
+   }
   },
   "selected": {
    "fill_pct": 91.61849710982659,
@@ -568,6 +1083,7 @@
   "set": "6378-1",
   "object": "table",
   "run": "out/m12d_looks/new/6378-1/table",
+  "slack": 0.8,
   "target_cells": 1522,
   "volume": 1351.2,
   "grid": [
@@ -596,6 +1112,25 @@
    "new_parts": 1.82,
    "new_on_skin": 1.82,
    "new_skin_face_pct": 0.4863715006256977
+  },
+  "accounting": {
+   "kinds": {
+    "jumper": {
+     "inventory": 2,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 1.82,
+     "unused": 2
+    }
+   },
+   "frames": {},
+   "all_new": {
+    "inventory": 2,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 1.82,
+    "unused": 2
+   }
   },
   "selected": {
    "fill_pct": 98.48883048620236,
@@ -641,6 +1176,7 @@
   "set": "5891-1",
   "object": "table",
   "run": "out/m12d_looks/old/5891-1/table",
+  "slack": 0.8,
   "target_cells": 2384,
   "volume": 2305.6,
   "grid": [
@@ -669,6 +1205,17 @@
    "new_parts": 0.0,
    "new_on_skin": 0.0,
    "new_skin_face_pct": 0.0
+  },
+  "accounting": {
+   "kinds": {},
+   "frames": {},
+   "all_new": {
+    "inventory": 0,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 0,
+    "unused": 0
+   }
   },
   "selected": {
    "fill_pct": 99.70637583892618,
@@ -714,6 +1261,7 @@
   "set": "5891-1",
   "object": "table",
   "run": "out/m12d_looks/new/5891-1/table",
+  "slack": 0.8,
   "target_cells": 2422,
   "volume": 2411.2000000000003,
   "grid": [
@@ -746,6 +1294,75 @@
    "new_parts": 11.395833333333334,
    "new_on_skin": 10.166666666666666,
    "new_skin_face_pct": 3.456020804295379
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 1,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.10416666666666667,
+     "unused": 1
+    },
+    "plain": {
+     "inventory": 2,
+     "unfittable": 2,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    },
+    "lookalike": {
+     "inventory": 19,
+     "unfittable": 0,
+     "placed": 6,
+     "placed_mean": 7.916666666666666,
+     "unused": 13
+    },
+    "slope/curved": {
+     "inventory": 2,
+     "unfittable": 0,
+     "placed": 1,
+     "placed_mean": 0.375,
+     "unused": 1
+    },
+    "frame": {
+     "inventory": 7,
+     "unfittable": 4,
+     "placed": 3,
+     "placed_mean": 3.0,
+     "unused": 0
+    }
+   },
+   "frames": {
+    "doorframe1x4x6_60596": {
+     "inventory": 1,
+     "unfittable": 1,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    },
+    "window1x2x2_60592": {
+     "inventory": 3,
+     "unfittable": 0,
+     "placed": 3,
+     "placed_mean": 3.0,
+     "unused": 0
+    },
+    "window1x4x3_60594": {
+     "inventory": 3,
+     "unfittable": 3,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    }
+   },
+   "all_new": {
+    "inventory": 31,
+    "unfittable": 6,
+    "placed": 10,
+    "placed_mean": 11.395833333333334,
+    "unused": 15
+   }
   },
   "selected": {
    "fill_pct": 88.19157720891825,
@@ -805,10 +1422,172 @@
   ]
  },
  {
+  "arm": "matched",
+  "set": "5891-1",
+  "object": "table",
+  "run": "out/m12d_looks/matched/5891-1/table",
+  "slack": 0.764963503649635,
+  "target_cells": 2384,
+  "volume": 2305.6,
+  "grid": [
+   51,
+   18,
+   19
+  ],
+  "plane": "z = 8.5",
+  "plane_score": 1.0,
+  "plane_from": "run",
+  "style": "M10 fold 0 (learned without 5891-1), style v3",
+  "valid": 49,
+  "candidates": 50,
+  "s_per_candidate": 25.10326217000198,
+  "left_out": {
+   "baseplate16x32": 2,
+   "doorframe1x4x6_60596": 1,
+   "window1x4x3_60594": 3
+  },
+  "complete_valid": 5,
+  "mean": {
+   "fill_pct": 94.91079989042596,
+   "largest_hole": 58.89795918367347,
+   "surface_pct": 94.70380426848853,
+   "top_window_parts": 6.533615156271015,
+   "side_window_parts": 3.6536027499312764,
+   "mirrored_pct": 44.27476859131688,
+   "mirrorable_mirrored_pct": 44.27476859131688,
+   "names": 46.57142857142857,
+   "new_parts": 19.53061224489796,
+   "new_on_skin": 16.653061224489797,
+   "new_skin_face_pct": 5.803397046651567
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 1,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.02040816326530612,
+     "unused": 1
+    },
+    "plain": {
+     "inventory": 2,
+     "unfittable": 2,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    },
+    "lookalike": {
+     "inventory": 19,
+     "unfittable": 0,
+     "placed": 18,
+     "placed_mean": 16.306122448979593,
+     "unused": 1
+    },
+    "slope/curved": {
+     "inventory": 2,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.20408163265306123,
+     "unused": 2
+    },
+    "frame": {
+     "inventory": 7,
+     "unfittable": 4,
+     "placed": 3,
+     "placed_mean": 3.0,
+     "unused": 0
+    }
+   },
+   "frames": {
+    "doorframe1x4x6_60596": {
+     "inventory": 1,
+     "unfittable": 1,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    },
+    "window1x2x2_60592": {
+     "inventory": 3,
+     "unfittable": 0,
+     "placed": 3,
+     "placed_mean": 3.0,
+     "unused": 0
+    },
+    "window1x4x3_60594": {
+     "inventory": 3,
+     "unfittable": 3,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    }
+   },
+   "all_new": {
+    "inventory": 31,
+    "unfittable": 6,
+    "placed": 21,
+    "placed_mean": 19.53061224489796,
+    "unused": 4
+   }
+  },
+  "selected": {
+   "fill_pct": 99.83221476510067,
+   "holes": 4,
+   "largest_hole": 1,
+   "unfilled": 4,
+   "surface_pct": 99.71387696709584,
+   "largest_surface_hole": 1,
+   "unfilled_on_surface_pct": 100.0,
+   "complete": true,
+   "top_window_parts": 7.4206896551724135,
+   "top_windows": 145,
+   "side_window_parts": 3.955,
+   "side_windows": 200,
+   "mirrored_pct": 65.39792387543253,
+   "mirrorable_mirrored_pct": 65.39792387543253,
+   "parts": 289,
+   "names": 44,
+   "new_names": 4,
+   "new_parts": 21,
+   "new_on_skin": 20,
+   "skin_parts": 223,
+   "new_skin_face_pct": 5.920398009950249,
+   "new_by_kind": {
+    "frame": {
+     "placed": 3,
+     "skin": 3
+    },
+    "lookalike": {
+     "placed": 18,
+     "skin": 17
+    }
+   },
+   "new_names_list": [
+    "brick1x1_4589",
+    "brick1x1_6541",
+    "panel1x2x1_4865a",
+    "window1x2x2_60592"
+   ],
+   "seed": 14,
+   "judge": -0.3695793750735926,
+   "utilization_pct": 58.85947046843177,
+   "accessories": 3,
+   "seams_raw_pct": 28.373015873015873,
+   "seams_pct": 41.86507936507937,
+   "colors_per_window": 2.701449275362319,
+   "recolor_matches_run": true
+  },
+  "pictures": [
+   "out/m12d_looks/matched/5891-1/table/build_01.png",
+   "out/m12d_looks/sheet/table_5891-1_matched_raw.png",
+   "out/m12d_looks/sheet/table_5891-1_matched_missing.png"
+  ]
+ },
+ {
   "arm": "old",
   "set": "4956-1",
   "object": "table",
   "run": "out/m12d_looks/old/4956-1/table",
+  "slack": 0.8,
   "target_cells": 3704,
   "volume": 3505.6000000000004,
   "grid": [
@@ -837,6 +1616,17 @@
    "new_parts": 0.0,
    "new_on_skin": 0.0,
    "new_skin_face_pct": 0.0
+  },
+  "accounting": {
+   "kinds": {},
+   "frames": {},
+   "all_new": {
+    "inventory": 0,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 0,
+    "unused": 0
+   }
   },
   "selected": {
    "fill_pct": 93.49352051835854,
@@ -882,6 +1672,7 @@
   "set": "4956-1",
   "object": "table",
   "run": "out/m12d_looks/new/4956-1/table",
+  "slack": 0.8,
   "target_cells": 3850,
   "volume": 3776.0,
   "grid": [
@@ -913,6 +1704,68 @@
    "new_parts": 18.714285714285715,
    "new_on_skin": 18.685714285714287,
    "new_skin_face_pct": 7.8194098121632445
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 5,
+     "unfittable": 0,
+     "placed": 3,
+     "placed_mean": 0.6571428571428571,
+     "unused": 2
+    },
+    "plain": {
+     "inventory": 3,
+     "unfittable": 1,
+     "placed": 2,
+     "placed_mean": 2.0,
+     "unused": 0
+    },
+    "keep-out": {
+     "inventory": 8,
+     "unfittable": 0,
+     "placed": 7,
+     "placed_mean": 7.685714285714286,
+     "unused": 1
+    },
+    "frame": {
+     "inventory": 10,
+     "unfittable": 4,
+     "placed": 0,
+     "placed_mean": 4.428571428571429,
+     "unused": 6
+    },
+    "slope/curved": {
+     "inventory": 4,
+     "unfittable": 0,
+     "placed": 2,
+     "placed_mean": 3.942857142857143,
+     "unused": 2
+    }
+   },
+   "frames": {
+    "fence1x4x2_3185": {
+     "inventory": 6,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 4.428571428571429,
+     "unused": 6
+    },
+    "window1x4x3_6556": {
+     "inventory": 4,
+     "unfittable": 4,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    }
+   },
+   "all_new": {
+    "inventory": 30,
+    "unfittable": 5,
+    "placed": 14,
+    "placed_mean": 18.714285714285715,
+    "unused": 11
+   }
   },
   "selected": {
    "fill_pct": 99.01298701298701,
@@ -978,10 +1831,174 @@
   ]
  },
  {
+  "arm": "matched",
+  "set": "4956-1",
+  "object": "table",
+  "run": "out/m12d_looks/matched/4956-1/table",
+  "slack": 0.7427118644067798,
+  "target_cells": 3704,
+  "volume": 3505.600000000001,
+  "grid": [
+   59,
+   22,
+   23
+  ],
+  "plane": "z = 10.5",
+  "plane_score": 1.0,
+  "plane_from": "run",
+  "style": "M10 fold 1 (learned without 4956-1), style v3",
+  "valid": 46,
+  "candidates": 50,
+  "s_per_candidate": 32.51325639599934,
+  "left_out": {
+   "baseplate32x32": 1,
+   "window1x4x3_6556": 4
+  },
+  "complete_valid": 0,
+  "mean": {
+   "fill_pct": 89.7531458352897,
+   "largest_hole": 190.5,
+   "surface_pct": 85.9600572414664,
+   "top_window_parts": 5.881969948279764,
+   "side_window_parts": 3.3068339206244195,
+   "mirrored_pct": 43.58006222860322,
+   "mirrorable_mirrored_pct": 43.58006222860322,
+   "names": 47.06521739130435,
+   "new_parts": 18.847826086956523,
+   "new_on_skin": 18.847826086956523,
+   "new_skin_face_pct": 8.666488588321657
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 5,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.6086956521739131,
+     "unused": 5
+    },
+    "plain": {
+     "inventory": 3,
+     "unfittable": 1,
+     "placed": 2,
+     "placed_mean": 2.0,
+     "unused": 0
+    },
+    "keep-out": {
+     "inventory": 8,
+     "unfittable": 0,
+     "placed": 8,
+     "placed_mean": 8.0,
+     "unused": 0
+    },
+    "frame": {
+     "inventory": 10,
+     "unfittable": 4,
+     "placed": 6,
+     "placed_mean": 4.260869565217392,
+     "unused": 0
+    },
+    "slope/curved": {
+     "inventory": 4,
+     "unfittable": 0,
+     "placed": 4,
+     "placed_mean": 3.9782608695652173,
+     "unused": 0
+    }
+   },
+   "frames": {
+    "fence1x4x2_3185": {
+     "inventory": 6,
+     "unfittable": 0,
+     "placed": 6,
+     "placed_mean": 4.260869565217392,
+     "unused": 0
+    },
+    "window1x4x3_6556": {
+     "inventory": 4,
+     "unfittable": 4,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    }
+   },
+   "all_new": {
+    "inventory": 30,
+    "unfittable": 5,
+    "placed": 20,
+    "placed_mean": 18.847826086956523,
+    "unused": 5
+   }
+  },
+  "selected": {
+   "fill_pct": 94.97840172786177,
+   "holes": 18,
+   "largest_hole": 41,
+   "unfilled": 186,
+   "surface_pct": 92.0135527589545,
+   "largest_surface_hole": 35,
+   "unfilled_on_surface_pct": 88.70967741935483,
+   "complete": false,
+   "top_window_parts": 7.052083333333333,
+   "top_windows": 192,
+   "side_window_parts": 3.4801223241590216,
+   "side_windows": 327,
+   "mirrored_pct": 66.95402298850574,
+   "mirrorable_mirrored_pct": 66.95402298850574,
+   "parts": 348,
+   "names": 48,
+   "new_names": 6,
+   "new_parts": 20,
+   "new_on_skin": 20,
+   "skin_parts": 332,
+   "new_skin_face_pct": 11.845637583892618,
+   "new_by_kind": {
+    "plain": {
+     "placed": 2,
+     "skin": 2
+    },
+    "keep-out": {
+     "placed": 8,
+     "skin": 8
+    },
+    "frame": {
+     "placed": 6,
+     "skin": 6
+    },
+    "slope/curved": {
+     "placed": 4,
+     "skin": 4
+    }
+   },
+   "new_names_list": [
+    "bracket1x2_2x2_44728",
+    "doorrail1x2_32028",
+    "doorrail1x8_4510",
+    "fence1x4x2_3185",
+    "plate2x16",
+    "slope45triple_1x2"
+   ],
+   "seed": 24,
+   "judge": -0.31602375154531215,
+   "utilization_pct": 57.711442786069654,
+   "accessories": 0,
+   "seams_raw_pct": 46.71328671328671,
+   "seams_pct": 54.40559440559441,
+   "colors_per_window": 2.0423892100192678,
+   "recolor_matches_run": true
+  },
+  "pictures": [
+   "out/m12d_looks/matched/4956-1/table/build_01.png",
+   "out/m12d_looks/sheet/table_4956-1_matched_raw.png",
+   "out/m12d_looks/sheet/table_4956-1_matched_missing.png"
+  ]
+ },
+ {
   "arm": "old",
   "set": "6378-1",
   "object": "car",
   "run": "out/m12d_looks/old/6378-1/car",
+  "slack": 0.8,
   "target_cells": 1428,
   "volume": 1348.0,
   "grid": [
@@ -1010,6 +2027,17 @@
    "new_parts": 0.0,
    "new_on_skin": 0.0,
    "new_skin_face_pct": 0.0
+  },
+  "accounting": {
+   "kinds": {},
+   "frames": {},
+   "all_new": {
+    "inventory": 0,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 0,
+    "unused": 0
+   }
   },
   "selected": {
    "fill_pct": 94.32773109243698,
@@ -1055,6 +2083,7 @@
   "set": "6378-1",
   "object": "car",
   "run": "out/m12d_looks/new/6378-1/car",
+  "slack": 0.8,
   "target_cells": 1428,
   "volume": 1351.2,
   "grid": [
@@ -1083,6 +2112,25 @@
    "new_parts": 0.88,
    "new_on_skin": 0.86,
    "new_skin_face_pct": 0.27957582060986735
+  },
+  "accounting": {
+   "kinds": {
+    "jumper": {
+     "inventory": 2,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.88,
+     "unused": 2
+    }
+   },
+   "frames": {},
+   "all_new": {
+    "inventory": 2,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 0.88,
+    "unused": 2
+   }
   },
   "selected": {
    "fill_pct": 99.92997198879551,
@@ -1128,6 +2176,7 @@
   "set": "5891-1",
   "object": "car",
   "run": "out/m12d_looks/old/5891-1/car",
+  "slack": 0.8,
   "target_cells": 2566,
   "volume": 2305.6,
   "grid": [
@@ -1156,6 +2205,17 @@
    "new_parts": 0.0,
    "new_on_skin": 0.0,
    "new_skin_face_pct": 0.0
+  },
+  "accounting": {
+   "kinds": {},
+   "frames": {},
+   "all_new": {
+    "inventory": 0,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 0,
+    "unused": 0
+   }
   },
   "selected": {
    "fill_pct": 94.73889321901792,
@@ -1201,6 +2261,7 @@
   "set": "5891-1",
   "object": "car",
   "run": "out/m12d_looks/new/5891-1/car",
+  "slack": 0.8,
   "target_cells": 2934,
   "volume": 2555.2000000000003,
   "grid": [
@@ -1231,6 +2292,75 @@
    "new_parts": 23.42,
    "new_on_skin": 19.64,
    "new_skin_face_pct": 9.292677688339426
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 1,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.62,
+     "unused": 1
+    },
+    "plain": {
+     "inventory": 2,
+     "unfittable": 2,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    },
+    "lookalike": {
+     "inventory": 19,
+     "unfittable": 0,
+     "placed": 15,
+     "placed_mean": 16.12,
+     "unused": 4
+    },
+    "slope/curved": {
+     "inventory": 2,
+     "unfittable": 0,
+     "placed": 2,
+     "placed_mean": 1.9,
+     "unused": 0
+    },
+    "frame": {
+     "inventory": 7,
+     "unfittable": 0,
+     "placed": 4,
+     "placed_mean": 4.78,
+     "unused": 3
+    }
+   },
+   "frames": {
+    "doorframe1x4x6_60596": {
+     "inventory": 1,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 1
+    },
+    "window1x2x2_60592": {
+     "inventory": 3,
+     "unfittable": 0,
+     "placed": 3,
+     "placed_mean": 3.0,
+     "unused": 0
+    },
+    "window1x4x3_60594": {
+     "inventory": 3,
+     "unfittable": 0,
+     "placed": 1,
+     "placed_mean": 1.78,
+     "unused": 2
+    }
+   },
+   "all_new": {
+    "inventory": 31,
+    "unfittable": 2,
+    "placed": 21,
+    "placed_mean": 23.42,
+    "unused": 8
+   }
   },
   "selected": {
    "fill_pct": 94.88752556237219,
@@ -1292,10 +2422,177 @@
   ]
  },
  {
+  "arm": "matched",
+  "set": "5891-1",
+  "object": "car",
+  "run": "out/m12d_looks/matched/5891-1/car",
+  "slack": 0.7385009609224856,
+  "target_cells": 2566,
+  "volume": 2305.6,
+  "grid": [
+   21,
+   20,
+   10
+  ],
+  "plane": "x = 4.5",
+  "plane_score": 1.0,
+  "plane_from": "run",
+  "style": "M10 fold 0 (learned without 5891-1), style v3",
+  "valid": 50,
+  "candidates": 50,
+  "s_per_candidate": 19.34893390400277,
+  "left_out": {
+   "baseplate16x32": 2,
+   "doorframe1x4x6_60596": 1
+  },
+  "complete_valid": 0,
+  "mean": {
+   "fill_pct": 92.64302416212004,
+   "largest_hole": 56.48,
+   "surface_pct": 92.49185667752442,
+   "top_window_parts": 5.148854900366981,
+   "side_window_parts": 4.275857290603737,
+   "mirrored_pct": 51.03275884478541,
+   "mirrorable_mirrored_pct": 51.03275884478541,
+   "names": 47.48,
+   "new_parts": 20.46,
+   "new_on_skin": 17.48,
+   "new_skin_face_pct": 8.643396863370674
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 1,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 0.26,
+     "unused": 1
+    },
+    "plain": {
+     "inventory": 2,
+     "unfittable": 2,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    },
+    "lookalike": {
+     "inventory": 19,
+     "unfittable": 0,
+     "placed": 14,
+     "placed_mean": 13.68,
+     "unused": 5
+    },
+    "slope/curved": {
+     "inventory": 2,
+     "unfittable": 0,
+     "placed": 2,
+     "placed_mean": 1.82,
+     "unused": 0
+    },
+    "frame": {
+     "inventory": 7,
+     "unfittable": 1,
+     "placed": 4,
+     "placed_mean": 4.7,
+     "unused": 2
+    }
+   },
+   "frames": {
+    "doorframe1x4x6_60596": {
+     "inventory": 1,
+     "unfittable": 1,
+     "placed": 0,
+     "placed_mean": 0.0,
+     "unused": 0
+    },
+    "window1x2x2_60592": {
+     "inventory": 3,
+     "unfittable": 0,
+     "placed": 3,
+     "placed_mean": 3.0,
+     "unused": 0
+    },
+    "window1x4x3_60594": {
+     "inventory": 3,
+     "unfittable": 0,
+     "placed": 1,
+     "placed_mean": 1.7,
+     "unused": 2
+    }
+   },
+   "all_new": {
+    "inventory": 31,
+    "unfittable": 3,
+    "placed": 20,
+    "placed_mean": 20.46,
+    "unused": 8
+   }
+  },
+  "selected": {
+   "fill_pct": 95.47934528448948,
+   "holes": 18,
+   "largest_hole": 18,
+   "unfilled": 116,
+   "surface_pct": 93.72964169381108,
+   "largest_surface_hole": 18,
+   "unfilled_on_surface_pct": 66.37931034482759,
+   "complete": false,
+   "top_window_parts": 6.609756097560975,
+   "top_windows": 41,
+   "side_window_parts": 4.201680672268908,
+   "side_windows": 238,
+   "mirrored_pct": 42.59818731117825,
+   "mirrorable_mirrored_pct": 42.59818731117825,
+   "parts": 331,
+   "names": 48,
+   "new_names": 6,
+   "new_parts": 20,
+   "new_on_skin": 17,
+   "skin_parts": 263,
+   "new_skin_face_pct": 6.995884773662551,
+   "new_by_kind": {
+    "frame": {
+     "placed": 4,
+     "skin": 4
+    },
+    "lookalike": {
+     "placed": 14,
+     "skin": 11
+    },
+    "slope/curved": {
+     "placed": 2,
+     "skin": 2
+    }
+   },
+   "new_names_list": [
+    "brick1x1_4589",
+    "brick1x1_6541",
+    "curved1x2x4_6091",
+    "panel1x2x1_4865a",
+    "window1x2x2_60592",
+    "window1x4x3_60594"
+   ],
+   "seed": 6,
+   "judge": -0.3414946282313401,
+   "utilization_pct": 67.41344195519349,
+   "accessories": 6,
+   "seams_raw_pct": 30.31423290203327,
+   "seams_pct": 48.24399260628466,
+   "colors_per_window": 2.082437275985663,
+   "recolor_matches_run": true
+  },
+  "pictures": [
+   "out/m12d_looks/matched/5891-1/car/build_01.png",
+   "out/m12d_looks/sheet/car_5891-1_matched_raw.png",
+   "out/m12d_looks/sheet/car_5891-1_matched_missing.png"
+  ]
+ },
+ {
   "arm": "old",
   "set": "4956-1",
   "object": "car",
   "run": "out/m12d_looks/old/4956-1/car",
+  "slack": 0.8,
   "target_cells": 3788,
   "volume": 3505.6000000000004,
   "grid": [
@@ -1324,6 +2621,17 @@
    "new_parts": 0.0,
    "new_on_skin": 0.0,
    "new_skin_face_pct": 0.0
+  },
+  "accounting": {
+   "kinds": {},
+   "frames": {},
+   "all_new": {
+    "inventory": 0,
+    "unfittable": 0,
+    "placed": 0,
+    "placed_mean": 0,
+    "unused": 0
+   }
   },
   "selected": {
    "fill_pct": 90.9714889123548,
@@ -1369,6 +2677,7 @@
   "set": "4956-1",
   "object": "car",
   "run": "out/m12d_looks/new/4956-1/car",
+  "slack": 0.8,
   "target_cells": 4248,
   "volume": 3891.2000000000003,
   "grid": [
@@ -1399,6 +2708,68 @@
    "new_parts": 18.847826086956523,
    "new_on_skin": 18.456521739130434,
    "new_skin_face_pct": 10.723027923709997
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 5,
+     "unfittable": 0,
+     "placed": 1,
+     "placed_mean": 2.869565217391304,
+     "unused": 4
+    },
+    "plain": {
+     "inventory": 3,
+     "unfittable": 1,
+     "placed": 1,
+     "placed_mean": 1.5,
+     "unused": 1
+    },
+    "keep-out": {
+     "inventory": 8,
+     "unfittable": 0,
+     "placed": 7,
+     "placed_mean": 7.978260869565217,
+     "unused": 1
+    },
+    "frame": {
+     "inventory": 10,
+     "unfittable": 0,
+     "placed": 2,
+     "placed_mean": 3.8260869565217392,
+     "unused": 8
+    },
+    "slope/curved": {
+     "inventory": 4,
+     "unfittable": 0,
+     "placed": 2,
+     "placed_mean": 2.6739130434782608,
+     "unused": 2
+    }
+   },
+   "frames": {
+    "fence1x4x2_3185": {
+     "inventory": 6,
+     "unfittable": 0,
+     "placed": 2,
+     "placed_mean": 2.0869565217391304,
+     "unused": 4
+    },
+    "window1x4x3_6556": {
+     "inventory": 4,
+     "unfittable": 0,
+     "placed": 0,
+     "placed_mean": 1.7391304347826086,
+     "unused": 4
+    }
+   },
+   "all_new": {
+    "inventory": 30,
+    "unfittable": 1,
+    "placed": 13,
+    "placed_mean": 18.84782608695652,
+    "unused": 16
+   }
   },
   "selected": {
    "fill_pct": 89.75988700564972,
@@ -1466,6 +2837,169 @@
    "out/m12d_looks/new/4956-1/car/build_01.png",
    "out/m12d_looks/sheet/car_4956-1_new_raw.png",
    "out/m12d_looks/sheet/car_4956-1_new_missing.png"
+  ]
+ },
+ {
+  "arm": "matched",
+  "set": "4956-1",
+  "object": "car",
+  "run": "out/m12d_looks/matched/4956-1/car",
+  "slack": 0.7207236842105263,
+  "target_cells": 3788,
+  "volume": 3505.6000000000004,
+  "grid": [
+   24,
+   23,
+   11
+  ],
+  "plane": "x = 5",
+  "plane_score": 1.0,
+  "plane_from": "run",
+  "style": "M10 fold 1 (learned without 4956-1), style v3",
+  "valid": 49,
+  "candidates": 50,
+  "s_per_candidate": 34.33627576199709,
+  "left_out": {
+   "baseplate32x32": 1
+  },
+  "complete_valid": 0,
+  "mean": {
+   "fill_pct": 85.76439023339009,
+   "largest_hole": 301.6938775510204,
+   "surface_pct": 84.10244694892882,
+   "top_window_parts": 4.6852670886104395,
+   "side_window_parts": 3.444064271671041,
+   "mirrored_pct": 22.328544109307348,
+   "mirrorable_mirrored_pct": 22.328544109307348,
+   "names": 48.6530612244898,
+   "new_parts": 16.755102040816325,
+   "new_on_skin": 16.367346938775512,
+   "new_skin_face_pct": 9.688025749257013
+  },
+  "accounting": {
+   "kinds": {
+    "per-cell": {
+     "inventory": 5,
+     "unfittable": 0,
+     "placed": 2,
+     "placed_mean": 2.0408163265306123,
+     "unused": 3
+    },
+    "plain": {
+     "inventory": 3,
+     "unfittable": 1,
+     "placed": 0,
+     "placed_mean": 0.9387755102040817,
+     "unused": 2
+    },
+    "keep-out": {
+     "inventory": 8,
+     "unfittable": 0,
+     "placed": 8,
+     "placed_mean": 8.0,
+     "unused": 0
+    },
+    "frame": {
+     "inventory": 10,
+     "unfittable": 0,
+     "placed": 5,
+     "placed_mean": 3.4693877551020407,
+     "unused": 5
+    },
+    "slope/curved": {
+     "inventory": 4,
+     "unfittable": 0,
+     "placed": 3,
+     "placed_mean": 2.306122448979592,
+     "unused": 1
+    }
+   },
+   "frames": {
+    "fence1x4x2_3185": {
+     "inventory": 6,
+     "unfittable": 0,
+     "placed": 4,
+     "placed_mean": 2.0816326530612246,
+     "unused": 2
+    },
+    "window1x4x3_6556": {
+     "inventory": 4,
+     "unfittable": 0,
+     "placed": 1,
+     "placed_mean": 1.3877551020408163,
+     "unused": 3
+    }
+   },
+   "all_new": {
+    "inventory": 30,
+    "unfittable": 1,
+    "placed": 18,
+    "placed_mean": 16.755102040816325,
+    "unused": 11
+   }
+  },
+  "selected": {
+   "fill_pct": 87.80359028511087,
+   "holes": 29,
+   "largest_hole": 125,
+   "unfilled": 462,
+   "surface_pct": 84.63930348258707,
+   "largest_surface_hole": 48,
+   "unfilled_on_surface_pct": 53.46320346320347,
+   "complete": false,
+   "top_window_parts": 5.904761904761905,
+   "top_windows": 21,
+   "side_window_parts": 3.1524926686217007,
+   "side_windows": 341,
+   "mirrored_pct": 33.6,
+   "mirrorable_mirrored_pct": 33.6,
+   "parts": 375,
+   "names": 49,
+   "new_names": 7,
+   "new_parts": 18,
+   "new_on_skin": 18,
+   "skin_parts": 327,
+   "new_skin_face_pct": 9.607577807848443,
+   "new_by_kind": {
+    "keep-out": {
+     "placed": 8,
+     "skin": 8
+    },
+    "frame": {
+     "placed": 5,
+     "skin": 5
+    },
+    "slope/curved": {
+     "placed": 3,
+     "skin": 3
+    },
+    "per-cell": {
+     "placed": 2,
+     "skin": 2
+    }
+   },
+   "new_names_list": [
+    "arch1x6",
+    "bracket1x2_2x2_44728",
+    "doorrail1x2_32028",
+    "doorrail1x8_4510",
+    "fence1x4x2_3185",
+    "slope45triple_1x2",
+    "window1x4x3_6556"
+   ],
+   "seed": 33,
+   "judge": -0.2762027454043435,
+   "utilization_pct": 62.189054726368155,
+   "accessories": 2,
+   "seams_raw_pct": 45.39363484087102,
+   "seams_pct": 56.44891122278057,
+   "colors_per_window": 1.3784530386740332,
+   "recolor_matches_run": true
+  },
+  "pictures": [
+   "out/m12d_looks/matched/4956-1/car/build_01.png",
+   "out/m12d_looks/sheet/car_4956-1_matched_raw.png",
+   "out/m12d_looks/sheet/car_4956-1_matched_missing.png"
   ]
  }
 ]
