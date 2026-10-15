@@ -865,6 +865,35 @@ python training/train.py --data data/tokens_v2 --out out/proposal_smoke --d-mode
 PYTHONPATH=src python training/parity.py check --weights out/proposal_smoke/proposal.npz --data data/tokens_v2
 ```
 
+### `results/m12e_training.md` (M12e: proposal model v2 trained on the pool; the planned runs and the regularization sweep)
+
+Trained on a Colab A100 from the main checkout at 921ad1d with the tokens from the `m12e_tokens.md` entry (catalog
+fingerprint `475df2114737`). Run through the Colab CLI (`pip install google-colab-cli`, authenticated once in a
+browser; the notebook `training/colab_v2.ipynb` is the browser equivalent): a session `colab new -s brickwfc --gpu A100`,
+then `git archive --format=tar.gz -o src.tar.gz HEAD pyproject.toml src training` and `tar -czf tokens.tar.gz -C data
+tokens_v2`, both `colab upload`ed to `/content`, unpacked there, `pip install -e /content/brick-wfc`, and the fingerprint
+check `python -c "from brickwfc.experiments.omr_pool import catalog_fingerprint; print(catalog_fingerprint())"` against
+`export.json`. Each run is `training/train.py` with the configuration of `results/m12e_training_plan.md`
+(`--eval-every 1000 --val-builds 400 --patience 5 --minutes 0 --seed 0`, `--set-share 0.1659` = `export.json`'s
+`set_share_of_train_parts`), e.g. the two planned runs:
+
+```
+python training/train.py --data /content/tokens --out /content/runs/base_seed0 --d-model 256 --layers 6 --heads 8 \
+    --steps 40000 --batch 64 --lr 5e-4 --warmup 500 --eval-every 1000 --val-builds 400 --patience 5 --set-share 0.1659 --seed 0
+python training/train.py --data /content/tokens --out /content/runs/scaled_seed0 --d-model 512 --layers 8 --heads 8 \
+    --steps 60000 --batch 64 --lr 3e-4 --warmup 1000 --eval-every 1000 --val-builds 400 --patience 5 --set-share 0.1659 --seed 0
+PYTHONPATH=src python training/parity.py check --weights /content/runs/<run>/proposal.npz --data /content/tokens
+```
+
+The sweep runs are the base command with `--set-share` and `--weight-decay` as in the write-up's table (`scaled_ss05`
+uses the scaled command). The regularized runs add `--dropout 0.1` (or `0.2`) `--jitter set brickgpt` (training code
+from e3b1a21 or later) with the share in the table; the chosen stage-2 models are `base` and `scaled` with
+`--set-share 0.05 --dropout 0.1 --jitter set brickgpt`. The reference losses in the stage-1 table are unigram / uniform cross-entropies computed from
+`data/tokens_v2/train.npz` (0.5 smoothing per token; the real-set reference uses the rows whose `source` is a set).
+The run folders (`proposal.npz`, `vocab.json`, `log.jsonl`, `train.log`, `parity.log`) are downloaded to
+`data/models/proposal_v2_<run>/` (gitignored). GPU wall times are the A100's and are not reproducible on other hardware;
+losses are, at the same seed (one run per seed; the batches are deterministic per `[seed, step]`).
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
