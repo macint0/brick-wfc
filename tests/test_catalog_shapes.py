@@ -606,7 +606,7 @@ def test_learn_only_writes_versioned_fold_statistics(tmp_path: Path) -> None:
     assert learn_only(sets, per_model, 4, 0, "vt", "full", tmp_path) == 0
     for i, held_out in enumerate(folds(sets, 4, 0)):
         data = json.loads((tmp_path / f"style_fold{i}_vt.json").read_text(encoding="utf-8"))
-        assert data["catalog"] == "m12b" and data["parts"]["slope45_2x2"] == len(sets) - len(held_out)
+        assert data["catalog"] == "m12d" and data["parts"]["slope45_2x2"] == len(sets) - len(held_out)
         assert StyleStats.load(tmp_path / f"style_fold{i}_vt.json").models == len(sets) - len(held_out)
 
 

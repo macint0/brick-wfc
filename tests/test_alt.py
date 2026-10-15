@@ -62,7 +62,7 @@ def test_all_from_folds_equals_merged_counts() -> None:
 def test_learned_style_uses_the_held_out_fold(tmp_path: Path) -> None:
     sets = [f"s{i}" for i in range(8)]
     for i in range(4):
-        for version, tag in (("", 10), ("_v2", 20)):
+        for version, tag in (("", 10), ("_v2", 20), ("_v3", 30)):
             stats = StyleStats().add([piece("plate1x1", 0)])
             stats.models = tag + i  # tag each fold and version
             stats.save(tmp_path / f"style_fold{i}{version}.json")
@@ -71,8 +71,10 @@ def test_learned_style_uses_the_held_out_fold(tmp_path: Path) -> None:
     for i, held in enumerate(folds(sets, 4, 0)):
         stats, label = learned_style(held[0], tmp_path, sets_file, "v1")
         assert stats.models == 10 + i and label == f"M10 fold {i} (learned without {held[0]})"  # as in M12 caches
-        stats, label = learned_style(held[0], tmp_path, sets_file)  # v2 by default
+        stats, label = learned_style(held[0], tmp_path, sets_file, "v2")
         assert stats.models == 20 + i and label.endswith("style v2")
+        stats, label = learned_style(held[0], tmp_path, sets_file)  # v3 by default (M12d)
+        assert stats.models == 30 + i and label.endswith("style v3")
     stats, label = learned_style("other", tmp_path, sets_file, "v1")
     assert stats.models == round((10 + 11 + 12 + 13) / 3) and label == "all 8 M10 sets"
 
@@ -158,7 +160,7 @@ def test_cli_writes_k_builds_with_steps(tiny_ldr: Path, style_dir: tuple[Path, P
     assert [s["stage"] for s in stats["stages"]] == ["generate", "verify", "dedupe", "judge", "select"]
     survivors = [stats["requested"]] + [s["survivors"] for s in stats["stages"]]
     assert survivors == sorted(survivors, reverse=True) and survivors[-1] == 3
-    assert stats["style"] == "all 8 M10 sets, style v2" and stats["real_model_judge"] is not None
+    assert stats["style"] == "all 8 M10 sets, style v3" and stats["real_model_judge"] is not None
 
     inventory = load_source(str(tiny_ldr)).inventory
     for row in stats["selected"]:

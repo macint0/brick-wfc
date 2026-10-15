@@ -1,0 +1,1017 @@
+[
+  {
+    "set_number": "7796-1",
+    "parts": 56,
+    "primitives": 0,
+    "plates4": 6,
+    "catalog": 56,
+    "top_missing": [],
+    "catalog_m8": 49,
+    "on_grid": 56,
+    "on_grid_m8": 49,
+    "catalog_m12b": 56,
+    "on_grid_m12b": 56,
+    "plates4_pct": 10.714285714285714,
+    "catalog_m8_pct": 87.5,
+    "catalog_pct": 100.0
+  },
+  {
+    "set_number": "4956-1",
+    "parts": 629,
+    "primitives": 0,
+    "plates4": 22,
+    "catalog": 611,
+    "top_missing": [
+      [
+        "32000.dat",
+        4
+      ],
+      [
+        "2423.dat",
+        4
+      ],
+      [
+        "2432.dat",
+        2
+      ],
+      [
+        "4459.dat",
+        2
+      ],
+      [
+        "4599a.dat",
+        2
+      ]
+    ],
+    "catalog_m8": 397,
+    "on_grid": 581,
+    "on_grid_m8": 373,
+    "catalog_m12b": 573,
+    "on_grid_m12b": 543,
+    "plates4_pct": 3.4976152623211445,
+    "catalog_m8_pct": 63.11605723370429,
+    "catalog_pct": 97.13831478537361
+  },
+  {
+    "set_number": "4954-1",
+    "parts": 1174,
+    "primitives": 0,
+    "plates4": 55,
+    "catalog": 1134,
+    "top_missing": [
+      [
+        "30413.dat",
+        5
+      ],
+      [
+        "32000.dat",
+        4
+      ],
+      [
+        "4488.dat",
+        4
+      ],
+      [
+        "4274.dat",
+        4
+      ],
+      [
+        "50745.dat",
+        4
+      ]
+    ],
+    "catalog_m8": 774,
+    "on_grid": 925,
+    "on_grid_m8": 638,
+    "catalog_m12b": 975,
+    "on_grid_m12b": 823,
+    "plates4_pct": 4.6848381601362865,
+    "catalog_m8_pct": 65.92844974446338,
+    "catalog_pct": 96.59284497444634
+  },
+  {
+    "set_number": "5891-1",
+    "parts": 539,
+    "primitives": 0,
+    "plates4": 35,
+    "catalog": 501,
+    "top_missing": [
+      [
+        "4081b.dat",
+        5
+      ],
+      [
+        "4599a.dat",
+        3
+      ],
+      [
+        "6019.dat",
+        3
+      ],
+      [
+        "59443.dat",
+        3
+      ],
+      [
+        "2780.dat",
+        2
+      ]
+    ],
+    "catalog_m8": 323,
+    "on_grid": 448,
+    "on_grid_m8": 290,
+    "catalog_m12b": 460,
+    "on_grid_m12b": 414,
+    "plates4_pct": 6.4935064935064934,
+    "catalog_m8_pct": 59.92578849721707,
+    "catalog_pct": 92.94990723562152
+  },
+  {
+    "set_number": "10182-1",
+    "parts": 2073,
+    "primitives": 1384,
+    "plates4": 293,
+    "catalog": 1907,
+    "top_missing": [
+      [
+        "6120.dat",
+        11
+      ],
+      [
+        "44302.dat",
+        9
+      ],
+      [
+        "3680.dat",
+        8
+      ],
+      [
+        "3679.dat",
+        8
+      ],
+      [
+        "44301.dat",
+        7
+      ]
+    ],
+    "catalog_m8": 1514,
+    "on_grid": 1408,
+    "on_grid_m8": 1179,
+    "catalog_m12b": 1665,
+    "on_grid_m12b": 1289,
+    "plates4_pct": 14.134105161601545,
+    "catalog_m8_pct": 73.03424987940183,
+    "catalog_pct": 91.9922817173179
+  },
+  {
+    "set_number": "31009-1",
+    "parts": 270,
+    "primitives": 0,
+    "plates4": 22,
+    "catalog": 245,
+    "top_missing": [
+      [
+        "2429c01.dat",
+        2
+      ],
+      [
+        "32001.dat",
+        2
+      ],
+      [
+        "2496.dat",
+        2
+      ],
+      [
+        "3820.dat",
+        2
+      ],
+      [
+        "91405.dat",
+        1
+      ]
+    ],
+    "catalog_m8": 160,
+    "on_grid": 239,
+    "on_grid_m8": 155,
+    "catalog_m12b": 211,
+    "on_grid_m12b": 206,
+    "plates4_pct": 8.148148148148149,
+    "catalog_m8_pct": 59.25925925925926,
+    "catalog_pct": 90.74074074074075
+  },
+  {
+    "set_number": "10224-1",
+    "parts": 2797,
+    "primitives": 32,
+    "plates4": 280,
+    "catalog": 2504,
+    "top_missing": [
+      [
+        "4218b.dat",
+        18
+      ],
+      [
+        "3820.dat",
+        16
+      ],
+      [
+        "33291.dat",
+        12
+      ],
+      [
+        "4081b.dat",
+        12
+      ],
+      [
+        "3626cp01.dat",
+        8
+      ]
+    ],
+    "catalog_m8": 1792,
+    "on_grid": 2171,
+    "on_grid_m8": 1591,
+    "catalog_m12b": 1914,
+    "on_grid_m12b": 1699,
+    "plates4_pct": 10.010725777618877,
+    "catalog_m8_pct": 64.06864497676081,
+    "catalog_pct": 89.52449052556311
+  },
+  {
+    "set_number": "10218-1",
+    "parts": 2042,
+    "primitives": 0,
+    "plates4": 176,
+    "catalog": 1755,
+    "top_missing": [
+      [
+        "33291.dat",
+        36
+      ],
+      [
+        "2430.dat",
+        18
+      ],
+      [
+        "2429.dat",
+        18
+      ],
+      [
+        "60897.dat",
+        9
+      ],
+      [
+        "3820.dat",
+        8
+      ]
+    ],
+    "catalog_m8": 1258,
+    "on_grid": 1300,
+    "on_grid_m8": 958,
+    "catalog_m12b": 1397,
+    "on_grid_m12b": 1082,
+    "plates4_pct": 8.619000979431929,
+    "catalog_m8_pct": 61.60626836434868,
+    "catalog_pct": 85.94515181194907
+  },
+  {
+    "set_number": "5766-1",
+    "parts": 360,
+    "primitives": 0,
+    "plates4": 21,
+    "catalog": 309,
+    "top_missing": [
+      [
+        "49668.dat",
+        15
+      ],
+      [
+        "6266.dat",
+        2
+      ],
+      [
+        "33057.dat",
+        2
+      ],
+      [
+        "3830.dat",
+        2
+      ],
+      [
+        "3831.dat",
+        2
+      ]
+    ],
+    "catalog_m8": 203,
+    "on_grid": 274,
+    "on_grid_m8": 185,
+    "catalog_m12b": 267,
+    "on_grid_m12b": 245,
+    "plates4_pct": 5.833333333333333,
+    "catalog_m8_pct": 56.388888888888886,
+    "catalog_pct": 85.83333333333333
+  },
+  {
+    "set_number": "10197-1",
+    "parts": 2302,
+    "primitives": 0,
+    "plates4": 366,
+    "catalog": 1973,
+    "top_missing": [
+      [
+        "80.dat",
+        40
+      ],
+      [
+        "48729a.dat",
+        12
+      ],
+      [
+        "4081b.dat",
+        11
+      ],
+      [
+        "4218a.dat",
+        10
+      ],
+      [
+        "4085c.dat",
+        9
+      ]
+    ],
+    "catalog_m8": 1418,
+    "on_grid": 1511,
+    "on_grid_m8": 1081,
+    "catalog_m12b": 1584,
+    "on_grid_m12b": 1241,
+    "plates4_pct": 15.899218071242398,
+    "catalog_m8_pct": 61.59860990443093,
+    "catalog_pct": 85.70807993049522
+  },
+  {
+    "set_number": "5771-1",
+    "parts": 702,
+    "primitives": 1,
+    "plates4": 59,
+    "catalog": 596,
+    "top_missing": [
+      [
+        "60478.dat",
+        8
+      ],
+      [
+        "91405.dat",
+        5
+      ],
+      [
+        "4287b.dat",
+        5
+      ],
+      [
+        "2429.dat",
+        4
+      ],
+      [
+        "2430.dat",
+        4
+      ]
+    ],
+    "catalog_m8": 422,
+    "on_grid": 481,
+    "on_grid_m8": 358,
+    "catalog_m12b": 521,
+    "on_grid_m12b": 436,
+    "plates4_pct": 8.404558404558404,
+    "catalog_m8_pct": 60.11396011396011,
+    "catalog_pct": 84.9002849002849
+  },
+  {
+    "set_number": "10185-1",
+    "parts": 2405,
+    "primitives": 0,
+    "plates4": 238,
+    "catalog": 2039,
+    "top_missing": [
+      [
+        "6266.dat",
+        37
+      ],
+      [
+        "2429.dat",
+        34
+      ],
+      [
+        "2430.dat",
+        34
+      ],
+      [
+        "30377.dat",
+        13
+      ],
+      [
+        "2343.dat",
+        12
+      ]
+    ],
+    "catalog_m8": 1533,
+    "on_grid": 1854,
+    "on_grid_m8": 1417,
+    "catalog_m12b": 1827,
+    "on_grid_m12b": 1698,
+    "plates4_pct": 9.896049896049895,
+    "catalog_m8_pct": 63.74220374220374,
+    "catalog_pct": 84.78170478170478
+  },
+  {
+    "set_number": "349-1",
+    "parts": 80,
+    "primitives": 0,
+    "plates4": 0,
+    "catalog": 65,
+    "top_missing": [
+      [
+        "3069a.dat",
+        6
+      ],
+      [
+        "646cc01.dat",
+        3
+      ],
+      [
+        "3081cc01.dat",
+        2
+      ],
+      [
+        "455.dat",
+        1
+      ],
+      [
+        "33cc01.dat",
+        1
+      ]
+    ],
+    "catalog_m8": 46,
+    "on_grid": 65,
+    "on_grid_m8": 46,
+    "catalog_m12b": 59,
+    "on_grid_m12b": 59,
+    "plates4_pct": 0.0,
+    "catalog_m8_pct": 57.5,
+    "catalog_pct": 81.25
+  },
+  {
+    "set_number": "10243-1",
+    "parts": 2470,
+    "primitives": 268,
+    "plates4": 331,
+    "catalog": 1921,
+    "top_missing": [
+      [
+        "33291.dat",
+        49
+      ],
+      [
+        "92280.dat",
+        23
+      ],
+      [
+        "30126.dat",
+        18
+      ],
+      [
+        "60897.dat",
+        16
+      ],
+      [
+        "209.dat",
+        15
+      ]
+    ],
+    "catalog_m8": 1423,
+    "on_grid": 1466,
+    "on_grid_m8": 1135,
+    "catalog_m12b": 1511,
+    "on_grid_m12b": 1209,
+    "plates4_pct": 13.40080971659919,
+    "catalog_m8_pct": 57.611336032388664,
+    "catalog_pct": 77.77327935222672
+  },
+  {
+    "set_number": "10264-1",
+    "parts": 2564,
+    "primitives": 35,
+    "plates4": 252,
+    "catalog": 1963,
+    "top_missing": [
+      [
+        "32607.dat",
+        29
+      ],
+      [
+        "59443.dat",
+        18
+      ],
+      [
+        "32062.dat",
+        17
+      ],
+      [
+        "2780.dat",
+        15
+      ],
+      [
+        "64644.dat",
+        13
+      ]
+    ],
+    "catalog_m8": 1341,
+    "on_grid": 1076,
+    "on_grid_m8": 848,
+    "catalog_m12b": 1473,
+    "on_grid_m12b": 892,
+    "plates4_pct": 9.82839313572543,
+    "catalog_m8_pct": 52.30109204368175,
+    "catalog_pct": 76.5600624024961
+  },
+  {
+    "set_number": "10190-1",
+    "parts": 1484,
+    "primitives": 0,
+    "plates4": 56,
+    "catalog": 1123,
+    "top_missing": [
+      [
+        "756.dat",
+        192
+      ],
+      [
+        "30377.dat",
+        13
+      ],
+      [
+        "71944k02.dat",
+        12
+      ],
+      [
+        "22667.dat",
+        8
+      ],
+      [
+        "4085c.dat",
+        8
+      ]
+    ],
+    "catalog_m8": 989,
+    "on_grid": 909,
+    "on_grid_m8": 817,
+    "catalog_m12b": 1022,
+    "on_grid_m12b": 850,
+    "plates4_pct": 3.7735849056603774,
+    "catalog_m8_pct": 66.64420485175202,
+    "catalog_pct": 75.67385444743935
+  },
+  {
+    "set_number": "31048-1",
+    "parts": 369,
+    "primitives": 0,
+    "plates4": 36,
+    "catalog": 279,
+    "top_missing": [
+      [
+        "30137.dat",
+        8
+      ],
+      [
+        "30503.dat",
+        5
+      ],
+      [
+        "30565.dat",
+        4
+      ],
+      [
+        "41770.dat",
+        4
+      ],
+      [
+        "60478.dat",
+        4
+      ]
+    ],
+    "catalog_m8": 201,
+    "on_grid": 236,
+    "on_grid_m8": 166,
+    "catalog_m12b": 236,
+    "on_grid_m12b": 201,
+    "plates4_pct": 9.75609756097561,
+    "catalog_m8_pct": 54.47154471544715,
+    "catalog_pct": 75.60975609756098
+  },
+  {
+    "set_number": "377-1",
+    "parts": 203,
+    "primitives": 0,
+    "plates4": 24,
+    "catalog": 151,
+    "top_missing": [
+      [
+        "3641.dat",
+        6
+      ],
+      [
+        "3317.dat",
+        4
+      ],
+      [
+        "3831d01.dat",
+        4
+      ],
+      [
+        "3820.dat",
+        4
+      ],
+      [
+        "004695b.dat",
+        3
+      ]
+    ],
+    "catalog_m8": 139,
+    "on_grid": 122,
+    "on_grid_m8": 116,
+    "catalog_m12b": 146,
+    "on_grid_m12b": 119,
+    "plates4_pct": 11.822660098522167,
+    "catalog_m8_pct": 68.47290640394088,
+    "catalog_pct": 74.38423645320196
+  },
+  {
+    "set_number": "6362-1",
+    "parts": 139,
+    "primitives": 0,
+    "plates4": 9,
+    "catalog": 103,
+    "top_missing": [
+      [
+        "3641.dat",
+        4
+      ],
+      [
+        "3359.dat",
+        2
+      ],
+      [
+        "3358.dat",
+        2
+      ],
+      [
+        "4345ap03.dat",
+        2
+      ],
+      [
+        "4346p03.dat",
+        2
+      ]
+    ],
+    "catalog_m8": 82,
+    "on_grid": 83,
+    "on_grid_m8": 62,
+    "catalog_m12b": 97,
+    "on_grid_m12b": 77,
+    "plates4_pct": 6.474820143884892,
+    "catalog_m8_pct": 58.992805755395686,
+    "catalog_pct": 74.10071942446044
+  },
+  {
+    "set_number": "6370-1",
+    "parts": 185,
+    "primitives": 0,
+    "plates4": 11,
+    "catalog": 132,
+    "top_missing": [
+      [
+        "4079.dat",
+        4
+      ],
+      [
+        "3741ac01.dat",
+        4
+      ],
+      [
+        "3820.dat",
+        4
+      ],
+      [
+        "2493a.dat",
+        3
+      ],
+      [
+        "(accessories outside a frame)",
+        3
+      ]
+    ],
+    "catalog_m8": 94,
+    "on_grid": 131,
+    "on_grid_m8": 93,
+    "catalog_m12b": 129,
+    "on_grid_m12b": 128,
+    "plates4_pct": 5.945945945945946,
+    "catalog_m8_pct": 50.810810810810814,
+    "catalog_pct": 71.35135135135135
+  },
+  {
+    "set_number": "6372-1",
+    "parts": 239,
+    "primitives": 0,
+    "plates4": 14,
+    "catalog": 170,
+    "top_missing": [
+      [
+        "3742.dat",
+        18
+      ],
+      [
+        "3741.dat",
+        6
+      ],
+      [
+        "4079.dat",
+        4
+      ],
+      [
+        "3899.dat",
+        4
+      ],
+      [
+        "3820.dat",
+        4
+      ]
+    ],
+    "catalog_m8": 134,
+    "on_grid": 167,
+    "on_grid_m8": 131,
+    "catalog_m12b": 164,
+    "on_grid_m12b": 161,
+    "plates4_pct": 5.857740585774058,
+    "catalog_m8_pct": 56.06694560669456,
+    "catalog_pct": 71.1297071129707
+  },
+  {
+    "set_number": "6363-1",
+    "parts": 148,
+    "primitives": 2,
+    "plates4": 17,
+    "catalog": 101,
+    "top_missing": [
+      [
+        "4084.dat",
+        4
+      ],
+      [
+        "4085a.dat",
+        4
+      ],
+      [
+        "4079.dat",
+        2
+      ],
+      [
+        "4081b.dat",
+        2
+      ],
+      [
+        "422.dat",
+        2
+      ]
+    ],
+    "catalog_m8": 95,
+    "on_grid": 74,
+    "on_grid_m8": 68,
+    "catalog_m12b": 100,
+    "on_grid_m12b": 73,
+    "plates4_pct": 11.486486486486486,
+    "catalog_m8_pct": 64.1891891891892,
+    "catalog_pct": 68.24324324324324
+  },
+  {
+    "set_number": "374-1",
+    "parts": 363,
+    "primitives": 0,
+    "plates4": 34,
+    "catalog": 247,
+    "top_missing": [
+      [
+        "3641.dat",
+        12
+      ],
+      [
+        "3820.dat",
+        8
+      ],
+      [
+        "3788.dat",
+        6
+      ],
+      [
+        "122c01.dat",
+        6
+      ],
+      [
+        "3581.dat",
+        6
+      ]
+    ],
+    "catalog_m8": 219,
+    "on_grid": 239,
+    "on_grid_m8": 213,
+    "catalog_m12b": 224,
+    "on_grid_m12b": 218,
+    "plates4_pct": 9.366391184573002,
+    "catalog_m8_pct": 60.33057851239669,
+    "catalog_pct": 68.04407713498622
+  },
+  {
+    "set_number": "7743-1",
+    "parts": 547,
+    "primitives": 0,
+    "plates4": 49,
+    "catalog": 360,
+    "top_missing": [
+      [
+        "6014.dat",
+        14
+      ],
+      [
+        "6015.dat",
+        14
+      ],
+      [
+        "3820.dat",
+        8
+      ],
+      [
+        "4488.dat",
+        6
+      ],
+      [
+        "4215a.dat",
+        6
+      ]
+    ],
+    "catalog_m8": 279,
+    "on_grid": 172,
+    "on_grid_m8": 145,
+    "catalog_m12b": 300,
+    "on_grid_m12b": 153,
+    "plates4_pct": 8.957952468007313,
+    "catalog_m8_pct": 51.005484460694696,
+    "catalog_pct": 65.81352833638026
+  },
+  {
+    "set_number": "6380-1",
+    "parts": 333,
+    "primitives": 0,
+    "plates4": 32,
+    "catalog": 209,
+    "top_missing": [
+      [
+        "2494d01.dat",
+        10
+      ],
+      [
+        "3820.dat",
+        10
+      ],
+      [
+        "3816.dat",
+        5
+      ],
+      [
+        "3817.dat",
+        5
+      ],
+      [
+        "3818.dat",
+        5
+      ]
+    ],
+    "catalog_m8": 181,
+    "on_grid": 140,
+    "on_grid_m8": 115,
+    "catalog_m12b": 197,
+    "on_grid_m12b": 131,
+    "plates4_pct": 9.60960960960961,
+    "catalog_m8_pct": 54.354354354354356,
+    "catalog_pct": 62.76276276276276
+  },
+  {
+    "set_number": "361-2",
+    "parts": 85,
+    "primitives": 0,
+    "plates4": 0,
+    "catalog": 53,
+    "top_missing": [
+      [
+        "(accessories outside a frame)",
+        8
+      ],
+      [
+        "3853.dat",
+        4
+      ],
+      [
+        "3865.dat",
+        2
+      ],
+      [
+        "3581.dat",
+        2
+      ],
+      [
+        "3644.dat",
+        2
+      ]
+    ],
+    "catalog_m8": 52,
+    "on_grid": 52,
+    "on_grid_m8": 52,
+    "catalog_m12b": 52,
+    "on_grid_m12b": 52,
+    "plates4_pct": 0.0,
+    "catalog_m8_pct": 61.1764705882353,
+    "catalog_pct": 62.35294117647059
+  },
+  {
+    "set_number": "6382-1",
+    "parts": 415,
+    "primitives": 0,
+    "plates4": 43,
+    "catalog": 258,
+    "top_missing": [
+      [
+        "4218a.dat",
+        20
+      ],
+      [
+        "3853.dat",
+        12
+      ],
+      [
+        "3855b.dat",
+        11
+      ],
+      [
+        "3820.dat",
+        8
+      ],
+      [
+        "3641.dat",
+        4
+      ]
+    ],
+    "catalog_m8": 212,
+    "on_grid": 193,
+    "on_grid_m8": 150,
+    "catalog_m12b": 243,
+    "on_grid_m12b": 181,
+    "plates4_pct": 10.36144578313253,
+    "catalog_m8_pct": 51.08433734939759,
+    "catalog_pct": 62.16867469879518
+  },
+  {
+    "set_number": "6378-1",
+    "parts": 348,
+    "primitives": 0,
+    "plates4": 28,
+    "catalog": 206,
+    "top_missing": [
+      [
+        "754.dat",
+        41
+      ],
+      [
+        "4624.dat",
+        7
+      ],
+      [
+        "3641.dat",
+        7
+      ],
+      [
+        "3937.dat",
+        4
+      ],
+      [
+        "3938.dat",
+        4
+      ]
+    ],
+    "catalog_m8": 203,
+    "on_grid": 167,
+    "on_grid_m8": 164,
+    "catalog_m12b": 204,
+    "on_grid_m12b": 165,
+    "plates4_pct": 8.045977011494253,
+    "catalog_m8_pct": 58.333333333333336,
+    "catalog_pct": 59.195402298850574
+  }
+]

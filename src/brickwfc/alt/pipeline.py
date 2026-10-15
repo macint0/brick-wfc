@@ -667,9 +667,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--data", type=Path, default=DATA_DIR, help="OMR download cache")
     parser.add_argument("--style-dir", type=Path, default=STYLE_DIR)
     parser.add_argument("--style-version", choices=sorted(STYLE_FILES), default=STYLE_VERSION,
-                        help="M10 style statistics: v1 (M8 catalog, M10-M12 tables) or v2 (relearned with slopes)")
+                        help="M10 style statistics: v1 (M8 catalog, M10-M12 tables), v2 (M12b: slopes, M12b/M12c "
+                             "tables) or v3 (M12d: the real sets' parts)")
     parser.add_argument("--catalog", choices=sorted(CATALOGS), default="full",
-                        help="parts the inventory is read with: full (corners, slopes) or m8 (before M12b)")
+                        help="parts the inventory is read with: full (M12d), m12b (corners, slopes) or m8 (before M12b)")
     parser.add_argument("--sets-file", type=Path, default=SETS_FILE)
     parser.add_argument("--out", type=Path, help="output directory (default out/alt/<input name>)")
     parser.add_argument("--fresh", action="store_true", help="discard cached candidates")

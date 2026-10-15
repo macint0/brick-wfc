@@ -72,7 +72,7 @@ def style_dir(tmp_path: Path) -> tuple[Path, Path]:
     directory = tmp_path / "style"
     stats = StyleStats().add(tiny_model())
     for i in range(4):
-        for version in ("", "_v2"):
+        for version in ("", "_v2", "_v3"):
             stats.save(directory / f"style_fold{i}{version}.json")
     sets_file = tmp_path / "sets.json"
     sets_file.write_text(json.dumps({"selected": [f"s{i}" for i in range(8)]}), encoding="utf-8")

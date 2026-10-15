@@ -20,7 +20,7 @@ from brickwfc.bricks.accessories import ACCESSORY_FILES, Accessories, accessorie
 from brickwfc.bricks.colors import BrickColor
 from brickwfc.bricks import rebrickable
 from brickwfc.bricks.inventory import Inventory, inventory_from_csv, inventory_from_mpd
-from brickwfc.bricks.parts import BY_FILE, M8_FILES
+from brickwfc.bricks.parts import BY_FILE, M8_FILES, M12B_FILES
 from brickwfc.bricks.style import StyleStats, merged
 from brickwfc.experiments.coverage import PRIMITIVE
 from brickwfc.experiments.style import folds
@@ -30,10 +30,12 @@ from brickwfc.ldraw.mpd import flatten
 DATA_DIR = Path("data/omr")
 STYLE_DIR = Path("results/m10_style_stats")  # style_fold{i}.json from the M10 run, *_v2.json relearned in M12b
 # Style statistics versions: v1, learned in M10 with the M8 catalog (the M10-M12 tables); v2, relearned in M12b
-# with corners and slopes (``experiments.style --learn-only v2``). The pipeline uses STYLE_VERSION by default.
-STYLE_FILES = {"v1": "style_fold{i}.json", "v2": "style_fold{i}_v2.json"}
-STYLE_VERSION = "v2"
-CATALOGS = {"full": BY_FILE, "m8": M8_FILES}  # parts an inventory is read with: today's catalog or M8's
+# with corners and slopes (``experiments.style --learn-only v2``); v3, relearned in M12d with the real sets' parts
+# (``--learn-only v3``). The pipeline uses STYLE_VERSION by default.
+STYLE_FILES = {"v1": "style_fold{i}.json", "v2": "style_fold{i}_v2.json", "v3": "style_fold{i}_v3.json"}
+STYLE_VERSION = "v3"
+# parts an inventory is read with: today's catalog, or the M12b or M8 one (to reproduce their tables)
+CATALOGS = {"full": BY_FILE, "m12b": M12B_FILES, "m8": M8_FILES}
 SETS_FILE = Path("results/sets_selection.json")
 FOLDS, FOLD_SEED = 4, 0  # the M10 run's cross-validation (experiments.style defaults)
 REBRICKABLE_PREFIX = "rebrickable:"
@@ -69,7 +71,7 @@ def rebrickable_source(set_num: str, data_dir: Path = rebrickable.DATA_DIR, cata
 def load_source(spec: str, data_dir: Path = DATA_DIR, rebrickable_dir: Path = rebrickable.DATA_DIR,
                 catalog: str = "full") -> Source:
     """The inventory of a set number, model, parts list or Rebrickable set, read with the ``catalog``
-    (``CATALOGS``: today's catalog or the M8 one)."""
+    (``CATALOGS``: today's catalog, the M12b or the M8 one)."""
     if spec.startswith(REBRICKABLE_PREFIX):
         return rebrickable_source(spec.removeprefix(REBRICKABLE_PREFIX), rebrickable_dir, catalog)
     known = CATALOGS[catalog]
@@ -96,7 +98,7 @@ def load_source(spec: str, data_dir: Path = DATA_DIR, rebrickable_dir: Path = re
     name = path.stem if suffix in (".csv", ".mpd", ".ldr") else spec
     ignored = {file: count for file, count in ignored.items()
                if not PRIMITIVE.search(file) and file.lower() not in ACCESSORY_FILES}
-    if catalog == "m8":  # the M8 catalog has no frames to hold them
+    if catalog != "full":  # the M8 and M12b catalogs have no frames to hold them
         accessories = {}
     return Source(name, inventory, tuple(colors), ignored, model, accessories)
 

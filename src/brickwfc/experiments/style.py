@@ -64,7 +64,7 @@ import numpy as np
 from brickwfc.bricks.bottomup import BottomUpBuilder
 from brickwfc.bricks.colors import colors_by_name
 from brickwfc.bricks.inventory import Inventory, overuse, usage, utilization
-from brickwfc.bricks.parts import BY_FILE, CATALOG, M8_FILES, PartSet, PlacedPart, Shape, extract_parts
+from brickwfc.bricks.parts import BY_FILE, CATALOG, M8_FILES, M12B_FILES, PartSet, PlacedPart, Shape, extract_parts
 from brickwfc.bricks.stability import SupportConstraint
 from brickwfc.bricks.style import (
     Events,
@@ -318,7 +318,7 @@ def wfc_history_mb(real: list[PlacedPart], height: int, room: float) -> float:
     return BACKTRACK_DEPTH * math.prod(grid_for(inventory, height, room)) * len(parts.infos) / 1e6
 
 
-CATALOG_NAMES = {"full": "m12b", "m8": "m8"}  # catalog version written into learned statistics
+CATALOG_NAMES = {"full": "m12d", "m12b": "m12b", "m8": "m8"}  # catalog version written into learned statistics
 
 
 def learn_only(sets: Sequence[str], per_model: dict[str, StyleStats], k: int, fold_seed: int, version: str,
@@ -351,13 +351,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 3) - 2), help="processes in all")
     parser.add_argument("--wfc-workers", type=int, default=2, help="processes for WFC jobs (memory-heavy)")
     parser.add_argument("--out", type=Path, default=Path("out/m10"))
-    parser.add_argument("--catalog", choices=("full", "m8"), default="full", help="parts the sets are voxelized with")
+    parser.add_argument("--catalog", choices=("full", "m12b", "m8"), default="full", help="parts the sets are voxelized with")
     parser.add_argument("--learn-only", metavar="VERSION", help="only write each fold's statistics, tagged VERSION")
     parser.add_argument("--stats-dir", type=Path, default=Path("results/m10_style_stats"), help="for --learn-only")
     args = parser.parse_args(argv)
 
     sets = json.loads(args.sets_file.read_text(encoding="utf-8"))["selected"]
-    known = BY_FILE if args.catalog == "full" else M8_FILES
+    known = {"full": BY_FILE, "m12b": M12B_FILES, "m8": M8_FILES}[args.catalog]
     models = {s: voxelize(flatten(fetch_set(s, args.data).read_text(encoding="utf-8", errors="replace")), known)[0]
               for s in sets}
     per_model = {s: StyleStats().add(m) for s, m in models.items()}
