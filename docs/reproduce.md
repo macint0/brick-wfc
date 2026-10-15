@@ -772,6 +772,23 @@ python -m brickwfc.experiments.omr_pool --data data/omr      # measure every mod
   fingerprint, so after a catalog change the same command measures everything again. Rerun it after every catalog
   change and commit both files.
 
+### `results/m12e_tokens.md` (M12e: the token dataset for proposal model v2), with `m12e_tokens_oov.md`
+
+```
+python -m brickwfc.experiments.export_tokens --pool results/m12e_omr_pool.json --omr data/omr \
+    --brickgpt data/brickgpt --out data/tokens_v2 --results results/m12e_tokens.md \
+    --oov-results results/m12e_tokens_oov.md --workers 1
+```
+
+- **About 4 minutes on one worker.** Peak memory stays low because masks are packed as they are encoded. The BrickGPT
+  splits are downloaded into `data/brickgpt/` if missing.
+- **Writes** `vocab.json`, `export.json` and `train` / `val` / `setval` / `heldout` `.npz` under `data/tokens_v2/`
+  (gitignored; upload this folder to Drive for `training/colab_v2.ipynb`). `export.json` records the catalog
+  fingerprint the tokens were built with.
+- **Refuses a pool measured on another catalog.** Rerun `experiments.omr_pool` first.
+- Deterministic: the validation sets are a seeded share (`--val-share 0.05 --val-seed 0`); the demo sets are
+  `--heldout-sets` (default 6378-1 31048-1).
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):
