@@ -721,6 +721,20 @@ python -m brickwfc.experiments.coherence --sweep out/m12c_bench --arms bench60 -
   rerun on every cached run (`--out out/m12c_refloor/...`) prints `rerun with ... selects seed X, the run selected Y`
   where a stored pick changes and records both seeds (`stored_seed`, `replayed_seed`).
 
+### `results/m12d_missing_parts.md` (M12d: the parts the catalog cannot place, ranked)
+
+Seconds for the 28 sets, a few seconds more for all local models (`--all`); Rebrickable's `parts.csv.gz` supplies the
+names (download `https://cdn.rebrickable.com/media/downloads/parts.csv.gz` into `data/rebrickable/`; without it names
+print as `?`):
+
+```
+python -m brickwfc.experiments.missing_parts --sets-file results/sets_selection.json --out results/m12d_missing_parts.md
+python -m brickwfc.experiments.missing_parts --all --out out/m12d_missing_all.md
+```
+
+The counts are at the catalog the command runs with (the file header names how many files it knows), so the ranking
+changes with every M12d batch; the one on main at d15e46b is the 88-part one that chose the batches.
+
 ## Not run yet
 
 Commands for results that are still to be run (the drivers are on main):

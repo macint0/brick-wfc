@@ -1,6 +1,6 @@
 # M12d — parts the catalog cannot place, ranked (2026-10-15)
 
-Counts part instances in the OMR models that are not in `parts.BY_FILE` (88-part catalog). LDraw primitives and subparts (alphabetic names, `n-m*`, `stud*`, paths) are left out. Names from Rebrickable `parts.csv`; "?" = no Rebrickable match (mostly composite files like `60593c01`, printed parts, old/obsolete numbers). Kinds are keyword heuristics on the name. Script: a one-off (`missing_parts.py`, scratchpad); the per-set view is `experiments/coverage.py`.
+Made at the 88-part catalog (d15e46b) with the first version of `experiments/missing_parts.py`; this is the ranking that chose the M12d batches. Counts part instances in the OMR models that are not in `parts.BY_FILE`. LDraw primitives and subparts (alphabetic names, `n-m*`, `stud*`, paths) are left out. Names from Rebrickable `parts.csv`; "?" = no Rebrickable match (mostly composite files like `60593c01`, printed parts, old/obsolete numbers). Kinds are keyword heuristics on the name. Reproduce: `python -m brickwfc.experiments.missing_parts --sets-file results/sets_selection.json --out ...` (at the current catalog the numbers differ); the per-set view is `experiments/coverage.py`.
 
 ## 28 building sets: 25321 parts, recognized 17607 (69.5%), missing 7714 in 807 distinct files
 
