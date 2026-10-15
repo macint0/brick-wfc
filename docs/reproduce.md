@@ -799,12 +799,17 @@ Part geometry facts (the placement-test rows) come from `python -m brickwfc.ldra
 the library's `complete.zip` unpacked under `data/ldraw` (`parts/` and `p/`, lower-case paths); the catalog check for
 Studio is `python -m brickwfc.bricks.catalog_check`.
 
-### `results/m12d_looks.md` (M12d: the selected builds before and after the catalog, for the eye), with `m12d_looks.json`, `m12d_looks_sheet.png`
+### `results/m12d_looks.md` (M12d: the selected builds before and after the catalog, for the eye), with `m12d_looks.json`, `m12d_looks_sheet.png`, `m12d_looks_matched_sheet.png`
 
 ```
-python -m brickwfc.experiments.looks --steps run --workers 5     # 9 pairs x 2 arms x 50 candidates
-python -m brickwfc.experiments.looks --steps report --workers 5  # no generation
+python -m brickwfc.experiments.looks --steps run --workers 5                  # 9 pairs x 2 arms x 50 candidates
+python -m brickwfc.experiments.looks --steps run --arms matched --workers 4    # 2026-10-16: 6 pairs, the old volume
+python -m brickwfc.experiments.looks --steps report --workers 5               # no generation
 ```
+
+- **The matched arm** (dated section of the write-up) is the new arm at the old arm's volume on the 5891-1 and 4956-1
+  pairs. Its slack is solved per pair before the run (sizing only, about 2 min) and saved as
+  `out/m12d_looks/matched/<set>/<object>/slack.json`.
 
 - **Two arms, one flag set.** Both arms use `--order connected --reserve-small --regrow --skin --symmetric --recolor
   --fill-slack 0.8` and the same seeds. The old arm adds `--catalog m12b --style-version v2`; the new arm uses the
