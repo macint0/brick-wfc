@@ -8,10 +8,11 @@ linear patch embedding at sequence positions 4..67 (``data.py`` for the layout).
 position from the first part on.
 
 Resumable: a checkpoint is written to ``--out`` at every evaluation and picked up by a rerun of the same
-command. The weights with the best validation loss (with ``--val-sets``: the mean of the BrickGPT validation
-loss and the loss on those held-out training sets; never the held-out fold) are exported as ``proposal.npz`` (float32 arrays in
+command. The weights with the best validation loss (with ``--val-sets``, or a ``setval.npz`` in ``--data`` (M12e
+pool exports): the mean of the BrickGPT validation loss and the real-set validation loss; never the held-out
+sets) are exported as ``proposal.npz`` (float32 arrays in
 (in, out) layout plus the config as JSON; read by ``brickwfc.bricks.proposal``), with ``vocab.json`` and
-``log.jsonl`` next to them.
+``log.jsonl`` next to them. ``--patience N`` stops after N evaluations in a row without a new best selection loss.
 
 PyTorch is used only here (and in the notebook); it is not a dependency of the brickwfc package.
 """
@@ -24,6 +25,7 @@ import math
 import shutil
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -124,7 +126,9 @@ def export_npz(model: ProposalModel, path: Path) -> None:
                        f"b{i}.fc1_b": b.fc1.bias, f"b{i}.fc2_w": b.fc2.weight.T, f"b{i}.fc2_b": b.fc2.bias})
     out = {k: v.detach().float().cpu().numpy().copy() for k, v in arrays.items()}
     out["config"] = np.array(json.dumps(asdict(model.config)))
-    np.savez(path, **out)
+    tmp = path.with_name(path.stem + ".tmp.npz")
+    np.savez(tmp, **out)
+    tmp.replace(path)
 
 
 # Training -------------------------------------------------------------------------------------------------
@@ -176,6 +180,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--val-sets", nargs="*", default=[],
                         help="training sets held out of training (all their symmetries) as set validation; with them, "
                              "the weights are selected on the mean of the BrickGPT and set validation losses")
+    parser.add_argument("--patience", type=int, default=0,
+                        help="stop after this many evaluations without a new best selection loss; 0 = never")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args(argv)
@@ -189,6 +195,8 @@ def main(argv: list[str] | None = None) -> int:
     # Every symmetry of the validation sets is held out of training, so all of them are validation windows.
     excluded = set_builds(train, args.val_sets)[0] if args.val_sets else []
     set_val = eval_windows(train, args.max_len, indices=excluded)
+    if not args.val_sets and (args.data / "setval.npz").exists():  # a pool export's real-set validation split
+        set_val = eval_windows(Split(args.data / "setval.npz", vocab), args.max_len)
     sampler = Sampler(train, args.max_len, args.set_share, args.mask_drop, exclude=excluded)
 
     torch.manual_seed(args.seed)
@@ -202,24 +210,35 @@ def main(argv: list[str] | None = None) -> int:
     scaler = torch.amp.GradScaler("cuda", enabled=cuda)
     params = sum(p.numel() for p in model.parameters())
     print(f"{params / 1e6:.2f}M parameters, {len(train) - len(excluded)} training builds, {len(val)} val / "
-          f"{len(set_val)} set-val ({' '.join(args.val_sets) or 'none'}) / {len(heldout)} held-out windows")
+          f"{len(set_val)} set-val ({' '.join(args.val_sets) or ('setval.npz' if set_val else 'none')}) / {len(heldout)} held-out windows")
 
     args.out.mkdir(parents=True, exist_ok=True)
     ckpt_path, log_path = args.out / "checkpoint.pt", args.out / "log.jsonl"
-    step, best = 0, float("inf")
+    step, best, stale = 0, float("inf"), 0
     if ckpt_path.exists():
         ckpt = torch.load(ckpt_path, map_location=args.device)
         model.load_state_dict(ckpt["model"])
         opt.load_state_dict(ckpt["opt"])
         scaler.load_state_dict(ckpt["scaler"])
-        step, best = ckpt["step"], ckpt["best"]
-        print(f"resumed at step {step} (best val loss {best:.4f})")
+        step, best, stale = ckpt["step"], ckpt["best"], ckpt.get("stale", 0)
+        print(f"resumed at step {step} (best val loss {best:.4f}, {stale} evaluations without improvement)")
+        if args.patience and stale >= args.patience:
+            print("already stopped early; nothing to do")
+            return 0
     shutil.copy(args.data / "vocab.json", args.out / "vocab.json")
 
+    def draw(at: int) -> tuple[np.ndarray, np.ndarray]:
+        # Per-step generator: a resumed run draws the same batches, with or without the prefetch below.
+        return sampler.batch(args.batch, np.random.default_rng([args.seed, at]))
+
+    # The next batch is sampled on a thread while the GPU works on this one (sampling is CPU-bound).
+    prefetch = ThreadPoolExecutor(max_workers=1)
+    pending = prefetch.submit(draw, step)
     tic = time.time()
     while step < args.steps:
-        rng = np.random.default_rng([args.seed, step])  # per-step generator: a resumed run draws the same batches
-        ids, patches = (torch.from_numpy(a).to(args.device) for a in sampler.batch(args.batch, rng))
+        batch = pending.result()
+        pending = prefetch.submit(draw, step + 1)
+        ids, patches = (torch.from_numpy(a).to(args.device) for a in batch)
         for group in opt.param_groups:
             group["lr"] = lr_at(step, args.steps, args.lr, args.warmup)
         with torch.autocast("cuda", dtype=torch.float16, enabled=cuda):
@@ -242,20 +261,28 @@ def main(argv: list[str] | None = None) -> int:
                       "heldout_sets": evaluate(model, heldout, pad, args.device, args.batch), "minutes": (time.time() - started) / 60}
             if set_val:
                 scores["set_val"] = evaluate(model, set_val, pad, args.device, args.batch)
-                scores["val_sets"] = args.val_sets
+                scores["val_sets"] = args.val_sets or "setval.npz"
             # Selection never looks at the held-out sets (the test sets of the proposal comparison).
             scores["select"] = (scores["val"]["loss"] + scores["set_val"]["loss"]) / 2 if set_val else scores["val"]["loss"]
             with log_path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(scores) + "\n")
             print(json.dumps(scores), flush=True)
             if scores["select"] < best:
-                best = scores["select"]
+                best, stale = scores["select"], 0
                 export_npz(model, args.out / "proposal.npz")
+            else:
+                stale += 1
+            # Written next to the old checkpoint, then swapped in: a disconnect mid-write keeps the last good one.
             torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "scaler": scaler.state_dict(), "step": step,
-                        "best": best}, ckpt_path)
+                        "best": best, "stale": stale}, ckpt_path.with_suffix(".tmp"))
+            ckpt_path.with_suffix(".tmp").replace(ckpt_path)
+            if args.patience and stale >= args.patience:
+                print(f"early stop at step {step}: {stale} evaluations without a new best (best {best:.4f})")
+                break
         if out_of_time:
             print(f"time limit reached at step {step}")
             break
+    prefetch.shutdown(cancel_futures=True)
     print(f"done: best selection loss {best:.4f}; weights in {args.out / 'proposal.npz'}")
     return 0
 
