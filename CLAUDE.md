@@ -592,6 +592,42 @@ open; nothing changes there now.
   ~16 MB) to Drive as `MyDrive/brick-wfc/tokens_v2`, add the `GITHUB_TOKEN` secret, push main (the notebook clones
   `BRANCH=main`; the catalog fingerprint must be 475df2114737), run the smoke config first.
 - Coordinator (this session): merges on main, full pytest per merge, CLAUDE.md; no experiments on the PC.
+**Night of 2026-10-15/16 (Mac: "u can train by urself we have colab in wsl" and "set up overnight task"):**
+- **Proposal v2 trained** (`results/m12e_training.md`; 15 runs on a Colab A100 through the `colab` CLI in WSL, source and
+  tokens uploaded straight to the VM, no Drive / token / push; 29.7 compute units, session stopped). The planned `base`
+  (5.25M) and `scaled` (26.2M) runs early-stop in 9 and 17 minutes: **they memorize the real sets within 3,000–5,000
+  steps** (551 distinct models × 8 symmetries, absolute coordinates; the BrickGPT split never overfits). Stage 1 of the
+  plan passes for both (demo-set shape 3.58 / 3.22 and colour 1.96 / 0.97 vs the real-set unigram's 4.68 / 2.86). Flag
+  sweep: the real-set share sets when the overfit starts, capacity sets the floor (base 1.68–1.76 on `setval` at any
+  share, scaled 1.53); weight decay 0.3 does nothing. **Regularization merged from session B (e3b1a21): `--dropout`,
+  `--jitter set brickgpt` (training windows moved by whole coarse voxels along Z/X, tokens and mask together),
+  `--select setval`, running minima logged, `proposal_setval.npz`;** defaults unchanged. With dropout 0.1 + jitter at share
+  0.05, base and scaled reach `setval` 1.26 / 1.24 and demo sets 1.10 / 1.12 (colour 0.75–0.85, shape 2.66–2.74), 0.5 nats
+  below the planned base; base hit its 40k cap still improving. **Stage-2 models:** `data/models/proposal_v2_base_reg_ss05/`
+  and `proposal_v2_scaled_reg_ss05/` (gitignored; `proposal.npz`, `vocab.json`, `log.jsonl`). All 18 parity checks OK.
+  Stage 2 (builds on the demo pairs, rendered sheets, surface / mirror / colour metrics; adoption rule in the plan) runs
+  when Mac says go.
+- **Catalog eye test** (session A, merged 474b03a + 08ff251; `results/m12d_looks.md`, `m12d_looks_sheet.png`,
+  `m12d_looks_matched_sheet.png`; `experiments/looks.py`): the 9 bench pairs, old (`--catalog m12b --style-version v2`)
+  vs new catalog, both with connected + reserve + regrow, `--skin --symmetric --recolor`, slack 0.8, 50 candidates.
+  **The new catalog does not make the selected builds look better on any metric we have:** new parts are 3.6% of the
+  selected builds' parts (92 of 95 on the skin; frames, rails, brackets, arches, cones), top 4×4 windows busier on 6/9,
+  seams after recolour worse on 8/9 (58.1 → 54.8%), mirrored flat, complete candidates 21 → 3, 14 → 21 s per candidate.
+  The matched-volume arm (new catalog at the old arm's exact target on 5891-1 and 4956-1): the completeness loss is half
+  size (the target grows 5–11% with the recognized volume: the 5891-1 table) and half the parts (the 5891-1 chair); the
+  busier skins, lower seams (55.9 → 51.3% on 6/6) and 1.4× time are the parts (with their style v3). 9 of 51 frames fit
+  nowhere (1×4×3 windows, 1×4×6 door frame on the tables); selected builds place 31 of 42 fittable frames, 22 glass
+  pieces ride along. **Caveat:** the preview renderer draws every part as its cell box and no glass, so the sheets cannot
+  show the new parts; three new-arm `.ldr` files are named in the write-up for the Studio check. The eye question needs a
+  renderer that draws the parts (LDraw geometry) or Studio.
+- Memory-pressure incident: session B's 0.9 GB CPU smoke coincided with the reaper killing A's 5-worker run (16/18 done;
+  rerun on 4 workers, resumable) and the coordinator's VM poll loop. Rule stands: one heavy job, announce torch tests.
+- Tests on main: 699 passed, 1 skipped (`tests/test_train.py` skips where torch does not import; passes in the cu124 venv).
+**For Mac (morning):** (1) say go for stage 2 (the two models above vs statistics and M12b run 2 on the demo pairs; about
+2 h on the PC); (2) the renderer gap: decide between a part-geometry preview (LDraw `.dat` meshes, a day's work) and
+judging in Studio from the `.ldr` files; (3) the catalog's looks result stands as measured: more parts alone did not help
+the builds; what they need is a model that places them, which is what stage 2 tests; (4) push main (now 221 commits
+ahead) when you want GitHub current; nothing on Colab needs it any more.
 
 ### M13 — Experiments for the paper
 - Baselines: random bottom-up placement (D), plain WFC + post-filter, constraint-aware WFC, BrickGPT
